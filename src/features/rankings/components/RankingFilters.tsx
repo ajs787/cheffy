@@ -69,7 +69,8 @@ export function RankingFilters({ controller }: { controller: RankingsController 
         title="Sort by"
         actions={SORTS.map((s) => ({
           key: s,
-          label: `${SORT_LABELS[s]}${s === sort ? '  ✓' : ''}`,
+          label: SORT_LABELS[s],
+          selected: s === sort,
           onPress: () => setSort(s),
         }))}
       />

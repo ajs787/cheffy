@@ -18,6 +18,7 @@ import {
 } from '@/lib/query/cache';
 import { invalidateAfterGraphChange } from '@/lib/query/invalidate';
 import { queryKeys } from '@/lib/query/keys';
+import { restoreUserCaches, setFollowingInUserCaches } from '@/lib/query/userCache';
 import { toast } from '@/stores/toast';
 import type { Comment, Post, ProfileWithViewer, ReportReason, ReportTarget } from '@/types/models';
 
@@ -107,11 +108,17 @@ export function useToggleFollow() {
       await qc.cancelQueries({ queryKey: key });
       const previous = qc.getQueryData<ProfileWithViewer | null>(key);
       if (previous) qc.setQueryData(key, { ...previous, viewerIsFollowing: follow });
+      await Promise.all([
+        qc.cancelQueries({ queryKey: ['users'] }),
+        qc.cancelQueries({ queryKey: ['connections'] }),
+      ]);
+      const userLists = setFollowingInUserCaches(qc, userId, follow);
       haptics.light();
-      return { previous, key };
+      return { previous, key, userLists };
     },
     onError: (error, _vars, context) => {
       if (context?.previous) qc.setQueryData(context.key, context.previous);
+      if (context) restoreUserCaches(qc, context.userLists);
       toast.error(toUserMessage(error, 'Couldn’t update follow.'));
     },
     onSettled: (_data, _error, { userId }) => {

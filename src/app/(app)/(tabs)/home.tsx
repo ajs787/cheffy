@@ -12,6 +12,8 @@ import { useFeed } from '@/features/feed/hooks';
 import { usePostMenu } from '@/features/posts/components/usePostMenu';
 import { useProfileStats } from '@/features/profile/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useTabScrollToTop } from '@/hooks/useTabScrollToTop';
+import type { Post } from '@/types/models';
 import { colors, fonts, radii, SCREEN_GUTTER, spacing } from '@/theme';
 
 export default function HomeScreen() {
@@ -20,6 +22,7 @@ export default function HomeScreen() {
   const feed = useFeed();
   const stats = useProfileStats(me ?? undefined);
   const menu = usePostMenu();
+  const listRef = useTabScrollToTop<Post>();
   const { refreshing, onRefresh } = usePullToRefresh(() => Promise.all([feed.refetch(), stats.refetch()]));
 
   const posts = feed.data?.pages.flatMap((page) => page.items) ?? [];
@@ -61,6 +64,7 @@ export default function HomeScreen() {
       {header}
       <FlashList
         data={posts}
+        ref={listRef}
         keyExtractor={(post) => post.id}
         renderItem={({ item, index }) => <PostCard post={item} onOpenMenu={menu.open} priority={index < 2} />}
         ItemSeparatorComponent={() => <Divider style={styles.separator} />}

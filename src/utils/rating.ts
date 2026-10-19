@@ -2,7 +2,6 @@ import { ratingColors } from '@/theme';
 
 export const RATING_MIN = 0;
 export const RATING_MAX = 10;
-export const RATING_STEP = 0.1;
 
 export type RatingTier = keyof typeof ratingColors;
 

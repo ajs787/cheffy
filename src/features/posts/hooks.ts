@@ -43,12 +43,12 @@ export function useDiary(userId: string | undefined, primaryId: string | null) {
   });
 }
 
-export function useDrafts() {
+export function useDrafts(enabled = true) {
   const userId = useUserId();
   return useQuery({
     queryKey: queryKeys.drafts,
     queryFn: () => fetchDrafts(userId!),
-    enabled: !!userId,
+    enabled: enabled && !!userId,
   });
 }
 

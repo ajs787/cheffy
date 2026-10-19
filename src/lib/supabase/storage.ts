@@ -13,7 +13,20 @@ const SIGNED_URL_TTL_SECONDS = 2 * 60 * 60;
 /** Re-sign when a cached URL has less than this left. */
 const REFRESH_MARGIN_MS = 15 * 60 * 1000;
 
+const MAX_CACHED_URLS = 600;
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+/** Keeps the cache bounded: drop expiring entries, then the oldest (Map keeps insertion order). */
+function pruneSignedUrlCache(now: number): void {
+  if (signedUrlCache.size <= MAX_CACHED_URLS) return;
+  for (const [path, entry] of signedUrlCache) {
+    if (entry.expiresAt - now <= REFRESH_MARGIN_MS) signedUrlCache.delete(path);
+  }
+  for (const path of signedUrlCache.keys()) {
+    if (signedUrlCache.size <= MAX_CACHED_URLS) break;
+    signedUrlCache.delete(path);
+  }
+}
 
 /**
  * Signs private post-image paths in one batch request. URLs are cached in
@@ -47,6 +60,7 @@ export async function signPostImagePaths(paths: readonly string[]): Promise<Reco
         result[entry.path] = entry.signedUrl;
       }
     }
+    pruneSignedUrlCache(now);
   }
 
   return result;
@@ -64,7 +78,13 @@ export async function uploadImageFile(bucket: Bucket, path: string, localUri: st
     cacheControl: '31536000',
     upsert: false,
   });
-  if (error) throw error;
+  // Paths are fresh UUIDs, so "already exists" means an earlier attempt of
+  // this same upload landed even though its response was lost: success.
+  if (error && !isAlreadyExists(error)) throw error;
+}
+
+function isAlreadyExists(error: { message?: string; statusCode?: string | number }): boolean {
+  return String(error.statusCode) === '409' || /already exists|duplicate/i.test(error.message ?? '');
 }
 
 export async function removeFiles(bucket: Bucket, paths: readonly string[]): Promise<void> {

@@ -2,11 +2,10 @@ import { FlashList } from '@shopify/flash-list';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Hash, Search, SearchX, Users, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ListFooter } from '@/components/shared/ListFooter';
-import { PostGridItem } from '@/components/shared/PostGridItem';
+import { PostGrid } from '@/components/shared/PostGrid';
 import { UserRow } from '@/components/shared/UserRow';
 import { AppText, EmptyState, ErrorState, GridSkeleton, PressableScale, RowSkeleton, SegmentedControl } from '@/components/ui';
 import { usePostSearch, useTagSearch } from '@/features/discover/hooks';
@@ -68,34 +67,32 @@ export default function SearchScreen() {
 }
 
 function CreationResults({ q }: { q: string }) {
-  const { width } = useWindowDimensions();
   const search = usePostSearch(q);
   const posts = search.data?.pages.flatMap((page) => page.items) ?? [];
-  const cardWidth = (width - SCREEN_GUTTER * 2 - spacing.md) / 2;
 
   if (q.length < 2) {
-    return <EmptyState icon={Search} compact title="Find something to make" message="Search names like “focaccia”, categories like “matcha”, or tags like “weeknight”." />;
+    return (
+      <EmptyState
+        icon={Search}
+        compact
+        title="Find something to make"
+        message="Search names like “focaccia”, categories like “matcha”, or tags like “weeknight”."
+      />
+    );
   }
   if (search.isPending) return <GridSkeleton count={4} columns={2} />;
   if (search.isError) return <ErrorState error={search.error} onRetry={() => void search.refetch()} />;
 
   return (
-    <FlashList
-      data={posts}
-      numColumns={2}
-      keyExtractor={(post) => post.id}
-      keyboardDismissMode="on-drag"
-      renderItem={({ item, index }) => (
-        <View style={[styles.cell, index % 2 === 0 ? styles.cellLeft : styles.cellRight]}>
-          <PostGridItem post={item} size={cardWidth} variant="card" />
-        </View>
-      )}
-      ListEmptyComponent={<EmptyState icon={SearchX} compact title={`No results for “${q}”`} />}
-      ListFooterComponent={<ListFooter loading={search.isFetchingNextPage} />}
+    <PostGrid
+      posts={posts}
+      header={<View style={styles.gridTop} />}
+      empty={<EmptyState icon={SearchX} compact title={`No results for “${q}”`} />}
+      loadingMore={search.isFetchingNextPage}
       onEndReached={() => {
         if (search.hasNextPage && !search.isFetchingNextPage) void search.fetchNextPage();
       }}
-      contentContainerStyle={styles.gridContent}
+      dismissKeyboardOnDrag
     />
   );
 }
@@ -184,10 +181,7 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontFamily: fonts.sans, fontSize: 16, color: colors.text, height: '100%' },
   cancel: { minHeight: HIT_TARGET, justifyContent: 'center', paddingHorizontal: spacing.xs },
-  gridContent: { paddingTop: spacing.lg },
-  cell: { paddingBottom: spacing.lg },
-  cellLeft: { paddingLeft: SCREEN_GUTTER, paddingRight: spacing.md / 2 },
-  cellRight: { paddingRight: SCREEN_GUTTER, paddingLeft: spacing.md / 2 },
+  gridTop: { height: spacing.lg },
   listContent: { paddingTop: spacing.sm },
   listLabel: { paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
   tagRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },

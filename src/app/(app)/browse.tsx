@@ -1,11 +1,9 @@
-import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams } from 'expo-router';
 import { Compass } from 'lucide-react-native';
 import { useState } from 'react';
-import { RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { ListFooter } from '@/components/shared/ListFooter';
-import { PostGridItem } from '@/components/shared/PostGridItem';
+import { PostGrid } from '@/components/shared/PostGrid';
 import { AppHeader, Chip, EmptyState, ErrorState, GridSkeleton } from '@/components/ui';
 import { useDiscoverGrid } from '@/features/discover/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -31,7 +29,6 @@ export default function BrowseScreen() {
     sort?: Sort;
     sinceDays?: string;
   }>();
-  const { width } = useWindowDimensions();
   const [sort, setSort] = useState<Sort>(params.sort ?? 'recent');
   const query = useDiscoverGrid({
     sort,
@@ -42,7 +39,6 @@ export default function BrowseScreen() {
     sinceDays: params.sinceDays ? Number(params.sinceDays) : null,
   });
   const posts = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const cardWidth = (width - SCREEN_GUTTER * 2 - spacing.md) / 2;
   const { refreshing, onRefresh } = usePullToRefresh(() => query.refetch());
 
   return (
@@ -58,25 +54,18 @@ export default function BrowseScreen() {
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : (
-        <FlashList
+        <PostGrid
           key={sort}
-          data={posts}
-          numColumns={2}
-          keyExtractor={(post) => post.id}
-          renderItem={({ item, index }) => (
-            <View style={[styles.cell, index % 2 === 0 ? styles.cellLeft : styles.cellRight]}>
-              <PostGridItem post={item} size={cardWidth} variant="card" />
-            </View>
-          )}
-          ListEmptyComponent={
+          posts={posts}
+          empty={
             <EmptyState icon={Compass} title="Nothing here yet" message="When people share posts like this, they’ll show up here." />
           }
-          ListFooterComponent={<ListFooter loading={query.isFetchingNextPage} />}
+          loadingMore={query.isFetchingNextPage}
           onEndReached={() => {
             if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
           }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
-          contentContainerStyle={styles.content}
+          refreshing={refreshing}
+          onRefresh={() => void onRefresh()}
         />
       )}
     </View>
@@ -86,8 +75,4 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   sorts: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: SCREEN_GUTTER, paddingBottom: spacing.md },
-  content: { paddingTop: spacing.xs },
-  cell: { paddingBottom: spacing.lg },
-  cellLeft: { paddingLeft: SCREEN_GUTTER, paddingRight: spacing.md / 2 },
-  cellRight: { paddingRight: SCREEN_GUTTER, paddingLeft: spacing.md / 2 },
 });

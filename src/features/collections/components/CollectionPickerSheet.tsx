@@ -17,7 +17,8 @@ export interface CollectionPickerSheetProps {
 /** Add or remove a post from any of my collections, or start a new one. */
 export function CollectionPickerSheet({ postId, onClose }: CollectionPickerSheetProps) {
   const me = useRequiredUserId();
-  const collections = useCollections(me);
+  // Only fetch while the picker is open; every post menu renders this sheet.
+  const collections = useCollections(postId ? me : undefined);
   const memberOf = useMyCollectionIdsForPost(postId ?? undefined);
   const toggle = useToggleCollectionItem(postId ?? '');
   const create = useCreateCollection();

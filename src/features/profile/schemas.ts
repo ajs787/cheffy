@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-export const USERNAME_PATTERN = /^[a-z0-9_.]{3,24}$/;
-
 export const usernameSchema = z
   .string()
   .trim()

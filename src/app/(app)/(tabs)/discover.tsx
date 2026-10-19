@@ -1,11 +1,9 @@
-import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { Compass, Search } from 'lucide-react-native';
-import { RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { ListFooter } from '@/components/shared/ListFooter';
-import { PostGridItem } from '@/components/shared/PostGridItem';
+import { PostGrid } from '@/components/shared/PostGrid';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { AppHeader, AppText, CategoryIcon, EmptyState, GridSkeleton, PressableScale } from '@/components/ui';
 import { DiscoverRow } from '@/features/discover/components/DiscoverRow';
@@ -13,7 +11,9 @@ import { SuggestedCooks } from '@/features/discover/components/SuggestedCooks';
 import { useDiscoverGrid, useTrending } from '@/features/discover/hooks';
 import { useTaxonomy } from '@/features/taxonomy/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useTabScrollToTop } from '@/hooks/useTabScrollToTop';
 import { queryKeys } from '@/lib/query/keys';
+import type { Post } from '@/types/models';
 import { colors, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 
 const LATEST = { sort: 'recent' } as const;
@@ -23,11 +23,11 @@ function browse(params: Record<string, string>) {
 }
 
 export default function DiscoverScreen() {
-  const { width } = useWindowDimensions();
   const qc = useQueryClient();
   const taxonomy = useTaxonomy();
   const trending = useTrending();
   const latest = useDiscoverGrid(LATEST);
+  const listRef = useTabScrollToTop<Post>();
   const { refreshing, onRefresh } = usePullToRefresh(() =>
     Promise.all([
       qc.invalidateQueries({ queryKey: ['posts', 'discover'] }),
@@ -37,7 +37,6 @@ export default function DiscoverScreen() {
   );
 
   const posts = latest.data?.pages.flatMap((page) => page.items) ?? [];
-  const cardWidth = (width - SCREEN_GUTTER * 2 - spacing.md) / 2;
 
   const header = (
     <View>
@@ -109,17 +108,11 @@ export default function DiscoverScreen() {
   return (
     <View style={styles.screen}>
       <AppHeader title="Discover" large />
-      <FlashList
-        data={posts}
-        numColumns={2}
-        keyExtractor={(post) => post.id}
-        renderItem={({ item, index }) => (
-          <View style={[styles.cell, index % 2 === 0 ? styles.cellLeft : styles.cellRight]}>
-            <PostGridItem post={item} size={cardWidth} variant="card" />
-          </View>
-        )}
-        ListHeaderComponent={header}
-        ListEmptyComponent={
+      <PostGrid
+        listRef={listRef}
+        posts={posts}
+        header={header}
+        empty={
           latest.isPending ? (
             <GridSkeleton count={4} columns={2} />
           ) : (
@@ -130,12 +123,12 @@ export default function DiscoverScreen() {
             />
           )
         }
-        ListFooterComponent={<ListFooter loading={latest.isFetchingNextPage} />}
+        loadingMore={latest.isFetchingNextPage}
         onEndReached={() => {
           if (latest.hasNextPage && !latest.isFetchingNextPage) void latest.fetchNextPage();
         }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
-        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={() => void onRefresh()}
       />
     </View>
   );
@@ -172,7 +165,4 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  cell: { paddingBottom: spacing.lg },
-  cellLeft: { paddingLeft: SCREEN_GUTTER, paddingRight: spacing.md / 2 },
-  cellRight: { paddingRight: SCREEN_GUTTER, paddingLeft: spacing.md / 2 },
 });

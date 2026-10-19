@@ -1,6 +1,4 @@
-import { sanitizeSearch } from './api';
-
-jest.mock('@/lib/supabase/client', () => ({ supabase: {} }));
+import { sanitizeSearch } from './search';
 
 describe('sanitizeSearch', () => {
   it('removes PostgREST and LIKE control characters', () => {

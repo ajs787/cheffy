@@ -32,7 +32,7 @@ export function CategorySelector({ primaries, value, onChange, error }: Category
                   onChange(primary.id);
                 }
               }}
-              style={[styles.card, selected && { borderColor: tint, backgroundColor: colors.surface }]}
+              style={[styles.card, selected && { borderColor: tint }]}
               testID={`category-${primary.slug}`}
             >
               <CategoryIcon slug={primary.slug} size="lg" color={selected ? tint : colors.textTertiary} />
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1.5,
     borderColor: colors.border,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   error: { marginTop: spacing.xs },
 });

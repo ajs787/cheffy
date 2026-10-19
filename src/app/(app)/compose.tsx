@@ -4,11 +4,11 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState, type ComponentRef } from 'react';
 import { Controller, useForm, useWatch, type FieldPath } from 'react-hook-form';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppHeader, AppText, ConfirmationDialog, ErrorState, RatingInput } from '@/components/ui';
+import { AppHeader, AppText, ConfirmationDialog, ErrorState, RatingInput } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { CategorySelector } from '@/features/posts/components/CategorySelector';
+import { ComposeFooter } from '@/features/posts/components/ComposeFooter';
 import { DetailsSection } from '@/features/posts/components/DetailsSection';
 import { FormSection } from '@/features/posts/components/FormSection';
 import { OptionChips } from '@/features/posts/components/OptionChips';
@@ -32,7 +32,7 @@ import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { usePreferencesStore } from '@/stores/preferences';
 import { toast } from '@/stores/toast';
-import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
+import { colors, fonts, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
 import type { Post } from '@/types/models';
 
 export default function ComposeScreen() {
@@ -68,7 +68,6 @@ export default function ComposeScreen() {
 }
 
 function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }) {
-  const insets = useSafeAreaInsets();
   const taxonomy = useTaxonomy();
   const setDefaultVisibility = usePreferencesStore((s) => s.setDefaultVisibility);
   const savePost = useSavePost();
@@ -311,23 +310,13 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
           </FormSection>
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-          {savePost.isPaused ? (
-            <AppText variant="caption" color="textSecondary" align="center" accessibilityLiveRegion="polite">
-              Waiting for a connection… your post will save when you’re back online.
-            </AppText>
-          ) : progress ? (
-            <SaveProgressBar progress={progress} />
-          ) : null}
-          <AppButton
-            label={editingPublished ? 'Save changes' : 'Post'}
-            size="lg"
-            fullWidth
-            loading={saving}
-            onPress={() => void submit('published')}
-            testID="compose-submit"
-          />
-        </View>
+        <ComposeFooter
+          label={editingPublished ? 'Save changes' : 'Post'}
+          saving={saving}
+          paused={savePost.isPaused}
+          progress={progress}
+          onSubmit={() => void submit('published')}
+        />
       </KeyboardAvoidingView>
 
       <ConfirmationDialog
@@ -344,24 +333,6 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
           router.back();
         }}
       />
-    </View>
-  );
-}
-
-function SaveProgressBar({ progress }: { progress: SaveProgress }) {
-  const fraction = progress.total === 0 ? 1 : progress.done / progress.total;
-  const label =
-    progress.stage === 'saving'
-      ? 'Saving…'
-      : `Uploading photo ${Math.min(progress.done + 1, progress.total)} of ${progress.total}…`;
-  return (
-    <View style={styles.progress} accessibilityLiveRegion="polite" accessibilityLabel={label}>
-      <AppText variant="caption" color="textSecondary">
-        {label}
-      </AppText>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${Math.round(fraction * 100)}%` }]} />
-      </View>
     </View>
   );
 }
@@ -388,15 +359,4 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingTop: 0,
   },
-  footer: {
-    paddingHorizontal: SCREEN_GUTTER,
-    paddingTop: spacing.md,
-    gap: spacing.sm,
-    backgroundColor: colors.background,
-    borderTopWidth: HAIRLINE,
-    borderTopColor: colors.border,
-  },
-  progress: { gap: spacing.xs },
-  progressTrack: { height: 3, borderRadius: 2, backgroundColor: colors.surfaceMuted, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: colors.accent },
 });

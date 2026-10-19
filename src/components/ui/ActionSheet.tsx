@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+import { Check, type LucideIcon } from 'lucide-react-native';
 import { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -13,6 +13,8 @@ export interface SheetAction {
   label: string;
   icon?: LucideIcon;
   destructive?: boolean;
+  /** Shows a checkmark: the current choice in a pick-one menu. */
+  selected?: boolean;
   onPress: () => void;
 }
 
@@ -50,6 +52,7 @@ export function ActionSheet({ visible, onClose, title, actions }: ActionSheetPro
               key={action.key}
               accessibilityRole="button"
               accessibilityLabel={action.label}
+              accessibilityState={action.selected === undefined ? undefined : { selected: action.selected }}
               activeScale={0.98}
               onPress={() => {
                 pending.current = action.onPress;
@@ -58,9 +61,12 @@ export function ActionSheet({ visible, onClose, title, actions }: ActionSheetPro
               style={styles.row}
             >
               {Icon ? <Icon size={iconSizes.md} color={color} strokeWidth={strokes.regular} /> : null}
-              <AppText variant="bodyStrong" color={action.destructive ? 'danger' : 'text'}>
+              <AppText variant="bodyStrong" color={action.destructive ? 'danger' : 'text'} style={styles.label}>
                 {action.label}
               </AppText>
+              {action.selected ? (
+                <Check size={iconSizes.md} color={colors.accentStrong} strokeWidth={strokes.bold} />
+              ) : null}
             </PressableScale>
           );
         })}
@@ -76,4 +82,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: HIT_TARGET + 8,
   },
+  label: { flex: 1 },
 });

@@ -77,6 +77,32 @@ Bugs found live and fixed:
 6. Polish: "What kind?" label, "Your followers", ghosted 0.0 placeholder,
    exact-rating placeholder, header spacing.
 
+## Code & design review (2026-10-19)
+
+Fixed:
+- **Bugs:** your own profile opened from a post had no Back button; upload
+  retries failed with "already exists" after a lost response (now
+  idempotent); follow buttons in search/suggestions/follower lists didn't
+  update until refetch (now optimistic with rollback); drafts could be
+  double-tap "liked" on the post screen.
+- **Performance:** collections no longer fetched by every post menu while
+  closed; signed-URL cache bounded (600 entries, expiring first).
+- **Native iOS:** re-tapping the active tab scrolls to top (Home, Discover,
+  Rankings, Profile); pull-to-refresh on post detail; drafts reachable from
+  your profile ("N drafts to finish").
+- **Consistency:** real checkmark for the current sort; Create category cards
+  use the shared white card surface; one two-column grid (`PostGrid`) instead
+  of five copies.
+- **Structure:** post screen 375 → 126 lines (`PostDetailHeader`,
+  `CommentComposer`); `ProfileView` 315 → 128 (`ProfileTabs`, `ProfileMenu`);
+  `ComposeFooter` extracted; search sanitizing moved to `utils/search`; dead
+  exports removed.
+- **Tests added:** tag committing, idempotent upload, signed-URL caching,
+  follow-state caches, progress label, encrypted session round-trip.
+
+Sessions: the sign-out seen after a simulator reboot was a manual sign-out;
+encrypted session storage also passes a round-trip test.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

@@ -1,6 +1,4 @@
 /** App-wide constants. */
-export const APP_NAME = 'Cheffy';
-
 /**
  * Support contact shown in Terms and Settings. Apple requires apps with
  * user-generated content to publish a way to contact the developer — set this

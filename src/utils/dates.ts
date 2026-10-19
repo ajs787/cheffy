@@ -33,7 +33,3 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
   if (days < 7) return `${days}d`;
   return formatCalendarDate(then, now);
 }
-
-export function isToday(value: string, now: Date = new Date()): boolean {
-  return value === toLocalISODate(now);
-}

@@ -1,9 +1,9 @@
 import { attachImageUrls, mapPosts, POST_SELECT, type PostRow } from '@/features/posts/mappers';
-import { sanitizeSearch } from '@/features/social/api';
 import type { DiscoverQueryParams } from '@/lib/query/keys';
 import { supabase } from '@/lib/supabase/client';
 import { fetchRows } from '@/lib/supabase/query';
 import type { Cursor, Page, Post } from '@/types/models';
+import { sanitizeSearch } from '@/utils/search';
 
 export const DISCOVER_PAGE_SIZE = 18;
 

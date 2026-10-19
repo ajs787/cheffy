@@ -3,6 +3,7 @@ import { unwrap } from '@/lib/errors';
 import { supabase } from '@/lib/supabase/client';
 import { fetchOne, fetchRows } from '@/lib/supabase/query';
 import type { Comment, ReportReason, ReportTarget, UserListItem } from '@/types/models';
+import { sanitizeSearch } from '@/utils/search';
 
 /** Unique-violation code: the row already exists, which is fine for idempotent actions. */
 const ALREADY_EXISTS = '23505';
@@ -48,16 +49,6 @@ export async function fetchConnections(
   );
   // Profiles hidden by a block come back null.
   return rows.flatMap((row) => (row.profile ? [mapUserListItem(row.profile)] : []));
-}
-
-/** Strips characters that have meaning in PostgREST filters or LIKE patterns. */
-export function sanitizeSearch(q: string): string {
-  return q
-    .trim()
-    .toLowerCase()
-    .replace(/[%,()*\\:"']/g, '')
-    .replace(/^@/, '')
-    .slice(0, 40);
 }
 
 export async function searchUsers(query: string): Promise<UserListItem[]> {

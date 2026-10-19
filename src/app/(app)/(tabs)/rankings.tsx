@@ -10,12 +10,15 @@ import { useUserId } from '@/features/auth/store';
 import { RankingFilters } from '@/features/rankings/components/RankingFilters';
 import { useRankingsController } from '@/features/rankings/useRankingsController';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useTabScrollToTop } from '@/hooks/useTabScrollToTop';
+import type { RankingItem } from '@/types/models';
 import { colors } from '@/theme';
 
 export default function RankingsScreen() {
   const me = useUserId();
   const controller = useRankingsController(me ?? undefined);
   const { rankings, items, filtered } = controller;
+  const listRef = useTabScrollToTop<RankingItem>();
   const { refreshing, onRefresh } = usePullToRefresh(() => rankings.refetch());
 
   return (
@@ -23,6 +26,7 @@ export default function RankingsScreen() {
       <AppHeader title="Rankings" large />
       <FlashList
         data={items}
+        ref={listRef}
         keyExtractor={(item) => item.postId}
         renderItem={({ item }) => <RankingRow item={item} />}
         ListHeaderComponent={<RankingFilters controller={controller} />}
