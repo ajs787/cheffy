@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Cheffy",
+    "slug": "cheffy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "cheffy",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAF9F6",
+    "ios": {
+      "bundleIdentifier": "com.audreyshin.cheffy",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Cheffy uses your photo library so you can add photos of what you made to your posts and profile.",
+        "NSCameraUsageDescription": "Cheffy uses the camera so you can photograph what you made.",
+        "NSPhotoLibraryAddUsageDescription": "Cheffy saves photos you take in the app to your library."
+      }
+    },
+    "android": {
+      "package": "com.audreyshin.cheffy",
+      "adaptiveIcon": {
+        "backgroundColor": "#C4513C",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FAF9F6",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 96
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cheffy uses your photo library so you can add photos of what you made to your posts and profile.",
+          "cameraPermission": "Cheffy uses the camera so you can photograph what you made."
+        }
+      ],
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {}
+    }
+  }
+}
