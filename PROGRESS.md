@@ -103,13 +103,42 @@ Fixed:
 Sessions: the sign-out seen after a simulator reboot was a manual sign-out;
 encrypted session storage also passes a round-trip test.
 
+## R1 — UI/UX refinement & social feed redesign (2026-10-20)
+
+Implemented per IMPLEMENTATION_PLAN.md §R1. Typecheck, lint and all 175
+tests (26 suites, incl. PGlite RLS tests) pass.
+
+- **Headers:** shared `AppHeader` variants; logo on Home only. New Activity
+  inbox (bell on Home) built from real likes, comments and follows; unread dot
+  stored on device.
+- **Home:** Following / For You switch (`feed_posts` / `discover_posts`), new
+  entry card, "Cooking lately" and "Top rated this week" modules that only
+  appear when backed by real posts; mode-specific empty states.
+- **Discover:** large title, category tiles using each category's newest real
+  photo (icon fallback), sections hidden when empty.
+- **Rankings:** "My Rankings" with sort button, summary (creations, average,
+  most-made category), 64 pt thumbnails and podium ranks.
+- **Create:** full-screen presentation, photo → name → category → rating →
+  optional review, then collapsible Story / Tags / More details; compact
+  rating readout and photo tile; Post stays pinned in the footer.
+- **Profile:** "@username" + settings header; card no longer repeats the
+  username on your own profile; bio moves up under the card; tighter spacing.
+- **Story:** long-form story on entries — needs migration
+  `20261020000001_post_story.sql` pushed to the live project before the app
+  can load posts there.
+
+Needs manual checking on a device: the full-screen Create flow (keyboard,
+swipe-to-dismiss blocked when dirty), the collapsible sections, Following/For
+You with two real accounts, the activity inbox and unread dot, Discover
+category photos, and the Rankings sort sheet.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,
    edit/delete post, block/report, account deletion, password reset and
    email-confirmation deep links.
 2. Two-device acceptance test (`docs/ACCEPTANCE_TEST.md`) — needs a second account.
-3. Keyboard avoidance inside the modal compose sheet on a real device.
+3. Keyboard avoidance inside the full-screen Create on a real device.
 4. Android (code is cross-platform, but nothing has been run on Android).
 5. Manual VoiceOver pass and Dynamic Type at the largest sizes.
 6. EAS build / TestFlight upload (needs your Apple Developer account).

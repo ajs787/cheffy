@@ -11,9 +11,9 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="compose" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="collection/edit" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="compose" options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="edit-profile" options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="collection/edit" options={{ presentation: 'fullScreenModal' }} />
     </Stack>
   );
 }

@@ -87,10 +87,24 @@ export function PhotoStrip({ images, onChange }: PhotoStripProps) {
             ? [{ key: 'cover', label: 'Make cover photo', icon: Star, onPress: () => move(selected, 0) }]
             : []),
           ...(selected > 0
-            ? [{ key: 'left', label: 'Move earlier', icon: ArrowLeft, onPress: () => move(selected, selected - 1) }]
+            ? [
+                {
+                  key: 'left',
+                  label: 'Move earlier',
+                  icon: ArrowLeft,
+                  onPress: () => move(selected, selected - 1),
+                },
+              ]
             : []),
           ...(selected < images.length - 1
-            ? [{ key: 'right', label: 'Move later', icon: ArrowRight, onPress: () => move(selected, selected + 1) }]
+            ? [
+                {
+                  key: 'right',
+                  label: 'Move later',
+                  icon: ArrowRight,
+                  onPress: () => move(selected, selected + 1),
+                },
+              ]
             : []),
           {
             key: 'remove',
@@ -111,13 +125,20 @@ export function PhotoStrip({ images, onChange }: PhotoStripProps) {
           style={styles.empty}
           testID="compose-add-photos"
         >
-          <ImagePlus size={iconSizes.xl} color={colors.textSecondary} strokeWidth={strokes.regular} />
-          <AppText variant="bodyStrong">Add photos</AppText>
-          <AppText variant="caption" color="textSecondary">
-            Up to {MAX_IMAGES} · the first one is the cover
-          </AppText>
+          <ImagePlus size={iconSizes.xl} color={colors.accent} strokeWidth={strokes.regular} />
+          <View style={styles.emptyText}>
+            <AppText variant="bodyStrong">Add photos</AppText>
+            <AppText variant="caption" color="textSecondary">
+              Up to {MAX_IMAGES} · the first one is the cover
+            </AppText>
+          </View>
         </PressableScale>
-        <SourceSheet visible={sourceSheet} onClose={() => setSourceSheet(false)} onLibrary={addFromLibrary} onCamera={takePhoto} />
+        <SourceSheet
+          visible={sourceSheet}
+          onClose={() => setSourceSheet(false)}
+          onLibrary={addFromLibrary}
+          onCamera={takePhoto}
+        />
       </View>
     );
   }
@@ -162,7 +183,12 @@ export function PhotoStrip({ images, onChange }: PhotoStripProps) {
           </PressableScale>
         ) : null}
       </ScrollView>
-      <SourceSheet visible={sourceSheet} onClose={() => setSourceSheet(false)} onLibrary={addFromLibrary} onCamera={takePhoto} />
+      <SourceSheet
+        visible={sourceSheet}
+        onClose={() => setSourceSheet(false)}
+        onLibrary={addFromLibrary}
+        onCamera={takePhoto}
+      />
       <ActionSheet visible={selected !== null} onClose={() => setSelected(null)} actions={photoActions} />
     </View>
   );
@@ -194,16 +220,18 @@ function SourceSheet({
 const styles = StyleSheet.create({
   emptyWrap: { paddingHorizontal: SCREEN_GUTTER },
   empty: {
-    height: 168,
-    borderRadius: radii.lg,
+    height: 104,
+    borderRadius: radii.md,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
   },
+  emptyText: { flex: 1, gap: 2 },
   strip: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm },
   tile: { width: TILE_W, height: TILE_H },
   tileImage: { width: TILE_W, height: TILE_H },

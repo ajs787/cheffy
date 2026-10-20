@@ -1,4 +1,4 @@
-import { compareRankingRows } from './api';
+import { compareRankingRows, summarizeRatings } from './api';
 
 jest.mock('@/lib/supabase/client', () => ({ supabase: {} }));
 
@@ -21,5 +21,21 @@ describe('compareRankingRows', () => {
   it('orders by date made, breaking ties by creation time', () => {
     expect(order('recent')).toEqual([3, 4, 2, 1]);
     expect(order('oldest')).toEqual([1, 2, 4, 3]);
+  });
+});
+
+describe('summarizeRatings', () => {
+  it('averages to one decimal and finds the most-made category', () => {
+    expect(
+      summarizeRatings([
+        { rating: 9.2, primary_category_id: 'drinks' },
+        { rating: 7.5, primary_category_id: 'baking' },
+        { rating: 8.4, primary_category_id: 'drinks' },
+      ]),
+    ).toEqual({ count: 3, average: 8.4, topPrimaryId: 'drinks' });
+  });
+
+  it('is empty with no ratings', () => {
+    expect(summarizeRatings([])).toEqual({ count: 0, average: null, topPrimaryId: null });
   });
 });

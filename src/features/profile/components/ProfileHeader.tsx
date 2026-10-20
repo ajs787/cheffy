@@ -2,23 +2,35 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { FollowButton } from '@/components/shared/FollowButton';
-import { AppButton, AppText, Avatar, categoryColorFor } from '@/components/ui';
+import { AppButton, AppText, categoryColorFor } from '@/components/ui';
 import { shareProfile } from '@/lib/share';
-import { SCREEN_GUTTER, spacing } from '@/theme';
+import { colors, HAIRLINE, SCREEN_GUTTER, spacing } from '@/theme';
 import type { ProfileStats, ProfileWithViewer } from '@/types/models';
 import { formatCount } from '@/utils/format';
 
-function Stat({ value, label, onPress }: { value: number; label: string; onPress?: () => void }) {
+import { MembershipCard } from './MembershipCard';
+
+function Stat({
+  value,
+  label,
+  onPress,
+  divided = false,
+}: {
+  value: number;
+  label: string;
+  onPress?: () => void;
+  divided?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      style={styles.stat}
+      style={[styles.stat, divided && styles.statRule]}
       accessibilityRole={onPress ? 'link' : 'text'}
       accessibilityLabel={`${value} ${label}`}
     >
       <AppText variant="title2">{formatCount(value)}</AppText>
-      <AppText variant="caption" color="textSecondary">
+      <AppText variant="overline" color="textSecondary">
         {label}
       </AppText>
     </Pressable>
@@ -29,42 +41,46 @@ export function ProfileHeader({
   profile,
   stats,
   isOwn,
+  usernameInTitle = false,
 }: {
   profile: ProfileWithViewer;
   stats: ProfileStats | undefined;
   isOwn: boolean;
+  usernameInTitle?: boolean;
 }) {
+  const made = (stats?.byPrimary ?? []).filter((p) => p.count > 0);
   const openConnections = (type: 'followers' | 'following') =>
     router.push({ pathname: '/user/[id]/connections', params: { id: profile.id, type } });
 
   return (
     <View style={styles.container}>
-      <View style={styles.top}>
-        <Avatar uri={profile.avatarUrl} name={profile.displayName} size="lg" />
-        <View style={styles.stats}>
-          <Stat value={stats?.posts ?? 0} label="creations" />
-          <Stat value={stats?.followers ?? 0} label="followers" onPress={() => openConnections('followers')} />
-          <Stat value={stats?.following ?? 0} label="following" onPress={() => openConnections('following')} />
-        </View>
+      <MembershipCard profile={profile} stats={stats} showUsername={!usernameInTitle} />
+
+      {profile.bio ? <AppText variant="body">{profile.bio}</AppText> : null}
+
+      <View style={styles.stats}>
+        <Stat value={stats?.posts ?? 0} label="creations" />
+        <Stat
+          value={stats?.followers ?? 0}
+          label="followers"
+          divided
+          onPress={() => openConnections('followers')}
+        />
+        <Stat
+          value={stats?.following ?? 0}
+          label="following"
+          divided
+          onPress={() => openConnections('following')}
+        />
       </View>
 
-      <View style={styles.identity}>
-        <AppText variant="title1" accessibilityRole="header">
-          {profile.displayName}
-        </AppText>
-        <AppText variant="callout" color="textSecondary">
-          @{profile.username}
-        </AppText>
-        {profile.bio ? (
-          <AppText variant="body" style={styles.bio}>
-            {profile.bio}
-          </AppText>
-        ) : null}
-      </View>
-
-      {stats && stats.byPrimary.length > 0 ? (
-        <View style={styles.breakdown} accessible accessibilityLabel={stats.byPrimary.map((p) => `${p.count} ${p.name}`).join(', ')}>
-          {stats.byPrimary.map((primary) => (
+      {made.length > 1 ? (
+        <View
+          style={styles.breakdown}
+          accessible
+          accessibilityLabel={made.map((p) => `${p.count} ${p.name}`).join(', ')}
+        >
+          {made.map((primary) => (
             <View key={primary.slug} style={styles.breakdownItem}>
               <View style={[styles.dot, { backgroundColor: categoryColorFor(primary.slug) }]} />
               <AppText variant="calloutStrong">{formatCount(primary.count)}</AppText>
@@ -79,7 +95,13 @@ export function ProfileHeader({
       <View style={styles.actions}>
         {isOwn ? (
           <>
-            <AppButton label="Edit profile" variant="secondary" size="sm" style={styles.flex} onPress={() => router.push('/edit-profile')} />
+            <AppButton
+              label="Edit profile"
+              variant="secondary"
+              size="sm"
+              style={styles.flex}
+              onPress={() => router.push('/edit-profile')}
+            />
             <AppButton
               label="Share profile"
               variant="secondary"
@@ -99,12 +121,16 @@ export function ProfileHeader({
 }
 
 const styles = StyleSheet.create({
-  container: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.lg, paddingBottom: spacing.lg },
-  top: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
-  stats: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
-  stat: { alignItems: 'center', minWidth: 64, minHeight: 44, justifyContent: 'center' },
-  identity: { gap: 2 },
-  bio: { marginTop: spacing.sm },
+  container: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.md, paddingBottom: spacing.md },
+  // Rule-divided columns, as on the identity's cover.
+  stats: {
+    flexDirection: 'row',
+    borderTopWidth: HAIRLINE,
+    borderBottomWidth: HAIRLINE,
+    borderColor: colors.rule,
+  },
+  stat: { flex: 1, alignItems: 'center', minHeight: 60, justifyContent: 'center', gap: 2 },
+  statRule: { borderLeftWidth: HAIRLINE, borderLeftColor: colors.rule },
   breakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   breakdownItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
   dot: { width: 7, height: 7, borderRadius: 4 },

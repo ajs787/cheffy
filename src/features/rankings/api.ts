@@ -87,3 +87,40 @@ export async function fetchRankingFilters(userId: string): Promise<RankingFilter
   }>(supabase.rpc('ranking_filters', { p_user_id: userId }));
   return rows.map((r) => ({ kind: r.kind, id: r.id, slug: r.slug, name: r.name, postCount: Number(r.post_count) }));
 }
+
+export interface RatingSummary {
+  count: number;
+  average: number | null;
+  /** Primary category id logged most often (ties: first seen). */
+  topPrimaryId: string | null;
+}
+
+/** Summarises ratings (pure, for testing). */
+export function summarizeRatings(rows: readonly { rating: number; primary_category_id: string }[]): RatingSummary {
+  if (rows.length === 0) return { count: 0, average: null, topPrimaryId: null };
+  const total = rows.reduce((sum, r) => sum + Number(r.rating), 0);
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(r.primary_category_id, (counts.get(r.primary_category_id) ?? 0) + 1);
+  let topPrimaryId: string | null = null;
+  let best = 0;
+  for (const [id, n] of counts) {
+    if (n > best) {
+      best = n;
+      topPrimaryId = id;
+    }
+  }
+  return { count: rows.length, average: Math.round((total / rows.length) * 10) / 10, topPrimaryId };
+}
+
+/** A user's published ratings, summarised (only the two columns needed). */
+export async function fetchRatingSummary(userId: string): Promise<RatingSummary> {
+  const rows = await fetchRows<{ rating: number; primary_category_id: string }>(
+    supabase
+      .from('posts')
+      .select('rating, primary_category_id')
+      .eq('author_id', userId)
+      .eq('status', 'published')
+      .limit(5000),
+  );
+  return summarizeRatings(rows);
+}

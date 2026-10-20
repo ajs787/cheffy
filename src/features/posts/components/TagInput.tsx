@@ -45,7 +45,12 @@ export function TagInput({ value, onChange, onDraftChange }: TagInputProps) {
     <View style={styles.container}>
       <View style={styles.box}>
         {value.map((tag) => (
-          <Chip key={tag} label={`#${tag}`} size="sm" onRemove={() => onChange(value.filter((t) => t !== tag))} />
+          <Chip
+            key={tag}
+            label={`#${tag}`}
+            size="sm"
+            onRemove={() => onChange(value.filter((t) => t !== tag))}
+          />
         ))}
         {!full ? (
           <TextInput
@@ -108,7 +113,7 @@ const styles = StyleSheet.create({
   input: {
     flexGrow: 1,
     minWidth: 120,
-    fontFamily: fonts.sans,
+    fontFamily: fonts.text,
     fontSize: 16,
     color: colors.text,
     paddingVertical: spacing.xs,

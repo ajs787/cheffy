@@ -33,7 +33,7 @@ export function EmptyState({
     <View style={[styles.container, compact && styles.compact, style]}>
       {Icon ? (
         <View style={styles.iconWrap}>
-          <Icon size={28} color={colors.sageStrong} strokeWidth={strokes.regular} />
+          <Icon size={28} color={colors.accent} strokeWidth={strokes.regular} />
         </View>
       ) : null}
       <AppText variant="title2" align="center">
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.sageSoft,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,

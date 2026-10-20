@@ -11,11 +11,12 @@ export const spacing = {
   huge: 48,
 } as const;
 
+/** Editorial and squared-off: cards are near-square, tiles echo the app icon. */
 export const radii = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
+  xs: 2,
+  sm: 4,
+  md: 6,
+  lg: 12,
   pill: 999,
 } as const;
 
@@ -33,7 +34,7 @@ export const strokes = {
 
 export const shadows = {
   sm: {
-    shadowColor: '#2A2118',
+    shadowColor: '#3B2A22',
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

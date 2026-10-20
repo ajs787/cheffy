@@ -4,41 +4,46 @@ import { memo, useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
+import { useUserId } from '@/features/auth/store';
+import { StoryTeaser } from '@/features/posts/components/StoryTeaser';
+import { likedBySummary } from '@/features/social/likedBy';
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
-import { colors, iconSizes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
+import { colors, fonts, HAIRLINE, iconSizes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import type { Post } from '@/types/models';
-import { formatRelativeTime } from '@/utils/dates';
+import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
 import { CategoryLine } from './CategoryLine';
-import { ImageCarousel } from './ImageCarousel';
 import { LikeButton } from './LikeButton';
+import { PhotoMosaic } from './PhotoMosaic';
 
 export interface PostCardProps {
   post: Post;
   onOpenMenu: (post: Post) => void;
-  /** Load the first image eagerly (top of the feed). */
-  priority?: boolean;
 }
 
 function openProfile(userId: string) {
   router.push({ pathname: '/user/[id]', params: { id: userId } });
 }
 
-function PostCardBase({ post, onOpenMenu, priority = false }: PostCardProps) {
+/**
+ * A diary entry in the feed. Information first — who made what and how they
+ * rated it — then balanced, inset photos, the review and social context.
+ */
+function PostCardBase({ post, onOpenMenu }: PostCardProps) {
   const { width } = useWindowDimensions();
+  const me = useUserId();
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
   const [expanded, setExpanded] = useState(false);
 
   const openPost = (focusComment = false) =>
     router.push({ pathname: '/post/[id]', params: focusComment ? { id: post.id, focus: 'comment' } : { id: post.id } });
-
-  const like = () => toggleLike.mutate({ post, like: !post.viewerHasLiked });
+  const likedBy = likedBySummary(post.recentLikers, post.likeCount, post.viewerHasLiked, me);
 
   return (
     <View style={styles.card} testID={`post-card-${post.id}`}>
-      <View style={styles.header}>
+      <View style={styles.creator}>
         <Pressable
           onPress={() => openProfile(post.author.id)}
           style={styles.author}
@@ -46,7 +51,7 @@ function PostCardBase({ post, onOpenMenu, priority = false }: PostCardProps) {
           accessibilityLabel={`${post.author.displayName}, @${post.author.username}`}
         >
           <Avatar uri={post.author.avatarUrl} name={post.author.displayName} size="sm" />
-          <View style={styles.authorText}>
+          <View style={styles.flex}>
             <AppText variant="calloutStrong" numberOfLines={1}>
               {post.author.displayName}
             </AppText>
@@ -59,55 +64,72 @@ function PostCardBase({ post, onOpenMenu, priority = false }: PostCardProps) {
         <IconButton icon={Ellipsis} label="More options" color={colors.textSecondary} size="md" onPress={() => onOpenMenu(post)} />
       </View>
 
-      {post.images.length > 0 ? (
-        <ImageCarousel
-          images={post.images}
-          width={width}
-          title={post.title}
-          onPress={() => openPost()}
-          onDoubleTap={() => {
-            if (!post.viewerHasLiked) like();
-          }}
-          priority={priority ? 'high' : 'normal'}
-        />
-      ) : null}
-
-      <Pressable onPress={() => openPost()} style={styles.body} accessibilityRole="link" accessibilityLabel={`Open ${post.title}`}>
+      <Pressable onPress={() => openPost()} style={styles.entry} accessibilityRole="link" accessibilityLabel={`Open ${post.title}`}>
         <View style={styles.titleRow}>
           <View style={styles.titleText}>
-            <AppText variant="title2" numberOfLines={2}>
+            <AppText variant="title1" color="accent" numberOfLines={3}>
               {post.title}
             </AppText>
-            <CategoryLine post={post} />
+            <View style={styles.meta}>
+              <View style={styles.flex}>
+                <CategoryLine post={post} />
+              </View>
+              <AppText variant="overline" color="textSecondary">
+                {formatEntryDate(post.madeOn)}
+              </AppText>
+            </View>
           </View>
-          <RatingDisplay value={post.rating} size="md" />
+          <RatingDisplay value={post.rating} size="lg" />
         </View>
-        {post.review ? (
-          <AppText
-            variant="body"
-            numberOfLines={expanded ? undefined : 3}
-            onPress={() => setExpanded((v) => !v)}
-            style={styles.review}
-          >
-            {post.review}
-          </AppText>
-        ) : null}
       </Pressable>
 
-      {post.tags.length > 0 ? (
-        <View style={styles.tags}>
-          {post.tags.slice(0, 5).map((tag) => (
-            <TagChip
-              key={tag.id}
-              name={tag.name}
-              onPress={() => router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })}
-            />
-          ))}
+      {post.images.length > 0 ? (
+        <View style={styles.photos}>
+          <PhotoMosaic images={post.images} width={width - SCREEN_GUTTER * 2} title={post.title} onPress={() => openPost()} />
         </View>
+      ) : null}
+
+      {post.review || post.story || post.tags.length > 0 ? (
+        <View style={styles.words}>
+          {post.review ? (
+            <AppText variant="body" numberOfLines={expanded ? undefined : 3} onPress={() => setExpanded((v) => !v)}>
+              {post.review}
+            </AppText>
+          ) : null}
+          {post.story ? (
+            <Pressable onPress={() => openPost()} accessibilityRole="link">
+              <StoryTeaser story={post.story} />
+            </Pressable>
+          ) : null}
+          {post.tags.length > 0 ? (
+            <View style={styles.tags}>
+              {post.tags.slice(0, 5).map((tag) => (
+                <TagChip
+                  key={tag.id}
+                  name={tag.name}
+                  onPress={() => router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {likedBy ? (
+        <AppText variant="caption" color="textSecondary" style={styles.likedBy}>
+          {likedBy.lead ? (
+            <>
+              Liked by <AppText variant="caption" style={styles.likedByName}>{likedBy.lead}</AppText>
+              {likedBy.others > 0 ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}` : ''}
+            </>
+          ) : (
+            `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
+          )}
+        </AppText>
       ) : null}
 
       <View style={styles.actions}>
-        <LikeButton liked={post.viewerHasLiked} count={post.likeCount} onToggle={like} />
+        <LikeButton liked={post.viewerHasLiked} count={post.likeCount} onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })} />
         <Pressable
           onPress={() => openPost(true)}
           hitSlop={8}
@@ -118,7 +140,7 @@ function PostCardBase({ post, onOpenMenu, priority = false }: PostCardProps) {
           <MessageCircle size={iconSizes.lg} color={colors.text} strokeWidth={strokes.regular} />
           {post.commentCount > 0 ? <AppText variant="calloutStrong">{formatCount(post.commentCount)}</AppText> : null}
         </Pressable>
-        <View style={styles.spacer} />
+        <View style={styles.flex} />
         <IconButton
           icon={Bookmark}
           label={post.viewerHasSaved ? 'Remove from saved' : 'Save to make later'}
@@ -134,35 +156,28 @@ function PostCardBase({ post, onOpenMenu, priority = false }: PostCardProps) {
 export const PostCard = memo(PostCardBase);
 
 const styles = StyleSheet.create({
-  card: { paddingBottom: spacing.md },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: SCREEN_GUTTER,
-    paddingRight: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
+  card: { paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
+  flex: { flex: 1 },
+  creator: { flexDirection: 'row', alignItems: 'center', paddingLeft: SCREEN_GUTTER, paddingRight: spacing.xs },
   author: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
-  authorText: { flex: 1 },
-  body: { paddingHorizontal: SCREEN_GUTTER, paddingTop: spacing.md, gap: spacing.sm },
+  entry: { paddingHorizontal: SCREEN_GUTTER },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  titleText: { flex: 1, gap: spacing.xs },
-  review: { color: colors.text },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs + 2,
-    paddingHorizontal: SCREEN_GUTTER,
-    paddingTop: spacing.sm + 2,
-  },
+  titleText: { flex: 1, gap: spacing.xs + 2 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  photos: { paddingHorizontal: SCREEN_GUTTER },
+  words: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm + 2 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
+  likedBy: { paddingHorizontal: SCREEN_GUTTER, marginBottom: -spacing.xs },
+  likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
+  // The entry's espresso rule, then its actions.
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingLeft: SCREEN_GUTTER - spacing.xxs,
-    paddingRight: spacing.xs,
-    paddingTop: spacing.xs,
+    marginHorizontal: SCREEN_GUTTER,
+    paddingTop: spacing.xxs,
+    borderTopWidth: HAIRLINE,
+    borderTopColor: colors.rule,
   },
   action: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, minHeight: 44, paddingHorizontal: spacing.xs },
-  spacer: { flex: 1 },
 });

@@ -3,47 +3,46 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppText, CategoryIcon } from '@/components/ui';
-import { colors, fonts, SCREEN_GUTTER, spacing } from '@/theme';
+import { AppButton, AppText, CategoryIcon, Wordmark } from '@/components/ui';
+import { colors, HAIRLINE, SCREEN_GUTTER, spacing } from '@/theme';
 
 const CATEGORIES = [
-  { slug: 'cooking', label: 'Cooking' },
-  { slug: 'baking', label: 'Baking' },
-  { slug: 'drinks', label: 'Drinks' },
+  { slug: 'cooking', label: 'Cook' },
+  { slug: 'baking', label: 'Bake' },
+  { slug: 'drinks', label: 'Pour' },
 ];
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.huge, paddingBottom: insets.bottom + spacing.lg }]}>
-      <Animated.View entering={FadeInDown.duration(500)} style={styles.hero}>
-        <AppText style={styles.wordmark} accessibilityRole="header">
-          Cheffy
-        </AppText>
-        <AppText variant="title2" style={styles.tagline}>
-          Everything you make deserves to be remembered.
-        </AppText>
-        <AppText variant="body" color="textSecondary" style={styles.body}>
-          Log what you cook, bake and pour. Rate it, rank it, and see what your friends are making.
+    <View style={[styles.container, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.lg }]}>
+      <View style={styles.masthead}>
+        <AppText variant="overline">Club de cuisine</AppText>
+        <AppText variant="overline">Est. MMXXVI</AppText>
+      </View>
+
+      <Animated.View entering={FadeInDown.duration(600)} style={styles.hero}>
+        <Wordmark size={84} />
+        <AppText variant="body" color="textSecondary" align="center" style={styles.tagline}>
+          A private table for people who cook, bake, whisk, and keep notes.
         </AppText>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(150).duration(500)} style={styles.categories}>
-        {CATEGORIES.map((c) => (
-          <View key={c.slug} style={styles.category}>
-            <View style={styles.categoryIcon}>
-              <CategoryIcon slug={c.slug} size="lg" />
-            </View>
-            <AppText variant="caption" color="textSecondary">
-              {c.label}
-            </AppText>
+      <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.categories}>
+        {CATEGORIES.map((c, i) => (
+          <View key={c.slug} style={[styles.category, i > 0 && styles.categoryRule]}>
+            <CategoryIcon slug={c.slug} size="lg" />
+            <AppText variant="overline">{c.label}</AppText>
           </View>
         ))}
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.actions}>
-        <AppButton label="Create an account" size="lg" fullWidth onPress={() => router.push('/sign-up')} />
+      <Animated.View entering={FadeInDown.delay(350).duration(600)} style={styles.actions}>
+        <AppButton label="Join the table" size="lg" fullWidth onPress={() => router.push('/sign-up')} />
         <AppButton label="I already have an account" variant="ghost" fullWidth onPress={() => router.push('/sign-in')} />
+        <AppText variant="overline" color="textTertiary" align="center" style={styles.motto}>
+          Cook. Note. Share. Repeat.
+        </AppText>
       </Animated.View>
     </View>
   );
@@ -56,21 +55,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: SCREEN_GUTTER + spacing.sm,
     justifyContent: 'space-between',
   },
-  hero: { gap: spacing.lg },
-  wordmark: { fontFamily: fonts.serif, fontSize: 56, lineHeight: 62, letterSpacing: -1.2, color: colors.accentStrong },
-  tagline: { fontSize: 26, lineHeight: 32, maxWidth: 320 },
-  body: { maxWidth: 320 },
-  categories: { flexDirection: 'row', gap: spacing.xxl, justifyContent: 'center' },
-  category: { alignItems: 'center', gap: spacing.sm },
-  categoryIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+  masthead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.md,
+    borderBottomWidth: HAIRLINE,
+    borderBottomColor: colors.rule,
   },
+  hero: { alignItems: 'center', gap: spacing.lg },
+  tagline: { maxWidth: 280 },
+  categories: {
+    flexDirection: 'row',
+    borderTopWidth: HAIRLINE,
+    borderBottomWidth: HAIRLINE,
+    borderColor: colors.rule,
+  },
+  category: { flex: 1, alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
+  categoryRule: { borderLeftWidth: HAIRLINE, borderLeftColor: colors.rule },
   actions: { gap: spacing.xs },
+  motto: { marginTop: spacing.md },
 });

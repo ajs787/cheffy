@@ -186,6 +186,39 @@ describe('creating posts', () => {
   });
 });
 
+describe('stories', () => {
+  it('saves and edits a long-form story', async () => {
+    const story = 'First attempt at a laminated croissant dough.\n\nThe butter block cracked twice.';
+    const id = await db.createPost(alice.id, { story });
+    const [row] = await db.admin<{ story: string }>('select story from public.posts where id = $1', [id]);
+    expect(row.story).toBe(story);
+
+    await db.query(alice.id, 'select public.save_post($1::jsonb)', [
+      JSON.stringify({
+        id,
+        title: 'Croissants',
+        primary_category_id: await db.categoryId('primary', 'baking'),
+        rating: 8,
+        story: 'Second attempt: chilled between folds.',
+      }),
+    ]);
+    const [edited] = await db.admin<{ story: string }>('select story from public.posts where id = $1', [id]);
+    expect(edited.story).toBe('Second attempt: chilled between folds.');
+  });
+
+  it('defaults to empty and caps length', async () => {
+    const id = await db.createPost(alice.id);
+    const [row] = await db.admin<{ story: string }>('select story from public.posts where id = $1', [id]);
+    expect(row.story).toBe('');
+    await expectDbError(db.createPost(alice.id, { story: 'x'.repeat(10_001) }), /posts_story_length/);
+  });
+
+  it('follows post visibility', async () => {
+    const id = await db.createPost(alice.id, { story: 'secret recipe notes', visibility: 'private' });
+    expect(await db.query(bob.id, 'select story from public.posts where id = $1', [id])).toHaveLength(0);
+  });
+});
+
 describe('drafts', () => {
   it('allows drafts without a rating and hides them from everyone else', async () => {
     const draftId = await db.createPost(alice.id, { status: 'draft', rating: null });

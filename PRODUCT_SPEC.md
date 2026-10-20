@@ -45,7 +45,9 @@ New categories are rows in the database; the UI renders whatever the taxonomy re
 
 ### Create (the most important screen)
 - Required: name, primary category, rating (0.0–10.0, one decimal).
-- Optional: up to 6 photos (reorder, remove, cover), review, subcategory, cuisine,
+- Optional: up to 6 photos (reorder, remove, cover), review (the short take), a
+  **story** (long-form write-up, like a post body: backstory, process, what went
+  wrong), subcategory, cuisine,
   meal type, dish type, tags, date made, would make again, visibility.
 - Drinks: hot/iced, milk, sweetener. Cooking/Baking: cook time, ingredients, recipe
   URL, notes for next time. All: preparation notes.

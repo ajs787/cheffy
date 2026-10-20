@@ -1,34 +1,37 @@
 import type { TextStyle } from 'react-native';
 
-/** Font family names as registered with expo-font in the root layout. */
+/**
+ * Display — DM Serif Display: a sturdy, high-contrast display serif that keeps
+ * the identity's Didone character but stays bold and legible at app sizes.
+ * Text and labels — Newsreader. Registered in the root layout.
+ */
 export const fonts = {
-  serif: 'Fraunces_600SemiBold',
-  serifRegular: 'Fraunces_400Regular',
-  sans: 'Inter_400Regular',
-  sansMedium: 'Inter_500Medium',
-  sansSemiBold: 'Inter_600SemiBold',
-  sansBold: 'Inter_700Bold',
+  display: 'DMSerifDisplay_400Regular',
+  text: 'Newsreader_400Regular',
+  textMedium: 'Newsreader_500Medium',
+  textSemiBold: 'Newsreader_600SemiBold',
 } as const;
 
 export const typography = {
-  display: { fontFamily: fonts.serif, fontSize: 34, lineHeight: 40, letterSpacing: -0.4 },
-  title1: { fontFamily: fonts.serif, fontSize: 26, lineHeight: 32, letterSpacing: -0.3 },
-  title2: { fontFamily: fonts.serif, fontSize: 20, lineHeight: 26, letterSpacing: -0.2 },
-  title3: { fontFamily: fonts.sansSemiBold, fontSize: 17, lineHeight: 22 },
-  body: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 22 },
-  bodyStrong: { fontFamily: fonts.sansSemiBold, fontSize: 15, lineHeight: 22 },
-  callout: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20 },
-  calloutStrong: { fontFamily: fonts.sansSemiBold, fontSize: 14, lineHeight: 20 },
-  caption: { fontFamily: fonts.sansMedium, fontSize: 12, lineHeight: 16 },
+  display: { fontFamily: fonts.display, fontSize: 34, lineHeight: 39, letterSpacing: -0.3 },
+  title1: { fontFamily: fonts.display, fontSize: 26, lineHeight: 30, letterSpacing: -0.2 },
+  title2: { fontFamily: fonts.display, fontSize: 20, lineHeight: 24 },
+  title3: { fontFamily: fonts.textSemiBold, fontSize: 17, lineHeight: 22 },
+  body: { fontFamily: fonts.text, fontSize: 16, lineHeight: 23 },
+  bodyStrong: { fontFamily: fonts.textSemiBold, fontSize: 16, lineHeight: 23 },
+  callout: { fontFamily: fonts.text, fontSize: 15, lineHeight: 21 },
+  calloutStrong: { fontFamily: fonts.textSemiBold, fontSize: 15, lineHeight: 21 },
+  caption: { fontFamily: fonts.textMedium, fontSize: 13, lineHeight: 17 },
+  /** Newsreader tracked capitals, the identity's label style. */
   overline: {
-    fontFamily: fonts.sansSemiBold,
+    fontFamily: fonts.textSemiBold,
     fontSize: 11,
     lineHeight: 14,
-    letterSpacing: 0.8,
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
   },
-  button: { fontFamily: fonts.sansSemiBold, fontSize: 16, lineHeight: 20 },
-  rating: { fontFamily: fonts.serif, fontSize: 72, lineHeight: 80, fontVariant: ['tabular-nums'] },
+  button: { fontFamily: fonts.textSemiBold, fontSize: 16, lineHeight: 20, letterSpacing: 0.2 },
+  rating: { fontFamily: fonts.display, fontSize: 60, lineHeight: 66, fontVariant: ['tabular-nums'] },
 } satisfies Record<string, TextStyle>;
 
 export type TypographyVariant = keyof typeof typography;

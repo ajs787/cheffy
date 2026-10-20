@@ -55,7 +55,13 @@ export function usePostMenu(options: { onDeleted?: () => void } = {}) {
       });
     }
     if (own) {
-      actions.push({ key: 'delete', label: 'Delete post', icon: Trash2, destructive: true, onPress: () => setDeleteTarget(post) });
+      actions.push({
+        key: 'delete',
+        label: 'Delete post',
+        icon: Trash2,
+        destructive: true,
+        onPress: () => setDeleteTarget(post),
+      });
     } else {
       actions.push({
         key: 'report',

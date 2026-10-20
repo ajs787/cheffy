@@ -63,6 +63,16 @@ describe('normalizeTags', () => {
 });
 
 describe('toSavePayload', () => {
+  it('trims the story and keeps paragraph breaks', () => {
+    const { p_post } = toSavePayload(
+      { ...base(), rating: 8, story: '  Day one.\n\nDay two.  ' },
+      'post-3',
+      'published',
+      taxonomy,
+    );
+    expect(p_post.story).toBe('Day one.\n\nDay two.');
+  });
+
   it('keeps drink fields for drinks', () => {
     const { p_post, p_tags } = toSavePayload(
       { ...base(), rating: 9.2, subcategoryId: 'matcha', temperature: 'iced', milk: ' Oat ', tags: ['Iced'] },

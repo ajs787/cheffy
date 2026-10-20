@@ -201,9 +201,14 @@ export function RatingInput({ value, onChange, error }: RatingInputProps) {
             </Animated.View>
           </Pressable>
         )}
-        <AppText variant="calloutStrong" color={error ? 'danger' : 'textSecondary'}>
-          {error ?? ratingDescriptor(value)}
-        </AppText>
+        <View style={styles.readoutText}>
+          <AppText variant="bodyStrong" color={error ? 'danger' : 'text'}>
+            {error ?? ratingDescriptor(value)}
+          </AppText>
+          <AppText variant="caption" color="textSecondary">
+            {editing ? 'Type a score from 0 to 10' : 'Drag, nudge ± by 0.1, or tap the number to type'}
+          </AppText>
+        </View>
       </View>
 
       <View style={styles.controls}>
@@ -271,25 +276,15 @@ export function RatingInput({ value, onChange, error }: RatingInputProps) {
           <Plus size={iconSizes.md} color={colors.text} strokeWidth={strokes.bold} />
         </Pressable>
       </View>
-      <View style={styles.scale} pointerEvents="none">
-        <AppText variant="caption" color="textTertiary">
-          0
-        </AppText>
-        <AppText variant="caption" color="textTertiary">
-          5
-        </AppText>
-        <AppText variant="caption" color="textTertiary">
-          10
-        </AppText>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { gap: spacing.md },
-  readout: { alignItems: 'center', gap: spacing.xxs },
-  numberInput: { minWidth: 160, textAlign: 'center', padding: 0 },
+  readout: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  readoutText: { flex: 1, gap: 2 },
+  numberInput: { minWidth: 112, padding: 0 },
   controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   stepper: {
     width: 40,
@@ -330,5 +325,4 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     ...shadows.sm,
   },
-  scale: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 52 },
 });

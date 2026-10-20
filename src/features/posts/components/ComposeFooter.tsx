@@ -27,7 +27,14 @@ export function ComposeFooter({ label, saving, paused, progress, onSubmit }: Com
       ) : progress ? (
         <SaveProgressBar progress={progress} />
       ) : null}
-      <AppButton label={label} size="lg" fullWidth loading={saving} onPress={onSubmit} testID="compose-submit" />
+      <AppButton
+        label={label}
+        size="lg"
+        fullWidth
+        loading={saving}
+        onPress={onSubmit}
+        testID="compose-submit"
+      />
     </View>
   );
 }

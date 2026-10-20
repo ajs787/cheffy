@@ -3,7 +3,7 @@ import { CakeSlice, Coffee, CookingPot, Utensils } from 'lucide-react-native';
 import { categoryColors, colors, iconSizes, strokes } from '@/theme';
 
 export function categoryColorFor(slug: string): string {
-  return categoryColors[slug] ?? colors.sage;
+  return categoryColors[slug] ?? colors.rose;
 }
 
 export function CategoryIcon({

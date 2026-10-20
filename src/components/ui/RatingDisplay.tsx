@@ -47,12 +47,12 @@ export function RatingDisplay({ value, variant = 'badge', size = 'md' }: RatingD
 }
 
 const styles = StyleSheet.create({
-  inline: { fontFamily: fonts.serif, fontVariant: ['tabular-nums'] },
+  inline: { fontFamily: fonts.display, fontVariant: ['tabular-nums'] },
   badge: {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     backgroundColor: colors.surface,
   },
-  badgeText: { fontFamily: fonts.serif, fontVariant: ['tabular-nums'] },
+  badgeText: { fontFamily: fonts.display, fontVariant: ['tabular-nums'] },
 });

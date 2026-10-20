@@ -1,44 +1,60 @@
-/** Color tokens. See DESIGN_SYSTEM.md for contrast notes. */
+/**
+ * Color tokens from the Cheffy identity ("The Cellar"): Oxblood, Ivory,
+ * Espresso and Crème. See DESIGN_SYSTEM.md for roles and contrast.
+ */
+const brand = {
+  oxblood: '#6B2737',
+  ivory: '#F7F1E8',
+  espresso: '#3B2A22',
+  creme: '#EADFD0',
+  rose: '#B87484',
+} as const;
+
 export const colors = {
-  background: '#FAF9F6',
-  surface: '#FFFFFF',
-  surfaceMuted: '#F3F1EC',
-  surfacePressed: '#EEEBE5',
+  ...brand,
 
-  text: '#222222',
-  textSecondary: '#6F6B66',
-  textTertiary: '#8A817A',
-  textInverse: '#FFFFFF',
+  background: brand.ivory,
+  /** Lifted paper for inputs and sheets. */
+  surface: '#FCF9F4',
+  /** Image placeholders and skeletons. */
+  surfaceMuted: '#EFE7DC',
+  surfacePressed: '#E4D7C5',
+  /** Crème: quiet fills (tags, chips, cards, banners). */
+  tint: brand.creme,
 
-  accent: '#D95D47',
-  accentStrong: '#BE4B36',
-  accentSoft: '#FBEAE6',
+  text: brand.espresso,
+  textSecondary: '#6F5F55',
+  textTertiary: '#8C7B6E',
+  textInverse: brand.ivory,
 
-  sage: '#82947B',
-  sageStrong: '#5F7259',
-  sageSoft: '#EDF0EA',
+  accent: brand.oxblood,
+  accentStrong: brand.oxblood,
+  accentSoft: '#F0E2DE',
 
-  border: '#E9E6E1',
-  borderStrong: '#D9D4CC',
+  /** Soft hairlines (inputs, chips, list separators). */
+  border: '#DFD3C3',
+  borderStrong: '#CDBEAA',
+  /** Espresso rule: the strong hairline of editorial cards and sections. */
+  rule: brand.espresso,
 
-  danger: '#B3261E',
-  dangerSoft: '#FBE9E7',
+  danger: '#A1261D',
+  dangerSoft: '#F6E3DF',
 
-  overlay: 'rgba(24, 20, 16, 0.42)',
-  imageScrim: 'rgba(0, 0, 0, 0.35)',
+  overlay: 'rgba(59, 42, 34, 0.45)',
+  imageScrim: 'rgba(59, 42, 34, 0.38)',
 } as const;
 
 export type ColorToken = keyof typeof colors;
 
-/** Category identity colors (dots, icons). Unknown slugs fall back to sage. */
+/** Category identity dots (decorative; always paired with a label). Unknown slugs fall back to rose. */
 export const categoryColors: Record<string, string> = {
-  cooking: '#D95D47',
-  baking: '#C8913A',
-  drinks: '#82947B',
+  cooking: brand.oxblood,
+  baking: '#B08452',
+  drinks: brand.rose,
 };
 
 export const ratingColors = {
-  great: '#3D7A50',
-  good: '#97701F',
-  low: '#8A817A',
+  great: brand.oxblood,
+  good: '#8C6534',
+  low: '#8C7B6E',
 } as const;

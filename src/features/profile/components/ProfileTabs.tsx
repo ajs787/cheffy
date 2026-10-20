@@ -18,7 +18,11 @@ import {
   PressableScale,
   RowSkeleton,
 } from '@/components/ui';
-import { CollectionCard, NewCollectionCard, SavedCard } from '@/features/collections/components/CollectionCard';
+import {
+  CollectionCard,
+  NewCollectionCard,
+  SavedCard,
+} from '@/features/collections/components/CollectionCard';
 import { useCollections } from '@/features/collections/hooks';
 import { useDiary, useDrafts } from '@/features/posts/hooks';
 import { RankingFilters } from '@/features/rankings/components/RankingFilters';
@@ -86,7 +90,11 @@ export function DiaryTab({ userId, isOwn, name, header, onRefreshProfile }: Prof
                 <ChevronRight size={iconSizes.sm} color={colors.textTertiary} strokeWidth={strokes.bold} />
               </PressableScale>
             ) : null}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chips}
+            >
               <Chip label="All" selected={primaryId === null} onPress={() => setPrimaryId(null)} />
               {(taxonomy.data?.primaries ?? []).map((primary) => (
                 <CategoryChip
@@ -110,8 +118,14 @@ export function DiaryTab({ userId, isOwn, name, header, onRefreshProfile }: Prof
           <EmptyState
             compact
             icon={Camera}
-            title={primaryId ? 'Nothing in this category yet' : isOwn ? 'Your diary is empty' : 'No posts yet'}
-            message={isOwn ? 'Everything you log shows up here, newest first.' : `${name} hasn’t shared anything you can see yet.`}
+            title={
+              primaryId ? 'Nothing in this category yet' : isOwn ? 'Your diary is empty' : 'No posts yet'
+            }
+            message={
+              isOwn
+                ? 'Everything you log shows up here, newest first.'
+                : `${name} hasn’t shared anything you can see yet.`
+            }
             actionLabel={isOwn ? 'Log something you made' : undefined}
             onAction={isOwn ? () => router.push('/compose') : undefined}
           />
@@ -216,7 +230,12 @@ export function CollectionsTab({ userId, isOwn, name, header, onRefreshProfile }
         ) : collections.isError ? (
           <ErrorState compact error={collections.error} onRetry={() => void collections.refetch()} />
         ) : (
-          <EmptyState compact icon={FolderHeart} title="No collections yet" message={`${name} hasn’t made any public collections.`} />
+          <EmptyState
+            compact
+            icon={FolderHeart}
+            title="No collections yet"
+            message={`${name} hasn’t made any public collections.`}
+          />
         )
       }
       refreshControl={refreshControl}

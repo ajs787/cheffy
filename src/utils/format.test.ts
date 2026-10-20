@@ -1,4 +1,4 @@
-import { formatCookTime, formatCount, initials, pluralize, slugifyTag } from './format';
+import { formatCookTime, formatCount, initials, paragraphs, pluralize, readingMinutes, slugifyTag } from './format';
 
 describe('format', () => {
   it('formats counts compactly', () => {
@@ -29,5 +29,14 @@ describe('format', () => {
   it('slugifies tags like the database', () => {
     expect(slugifyTag(' Oat Milk ')).toBe('oat-milk');
     expect(slugifyTag('Brown-Butter!!')).toBe('brown-butter');
+  });
+
+  it('estimates reading time', () => {
+    expect(readingMinutes('short')).toBe(1);
+    expect(readingMinutes(Array.from({ length: 600 }, () => 'word').join(' '))).toBe(3);
+  });
+
+  it('splits paragraphs on blank lines', () => {
+    expect(paragraphs('One.\n\n  Two\nstill two.\n\n\nThree.')).toEqual(['One.', 'Two\nstill two.', 'Three.']);
   });
 });

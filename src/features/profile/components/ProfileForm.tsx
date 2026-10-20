@@ -25,7 +25,13 @@ export interface ProfileFormProps {
 
 type Availability = 'idle' | 'checking' | 'available' | 'taken';
 
-export function ProfileForm({ initial, initialAvatarUrl, currentUsername, submitLabel, onSubmit }: ProfileFormProps) {
+export function ProfileForm({
+  initial,
+  initialAvatarUrl,
+  currentUsername,
+  submitLabel,
+  onSubmit,
+}: ProfileFormProps) {
   const [avatar, setAvatar] = useState<{ uri: string | null; changed: boolean }>({
     uri: initialAvatarUrl,
     changed: false,
@@ -42,7 +48,8 @@ export function ProfileForm({ initial, initialAvatarUrl, currentUsername, submit
 
   // Availability is derived: only the network result lives in state.
   const parsedUsername = usernameSchema.safeParse(debouncedUsername);
-  const candidate = parsedUsername.success && parsedUsername.data !== currentUsername ? parsedUsername.data : null;
+  const candidate =
+    parsedUsername.success && parsedUsername.data !== currentUsername ? parsedUsername.data : null;
   const availability: Availability =
     candidate === null
       ? 'idle'
@@ -96,7 +103,14 @@ export function ProfileForm({ initial, initialAvatarUrl, currentUsername, submit
         onPick={(uri) => setAvatar({ uri, changed: true })}
         onRemove={avatar.uri ? () => setAvatar({ uri: null, changed: true }) : undefined}
       />
-      <ControlledInput control={control} name="displayName" label="Name" placeholder="Your name" maxLength={50} autoComplete="name" />
+      <ControlledInput
+        control={control}
+        name="displayName"
+        label="Name"
+        placeholder="Your name"
+        maxLength={50}
+        autoComplete="name"
+      />
       <View>
         <ControlledInput
           control={control}
@@ -110,9 +124,15 @@ export function ProfileForm({ initial, initialAvatarUrl, currentUsername, submit
           helper={availability === 'taken' ? undefined : usernameHelper}
         />
         <View style={styles.status} pointerEvents="none">
-          {availability === 'checking' ? <ActivityIndicator size="small" color={colors.textTertiary} /> : null}
-          {availability === 'available' ? <CircleCheck size={18} color={colors.sageStrong} strokeWidth={strokes.bold} /> : null}
-          {availability === 'taken' ? <CircleX size={18} color={colors.danger} strokeWidth={strokes.bold} /> : null}
+          {availability === 'checking' ? (
+            <ActivityIndicator size="small" color={colors.textTertiary} />
+          ) : null}
+          {availability === 'available' ? (
+            <CircleCheck size={18} color={colors.accent} strokeWidth={strokes.bold} />
+          ) : null}
+          {availability === 'taken' ? (
+            <CircleX size={18} color={colors.danger} strokeWidth={strokes.bold} />
+          ) : null}
         </View>
         {availability === 'taken' ? (
           <AppText variant="caption" color="danger">

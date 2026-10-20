@@ -82,6 +82,8 @@ export interface Post {
   dishType: CategoryRef | null;
   rating: number | null;
   review: string;
+  /** Optional long-form write-up: the backstory, the process. */
+  story: string;
   visibility: Visibility;
   status: PostStatus;
   madeOn: string;
@@ -103,6 +105,8 @@ export interface Post {
   tags: Tag[];
   viewerHasLiked: boolean;
   viewerHasSaved: boolean;
+  /** Newest likers (feed only; empty elsewhere). */
+  recentLikers: ProfileSummary[];
 }
 
 export interface Comment {

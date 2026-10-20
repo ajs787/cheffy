@@ -8,11 +8,13 @@ import { RankingRow } from '@/components/shared/RankingRow';
 import { AppHeader, EmptyState, ErrorState, RowSkeleton } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { RankingFilters } from '@/features/rankings/components/RankingFilters';
+import { RankingSortButton } from '@/features/rankings/components/RankingSortButton';
+import { RankingSummary } from '@/features/rankings/components/RankingSummary';
 import { useRankingsController } from '@/features/rankings/useRankingsController';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useTabScrollToTop } from '@/hooks/useTabScrollToTop';
 import type { RankingItem } from '@/types/models';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export default function RankingsScreen() {
   const me = useUserId();
@@ -23,13 +25,19 @@ export default function RankingsScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader title="Rankings" large />
+      <AppHeader variant="large" title="My Rankings" right={<RankingSortButton controller={controller} />} />
       <FlashList
         data={items}
         ref={listRef}
         keyExtractor={(item) => item.postId}
         renderItem={({ item }) => <RankingRow item={item} />}
-        ListHeaderComponent={<RankingFilters controller={controller} />}
+        ListHeaderComponent={
+          <View>
+            {me ? <RankingSummary userId={me} /> : null}
+            <RankingFilters controller={controller} inlineSort={false} />
+            <View style={styles.listTop} />
+          </View>
+        }
         ListEmptyComponent={
           rankings.isPending ? (
             <RowSkeleton />
@@ -59,4 +67,5 @@ export default function RankingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  listTop: { height: spacing.sm },
 });

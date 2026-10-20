@@ -3,66 +3,58 @@
 Tokens live in `src/theme/`. Components never hardcode a color, size or spacing
 value; they read tokens.
 
-## Personality
+## Identity
 
-Editorial, warm, photography-first. Think a well-designed cookbook rather than a
-dashboard: paper-toned background, a serif for names and numbers, quiet UI chrome,
-and the food photo doing the talking. One accent color, used sparingly.
+From *Cheffy Food Club — Identity, Vol. I*. Cheffy is a private table for
+people who cook, bake, whisk, and keep notes: a supper club's menu card
+rather than a dashboard. High-contrast Didone display type, warm paper, ink
+hairlines, one deep wine accent.
 
-What we avoid: gradients, glass, heavy shadows, giant rounded cards, emoji as UI,
-decorative motion.
+- **Wordmark:** lowercase `cheffy.` in Bodoni Moda with a signature full stop
+  (`Wordmark`): oxblood letters with an espresso stop on light grounds, ivory
+  letters with a rose stop on dark. Lock-up adds "Club de cuisine" in tracked
+  capitals.
+- **Monogram:** `c.`, the app icon (oxblood c, espresso stop on ivory) and
+  the in-app `Monogram` tile (ivory c, rose stop on oxblood).
+- **Voice:** "A private table for people who cook, bake, whisk, and keep
+  notes." · "Cook. Note. Share. Repeat." Small French touches (Club de
+  cuisine, Membre, Depuis) are flourishes, not UI copy.
 
-## Color
+## Color — "The Cellar"
 
-| Token | Value | Use | Contrast on background |
+| Token | Value | Use | Contrast |
 | --- | --- | --- | --- |
-| `background` | `#FAF9F6` | app background (warm paper) | — |
-| `surface` | `#FFFFFF` | sheets, inputs, cards | — |
-| `surfaceMuted` | `#F3F1EC` | chips, skeletons, image placeholders | — |
-| `text` | `#222222` | primary text | 15.1 |
-| `textSecondary` | `#6F6B66` | metadata, captions | 5.0 (spec `#777` was 4.25 — darkened for AA) |
-| `textTertiary` | `#8A817A` | placeholders, disabled | 3.6 (non-essential only) |
-| `accent` | `#D95D47` | brand terracotta: liked heart, Create button, focus | 3.6 (icons / large only) |
-| `accentStrong` | `#BE4B36` | primary button background, accent text | 4.7; white text on it 4.9 |
-| `accentSoft` | `#FBEAE6` | selected chip background | — |
-| `sage` | `#82947B` | secondary accent (decorative) | — |
-| `sageStrong` | `#5F7259` | sage text | 4.9 |
-| `sageSoft` | `#EDF0EA` | sage backgrounds | — |
-| `border` | `#E9E6E1` | hairlines, input borders | — |
-| `borderStrong` | `#D9D4CC` | pressed / focused borders | — |
-| `danger` | `#B3261E` | destructive actions, errors | 6.3 |
+| `oxblood` / `accent` | `#6B2737` | marks, entry titles, primary buttons, liked heart | 9.5:1 on ivory; ivory on it 9.5:1 |
+| `ivory` / `background` | `#F7F1E8` | ground: paper, linen | — |
+| `espresso` / `text` / `rule` | `#3B2A22` | ink: text, hairline rules | 12.1:1 |
+| `creme` / `tint` | `#EADFD0` | quiet fills: tags, banners, cards | — |
+| `rose` | `#B87484` | the full stop on dark marks; category dot (decorative only) | — |
+| `surface` | `#FCF9F4` | lifted paper: inputs, sheets | — |
+| `textSecondary` | `#6F5F55` | metadata | 5.4:1 ivory, 4.6:1 crème |
+| `textTertiary` | `#8C7B6E` | placeholders, disabled (non-essential) | 3.6:1 |
+| `border` / `borderStrong` | `#DFD3C3` / `#CDBEAA` | soft hairlines (inputs, chips) | — |
+| `danger` | `#A1261D` | destructive text and outlines | 6.7:1 |
 
-Category identity (small dots and icons, never large fills): Cooking `#D95D47`,
-Baking `#C8913A`, Drinks `#82947B`, unknown categories fall back to `sage`.
-
-Rating tiers (number color): ≥ 8.0 `#3D7A50` · 6.0–7.9 `#97701F` · < 6.0 `#8A817A`.
-
-The app ships light-only for v1 (`userInterfaceStyle: light`) — the warm paper
-palette is the brand. Tokens are structured so a dark palette can be added later.
+Category dots: Cooking oxblood, Baking caramel `#B08452`, Drinks rose. Rating
+tiers: ≥ 8 oxblood, 6–7.9 caramel `#8C6534` (4.7:1), < 6 taupe `#8C7B6E`.
+Light-only for v1: the paper is the brand.
 
 ## Typography
 
-Two families:
-
-- **Fraunces** (serif, display): dish names, screen titles, the rating number.
-- **Inter** (sans): everything else.
-
-| Variant | Family / weight | Size / line | Use |
+| Variant | Face | Size / line | Use |
 | --- | --- | --- | --- |
-| `display` | Fraunces 600 | 34 / 40 | screen titles (Home, Rankings) |
-| `title1` | Fraunces 600 | 26 / 32 | profile name, post detail title |
-| `title2` | Fraunces 600 | 20 / 26 | post card title, section headers |
-| `title3` | Inter 600 | 17 / 22 | list titles, sheet titles |
-| `body` | Inter 400 | 15 / 22 | reviews, paragraphs |
-| `bodyStrong` | Inter 600 | 15 / 22 | usernames, emphasis |
-| `callout` | Inter 400 | 14 / 20 | secondary lines |
-| `caption` | Inter 500 | 12 / 16 | timestamps, counts |
-| `overline` | Inter 600 | 11 / 14, +0.8 tracking, uppercase | section labels |
-| `button` | Inter 600 | 16 / 20 | buttons |
-| `rating` | Fraunces 600 | 72 / 76, tabular | rating input |
+| `display` | Bodoni Moda 400 | 36 / 42 | screen titles, post title on detail |
+| `title1` | Bodoni Moda 400 | 29 / 35 | entry titles (oxblood), membership name |
+| `title2` | Bodoni Moda 500 | 21 / 26 | section headers, stat numerals |
+| `title3` | Newsreader 600 | 17 / 22 | sheet titles |
+| `body` / `bodyStrong` | Newsreader 400 / 600 | 16 / 23 | reviews, paragraphs |
+| `callout` / `calloutStrong` | Newsreader 400 / 600 | 15 / 21 | secondary lines |
+| `caption` | Newsreader 500 | 13 / 17 | timestamps |
+| `overline` | Newsreader 500, caps, +1.8 tracking | 11 / 14 | labels: `DRINKS · MATCHA`, `MON · 19 OCT`, `MEMBRE` |
+| `button` | Newsreader 600 | 16 / 20 | buttons |
+| `rating` | Bodoni Moda 400, tabular | 76 / 84 | the rating input |
 
-Text supports Dynamic Type up to 1.3× (`maxFontSizeMultiplier`), keeping layouts
-intact.
+Bodoni's hairlines need size: never set Bodoni below ~18pt (use Newsreader).
 
 ## Spacing
 
@@ -71,14 +63,28 @@ Screen gutter is `lg` (16). Sections are separated by `xxl`–`xxxl`.
 
 ## Radii
 
-`xs 4 · sm 8 · md 12 · lg 16 · pill 999`. Photos use `md`; chips and avatars use
-`pill`; sheets use `lg` on top corners. Cards are flat (hairline + no shadow) —
-we don't use giant rounded cards.
+`xs 2 · sm 4 · md 6 · lg 12 · pill 999`. Squared off and editorial: buttons
+`sm` (a menu card, not a pill), photos and cards `md`, the membership card and
+sheets `lg`, chips and avatars `pill`, the monogram tile ~24% like the app
+icon.
+
+## Editorial patterns
+
+- **Diary entry** (post card / detail): tracked-caps meta line (category left,
+  `formatEntryDate` right) → oxblood Bodoni title + rating → review → tags →
+  espresso rule → actions.
+- **Membership card** (profile hero): oxblood card, ivory wordmark, `MEMBRE ·
+  DEPUIS {year}`, name, `@username · specialties`, avatar in a rose ring.
+- **Notification card** (toast): monogram tile, `CHEFFY · NOW`, message,
+  espresso hairline.
+- **Rule-divided rows**: stats and the welcome categories sit between espresso
+  hairlines with vertical rules, like the identity's cover.
 
 ## Elevation
 
-One shadow (`shadow.sm`) for floating things only: the Create button, toasts,
-sheets. Everything else is separated by hairlines and whitespace.
+One soft espresso shadow (`shadow.sm`) for objects that sit on the table: the
+Create button, toasts, the membership card. Everything else is separated by
+hairlines and whitespace.
 
 ## Icons
 
@@ -103,11 +109,12 @@ lucide-react-native, stroke 1.75 (2.25 when selected). Sizes: `sm 16 · md 20 ·
 | `AppButton` | `primary` · `secondary` · `ghost` · `destructive`; `sm`/`md`/`lg`; loading state |
 | `IconButton` | 44 pt hit target, accessibility label required |
 | `AppInput` | label, helper/error, multiline, character counter |
-| `AppHeader` | title, back button, right actions; large-title variant |
+| `AppHeader` | `brand` (Home only: logo + search + activity) · `large` (Discover, My Rankings: display title + actions) · `nav` (back/close + centred title; Profile "@username", Create "New entry") |
 | `Avatar` | image or initials on a tinted circle; sizes xs–xl |
 | `FoodImage` | expo-image with placeholder tint, fade-in, `cacheKey` |
 | `RatingDisplay` | tier-colored number; `badge` / `inline` / `large` |
-| `RatingInput` | big number + slider + ±0.1 steppers + exact entry |
+| `RatingInput` | compact readout (number beside descriptor) + slider + ±0.1 steppers; tap the number to type an exact score |
+| `Collapsible` | one ruled row (icon, title, one-line summary, chevron) that opens in place; Create's Story, Tags, More details |
 | `Chip` / `CategoryChip` / `TagChip` | selectable, removable |
 | `SegmentedControl` | tabs inside screens (Diary / Rankings / Collections) |
 | `EmptyState` / `ErrorState` | icon, title, message, action |
@@ -116,5 +123,18 @@ lucide-react-native, stroke 1.75 (2.25 when selected). Sizes: `sm 16 · md 20 ·
 | `ConfirmationDialog` | sheet-styled confirm for destructive actions |
 | `Toast` | transient feedback |
 
-`src/components/shared` (composed, app-aware): `PostCard`, `ImageCarousel`,
-`PostGrid`, `RankingRow`, `UserRow`, `CommentRow`, `TabBar`, `ScreenState`.
+`src/components/shared` (composed, app-aware): `PostCard`, `PhotoMosaic`,
+`ImageCarousel`, `PostGrid`, `RankingRow`, `UserRow`, `CommentRow`, `TabBar`, `ScreenState`.
+
+### Feed entry card (`PostCard`)
+
+Information before imagery: creator row → oxblood title + rating → category
+and date → inset photos (`PhotoMosaic`: one photo 4:3; two or three as a
+mosaic with "+N") → review, story teaser, tags → "Liked by **name** and N
+others" (real likers only) → espresso rule with like / comment / save.
+
+### Screen headers
+
+Only Home shows the wordmark. Every other tab names itself with a large
+display title; pushed and modal screens use the `nav` header. Create, Edit
+profile and Edit collection present full screen (no stacked card sheet).

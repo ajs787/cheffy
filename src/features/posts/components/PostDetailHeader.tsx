@@ -9,10 +9,11 @@ import { AppButton, AppText, Avatar, IconButton, RatingDisplay, TagChip } from '
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
 import { colors, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import type { Post } from '@/types/models';
-import { formatRelativeTime } from '@/utils/dates';
+import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
 import { PostDetails } from './PostDetails';
+import { StoryBody } from './StoryBody';
 
 export interface PostDetailHeaderProps {
   post: Post;
@@ -56,13 +57,18 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
           </View>
         ) : null}
 
-        <View style={styles.titleRow}>
-          <View style={styles.titleText}>
-            <AppText variant="title1" accessibilityRole="header">
-              {post.title}
-            </AppText>
+        <View style={styles.meta}>
+          <View style={styles.flex}>
             <CategoryLine post={post} />
           </View>
+          <AppText variant="overline" color="textSecondary">
+            {formatEntryDate(post.madeOn)}
+          </AppText>
+        </View>
+        <View style={styles.titleRow}>
+          <AppText variant="display" color="accent" accessibilityRole="header" style={styles.flex}>
+            {post.title}
+          </AppText>
           <RatingDisplay value={post.rating} size="lg" />
         </View>
 
@@ -105,7 +111,9 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
               accessibilityLabel={`Write a comment. ${post.commentCount} comments`}
             >
               <MessageCircle size={iconSizes.lg} color={colors.text} strokeWidth={strokes.regular} />
-              {post.commentCount > 0 ? <AppText variant="calloutStrong">{formatCount(post.commentCount)}</AppText> : null}
+              {post.commentCount > 0 ? (
+                <AppText variant="calloutStrong">{formatCount(post.commentCount)}</AppText>
+              ) : null}
             </Pressable>
             <View style={styles.flex} />
             <IconButton
@@ -123,13 +131,17 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
           </AppText>
         ) : null}
 
+        {post.story ? <StoryBody story={post.story} /> : null}
+
         {post.tags.length > 0 ? (
           <View style={styles.tags}>
             {post.tags.map((tag) => (
               <TagChip
                 key={tag.id}
                 name={tag.name}
-                onPress={() => router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })}
+                onPress={() =>
+                  router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })
+                }
               />
             ))}
           </View>
@@ -158,13 +170,19 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: colors.accentSoft,
   },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: -spacing.sm },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  titleText: { flex: 1, gap: spacing.xs },
   author: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   visibility: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   // The 44pt touch targets already give the row its height; no extra gap needed.
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: -spacing.sm },
-  action: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, minHeight: 44, paddingHorizontal: spacing.xs },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+  },
   review: { fontSize: 16, lineHeight: 24 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
   commentsTitle: { marginTop: spacing.md },

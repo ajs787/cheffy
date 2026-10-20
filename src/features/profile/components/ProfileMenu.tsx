@@ -40,7 +40,12 @@ export function ProfileMenu({ profile, visible, onClose }: ProfileMenuProps) {
             onPress: () => setReportTarget({ type: 'user', userId: profile.id }),
           },
           profile.viewerHasBlocked
-            ? { key: 'unblock', label: `Unblock @${profile.username}`, icon: Ban, onPress: () => unblock.mutate(profile.id) }
+            ? {
+                key: 'unblock',
+                label: `Unblock @${profile.username}`,
+                icon: Ban,
+                onPress: () => unblock.mutate(profile.id),
+              }
             : {
                 key: 'block',
                 label: `Block @${profile.username}`,

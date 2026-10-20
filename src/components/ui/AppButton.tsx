@@ -26,9 +26,9 @@ export interface AppButtonProps {
 
 const VARIANTS: Record<Variant, { bg: string; border: string; text: ColorToken }> = {
   primary: { bg: colors.accentStrong, border: colors.accentStrong, text: 'textInverse' },
-  secondary: { bg: colors.surface, border: colors.borderStrong, text: 'text' },
+  secondary: { bg: 'transparent', border: colors.rule, text: 'text' },
   ghost: { bg: 'transparent', border: 'transparent', text: 'text' },
-  destructive: { bg: colors.surface, border: colors.borderStrong, text: 'danger' },
+  destructive: { bg: 'transparent', border: colors.danger, text: 'danger' },
 };
 
 const SIZES: Record<Size, { height: number; paddingX: number }> = {
@@ -94,8 +94,9 @@ export function AppButton({
 }
 
 const styles = StyleSheet.create({
+  // Squared like a menu card, not a pill.
   base: {
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

@@ -33,8 +33,8 @@ export function Avatar({ uri, name, size = 'md' }: AvatarProps) {
   return (
     <View style={[styles.base, styles.fallback, style]} accessibilityLabel={`${name}'s profile photo`}>
       <AppText
-        style={{ fontFamily: fonts.serif, fontSize: dimension * 0.38, lineHeight: dimension * 0.46 }}
-        color="sageStrong"
+        style={{ fontFamily: fonts.display, fontSize: dimension * 0.38, lineHeight: dimension * 0.46 }}
+        color="accent"
       >
         {initials(name)}
       </AppText>
@@ -44,5 +44,5 @@ export function Avatar({ uri, name, size = 'md' }: AvatarProps) {
 
 const styles = StyleSheet.create({
   base: { backgroundColor: colors.surfaceMuted, overflow: 'hidden' },
-  fallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sageSoft },
+  fallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.tint },
 });

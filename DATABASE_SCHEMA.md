@@ -11,6 +11,7 @@ Source of truth: `supabase/migrations/*.sql`. Verified by `tests/db/*.test.ts`
 | `…04_rpc.sql` | Computed fields and client RPCs |
 | `…05_storage.sql` | Buckets and Storage policies |
 | `…06_taxonomy.sql` | Category reference data |
+| `20261020000001_post_story.sql` | `posts.story` + `save_post` with story |
 
 ## Entity overview
 
@@ -59,7 +60,8 @@ subcategories; Cooking's quick pick is cuisine.
 | subcategory_id | uuid null | must be a child of the primary |
 | cuisine_id, meal_type_id, dish_type_id | uuid null | kind-checked by trigger |
 | rating | numeric(3,1) null | 0.0–10.0; required unless draft |
-| review | text | ≤2000 |
+| review | text | ≤2000, the short take |
+| story | text | ≤10000, optional long-form write-up (migration `20261020000001`) |
 | visibility | text | `public` \| `followers` \| `private` |
 | status | text | `draft` \| `published` |
 | made_on | date | default today; not in the future (RPC check) |

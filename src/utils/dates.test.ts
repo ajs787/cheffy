@@ -1,4 +1,4 @@
-import { formatCalendarDate, formatRelativeTime, parseLocalDate, toLocalISODate } from './dates';
+import { formatCalendarDate, formatEntryDate, formatRelativeTime, parseLocalDate, toLocalISODate } from './dates';
 
 const now = new Date(2026, 9, 18, 12, 0, 0);
 
@@ -19,5 +19,10 @@ describe('dates', () => {
     expect(formatRelativeTime(ago(3 * 3_600_000), now)).toBe('3h');
     expect(formatRelativeTime(ago(2 * 86_400_000), now)).toBe('2d');
     expect(formatRelativeTime(ago(30 * 86_400_000), now)).toBe('Sep 18');
+  });
+
+  it('formats diary-entry dates', () => {
+    expect(formatEntryDate('2026-09-14', now)).toBe('Mon · 14 Sep');
+    expect(formatEntryDate('2025-10-19', now)).toBe('Sun · 19 Oct 2025');
   });
 });

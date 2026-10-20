@@ -4,7 +4,7 @@ import { AppText, categoryColorFor } from '@/components/ui';
 import { spacing } from '@/theme';
 import type { Post } from '@/types/models';
 
-/** "● Drinks · Matcha · Iced" */
+/** "● DRINKS · MATCHA · ICED" — tracked capitals, the identity's label style. */
 export function CategoryLine({
   post,
 }: {
@@ -19,7 +19,7 @@ export function CategoryLine({
   return (
     <View style={styles.row}>
       <View style={[styles.dot, { backgroundColor: categoryColorFor(post.primary.slug) }]} />
-      <AppText variant="caption" color="textSecondary" numberOfLines={1} style={styles.text}>
+      <AppText variant="overline" color="textSecondary" numberOfLines={1} style={styles.text}>
         {parts.join(' · ')}
       </AppText>
     </View>
@@ -28,6 +28,6 @@ export function CategoryLine({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
-  dot: { width: 7, height: 7, borderRadius: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
   text: { flexShrink: 1 },
 });

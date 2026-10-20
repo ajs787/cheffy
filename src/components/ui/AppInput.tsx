@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   icon: { marginRight: spacing.sm },
   input: {
     flex: 1,
-    fontFamily: fonts.sans,
+    fontFamily: fonts.text,
     fontSize: 16,
     lineHeight: 21,
     color: colors.text,

@@ -33,3 +33,12 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
   if (days < 7) return `${days}d`;
   return formatCalendarDate(then, now);
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Diary-entry date label, e.g. "Sun · 14 Sep" (year added when not this year). */
+export function formatEntryDate(madeOn: string, now: Date = new Date()): string {
+  const date = parseLocalDate(madeOn);
+  const base = `${WEEKDAYS[date.getDay()]} · ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+  return date.getFullYear() === now.getFullYear() ? base : `${base} ${date.getFullYear()}`;
+}

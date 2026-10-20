@@ -11,7 +11,11 @@ import { formatCookTime } from '@/utils/format';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <View style={styles.row} accessible accessibilityLabel={`${label}: ${typeof children === 'string' ? children : ''}`}>
+    <View
+      style={styles.row}
+      accessible
+      accessibilityLabel={`${label}: ${typeof children === 'string' ? children : ''}`}
+    >
       <AppText variant="callout" color="textSecondary">
         {label}
       </AppText>
@@ -90,7 +94,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.lg, paddingVertical: spacing.md },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   rowValue: { flexShrink: 1, textAlign: 'right' },
   recipe: {
     flexDirection: 'row',

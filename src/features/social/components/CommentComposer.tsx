@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     maxHeight: 110,
-    fontFamily: fonts.sans,
+    fontFamily: fonts.text,
     fontSize: 15,
     lineHeight: 20,
     color: colors.text,

@@ -20,7 +20,7 @@ export function TagChip({ name, onPress }: TagChipProps) {
       accessibilityLabel={`Tag ${name}`}
       style={styles.tag}
     >
-      <AppText variant="caption" color="sageStrong">
+      <AppText variant="caption" color="accent">
         #{name}
       </AppText>
     </PressableScale>
@@ -32,6 +32,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs + 1,
     borderRadius: radii.pill,
-    backgroundColor: colors.sageSoft,
+    backgroundColor: colors.tint,
   },
 });

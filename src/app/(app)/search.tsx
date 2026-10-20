@@ -153,7 +153,7 @@ function TagResults({ q }: { q: string }) {
           style={styles.tagRow}
         >
           <View style={styles.tagIcon}>
-            <Hash size={iconSizes.sm} color={colors.sageStrong} strokeWidth={strokes.bold} />
+            <Hash size={iconSizes.sm} color={colors.accent} strokeWidth={strokes.bold} />
           </View>
           <AppText variant="bodyStrong">{item.name}</AppText>
         </PressableScale>
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  input: { flex: 1, fontFamily: fonts.sans, fontSize: 16, color: colors.text, height: '100%' },
+  input: { flex: 1, fontFamily: fonts.text, fontSize: 16, color: colors.text, height: '100%' },
   cancel: { minHeight: HIT_TARGET, justifyContent: 'center', paddingHorizontal: spacing.xs },
   gridTop: { height: spacing.lg },
   listContent: { paddingTop: spacing.sm },
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.sageSoft,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },

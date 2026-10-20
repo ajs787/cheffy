@@ -86,6 +86,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.surface,
   },
-  ratingText: { fontFamily: fonts.serif, fontSize: 12, lineHeight: 16 },
+  ratingText: { fontFamily: fonts.display, fontSize: 12, lineHeight: 16 },
   caption: { paddingTop: spacing.xs + 2, gap: 1 },
 });

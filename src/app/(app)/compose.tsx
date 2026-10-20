@@ -3,9 +3,26 @@ import * as Crypto from 'expo-crypto';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState, type ComponentRef } from 'react';
 import { Controller, useForm, useWatch, type FieldPath } from 'react-hook-form';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { AppHeader, AppText, ConfirmationDialog, ErrorState, RatingInput } from '@/components/ui';
+import { BookOpenText, Hash } from 'lucide-react-native';
+
+import {
+  AppHeader,
+  AppText,
+  Collapsible,
+  ConfirmationDialog,
+  ErrorState,
+  RatingInput,
+} from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { CategorySelector } from '@/features/posts/components/CategorySelector';
 import { ComposeFooter } from '@/features/posts/components/ComposeFooter';
@@ -13,6 +30,7 @@ import { DetailsSection } from '@/features/posts/components/DetailsSection';
 import { FormSection } from '@/features/posts/components/FormSection';
 import { OptionChips } from '@/features/posts/components/OptionChips';
 import { PhotoStrip } from '@/features/posts/components/PhotoStrip';
+import { StoryField } from '@/features/posts/components/StoryField';
 import { TagInput } from '@/features/posts/components/TagInput';
 import { VisibilitySelector } from '@/features/posts/components/VisibilitySelector';
 import { usePost, useSavePost } from '@/features/posts/hooks';
@@ -32,7 +50,7 @@ import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { usePreferencesStore } from '@/stores/preferences';
 import { toast } from '@/stores/toast';
-import { colors, fonts, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
+import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
 import type { Post } from '@/types/models';
 
 export default function ComposeScreen() {
@@ -47,19 +65,25 @@ export default function ComposeScreen() {
 
   // Editing: wait for the full post (not a list placeholder) before building the form.
   const notEditable =
-    existing.isError || (existing.isFetched && !existing.data) || (existing.data && existing.data.author.id !== me);
+    existing.isError ||
+    (existing.isFetched && !existing.data) ||
+    (existing.data && existing.data.author.id !== me);
   if (notEditable) {
     return (
       <View style={styles.screen}>
-        <AppHeader leading="close" safeTop={Platform.OS !== 'ios'} />
-        <ErrorState error={existing.error} title="Can’t edit this post" onRetry={() => void existing.refetch()} />
+        <AppHeader leading="close" />
+        <ErrorState
+          error={existing.error}
+          title="Can’t edit this post"
+          onRetry={() => void existing.refetch()}
+        />
       </View>
     );
   }
   if (!existing.data || existing.isPlaceholderData) {
     return (
       <View style={styles.screen}>
-        <AppHeader leading="close" safeTop={Platform.OS !== 'ios'} />
+        <AppHeader leading="close" />
         <ActivityIndicator color={colors.textTertiary} style={styles.loading} />
       </View>
     );
@@ -96,7 +120,10 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
     clearErrors();
     const current = getValues();
     const values = pendingTag.current.trim()
-      ? { ...current, tags: normalizeTags([...current.tags, ...pendingTag.current.split(',')]).slice(0, MAX_TAGS) }
+      ? {
+          ...current,
+          tags: normalizeTags([...current.tags, ...pendingTag.current.split(',')]).slice(0, MAX_TAGS),
+        }
       : current;
     const parsed = (status === 'published' ? publishSchema : postFormSchema).safeParse(values);
     if (!parsed.success) {
@@ -139,6 +166,9 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
 
   const close = () => (dirty && !saving ? setConfirmDiscard(true) : router.back());
 
+  const tags = useWatch({ control, name: 'tags' });
+  const tagsSummary =
+    tags.length > 0 ? tags.map((t) => `#${t}`).join('  ') : 'Help friends find it — #sourdough, #weeknight';
   const pick = taxonomy.data ? quickPickFor(taxonomy.data, primaryId || null) : null;
   const title = post ? (post.status === 'draft' ? 'Finish draft' : 'Edit post') : 'New entry';
 
@@ -150,7 +180,6 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
         title={title}
         leading="close"
         onLeadingPress={close}
-        safeTop={Platform.OS !== 'ios'}
         bordered
         right={
           !editingPublished ? (
@@ -251,12 +280,16 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
               control={control}
               name="rating"
               render={({ field, fieldState }) => (
-                <RatingInput value={field.value} onChange={field.onChange} error={fieldState.error?.message} />
+                <RatingInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={fieldState.error?.message}
+                />
               )}
             />
           </FormSection>
 
-          <FormSection title="Review">
+          <FormSection title="Review" hint="Optional">
             <Controller
               control={control}
               name="review"
@@ -276,32 +309,55 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
             />
           </FormSection>
 
-          <FormSection title="Tags" bleed>
-            <Controller
-              control={control}
-              name="tags"
-              render={({ field }) => (
-                <TagInput
-                  value={field.value}
-                  onChange={field.onChange}
-                  onDraftChange={(draft) => {
-                    pendingTag.current = draft;
-                  }}
-                />
-              )}
-            />
-          </FormSection>
+          <View>
+            <Collapsible
+              title="Story"
+              summary={initial.story ? 'Your story so far' : 'The backstory, the process, what went wrong'}
+              icon={BookOpenText}
+              initiallyOpen={initial.story.length > 0}
+              testID="compose-story"
+            >
+              <Controller
+                control={control}
+                name="story"
+                render={({ field }) => <StoryField initial={initial.story} onChange={field.onChange} />}
+              />
+            </Collapsible>
 
-          {taxonomy.data ? (
-            <DetailsSection
-              control={control}
-              taxonomy={taxonomy.data}
-              showCuisine={pick?.kind === 'subcategory'}
-              initiallyOpen={!!post}
-            />
-          ) : null}
+            <Collapsible
+              title="Tags"
+              summary={tagsSummary}
+              icon={Hash}
+              initiallyOpen={initial.tags.length > 0}
+              testID="compose-tags"
+            >
+              <Controller
+                control={control}
+                name="tags"
+                render={({ field }) => (
+                  <TagInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onDraftChange={(draft) => {
+                      pendingTag.current = draft;
+                    }}
+                  />
+                )}
+              />
+            </Collapsible>
 
-          <FormSection title="Who can see this">
+            {taxonomy.data ? (
+              <DetailsSection
+                control={control}
+                taxonomy={taxonomy.data}
+                showCuisine={pick?.kind === 'subcategory'}
+                initiallyOpen={!!post}
+              />
+            ) : null}
+            <View style={styles.optionalEnd} />
+          </View>
+
+          <FormSection title="Who can see this" spaced>
             <Controller
               control={control}
               name="visibility"
@@ -341,21 +397,23 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   loading: { marginTop: spacing.huge },
   flex: { flex: 1 },
-  content: { paddingTop: spacing.lg, paddingBottom: spacing.huge, gap: spacing.xl },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
   padded: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.xs },
+  // Story, Tags and More details read as one ruled list.
+  optionalEnd: { height: HAIRLINE, backgroundColor: colors.rule, marginHorizontal: SCREEN_GUTTER },
   titleInput: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.display,
     fontSize: 28,
     lineHeight: 34,
     color: colors.text,
     paddingVertical: spacing.xs,
   },
   reviewInput: {
-    fontFamily: fonts.sans,
+    fontFamily: fonts.text,
     fontSize: 16,
     lineHeight: 23,
     color: colors.text,
-    minHeight: 88,
+    minHeight: 64,
     textAlignVertical: 'top',
     paddingTop: 0,
   },

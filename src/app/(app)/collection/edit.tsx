@@ -48,7 +48,7 @@ export default function EditCollectionScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader title={id ? 'Edit collection' : 'New collection'} leading="close" safeTop={Platform.OS !== 'ios'} bordered />
+      <AppHeader title={id ? 'Edit collection' : 'New collection'} leading="close" bordered />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ControlledInput control={control} name="name" label="Name" placeholder="My Best Bakes" maxLength={60} autoFocus={!id} />

@@ -3,7 +3,15 @@ import { Ban, Ellipsis, Settings, UserX } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppHeader, EmptyState, ErrorState, GridSkeleton, IconButton, SegmentedControl, Skeleton } from '@/components/ui';
+import {
+  AppHeader,
+  EmptyState,
+  ErrorState,
+  GridSkeleton,
+  IconButton,
+  SegmentedControl,
+  Skeleton,
+} from '@/components/ui';
 import { useUnblockUser } from '@/features/social/hooks';
 import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 
@@ -37,15 +45,25 @@ export function ProfileView({ userId, isOwn, isTabRoot = false }: ProfileViewPro
   const [tab, setTab] = useState<Tab>('diary');
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const topBar = isOwn ? (
+  const settingsButton = (
+    <IconButton icon={Settings} label="Settings" onPress={() => router.push('/settings')} />
+  );
+  // Profile tab: "@username" + settings (the logo lives on Home only); pushed: Back.
+  const topBar = isTabRoot ? (
     <AppHeader
       title={profile.data ? `@${profile.data.username}` : ''}
-      leading={isTabRoot ? 'none' : 'back'}
-      right={<IconButton icon={Settings} label="Settings" onPress={() => router.push('/settings')} />}
+      leading="none"
+      right={settingsButton}
     />
+  ) : isOwn ? (
+    <AppHeader title={profile.data ? `@${profile.data.username}` : ''} right={settingsButton} />
   ) : (
     <AppHeader
-      right={profile.data ? <IconButton icon={Ellipsis} label="More options" onPress={() => setMenuOpen(true)} /> : null}
+      right={
+        profile.data ? (
+          <IconButton icon={Ellipsis} label="More options" onPress={() => setMenuOpen(true)} />
+        ) : null
+      }
     />
   );
 
@@ -76,13 +94,19 @@ export function ProfileView({ userId, isOwn, isTabRoot = false }: ProfileViewPro
     return (
       <View style={styles.screen}>
         {topBar}
-        <EmptyState icon={UserX} title="Profile not available" message="This account doesn’t exist or isn’t visible to you." />
+        <EmptyState
+          icon={UserX}
+          title="Profile not available"
+          message="This account doesn’t exist or isn’t visible to you."
+        />
       </View>
     );
   }
 
   const p = profile.data;
-  const menu = isOwn ? null : <ProfileMenu profile={p} visible={menuOpen} onClose={() => setMenuOpen(false)} />;
+  const menu = isOwn ? null : (
+    <ProfileMenu profile={p} visible={menuOpen} onClose={() => setMenuOpen(false)} />
+  );
 
   if (p.viewerHasBlocked) {
     return (
@@ -112,7 +136,7 @@ export function ProfileView({ userId, isOwn, isTabRoot = false }: ProfileViewPro
         onRefreshProfile={() => Promise.all([profile.refetch(), stats.refetch()])}
         header={
           <View>
-            <ProfileHeader profile={p} stats={stats.data} isOwn={isOwn} />
+            <ProfileHeader profile={p} stats={stats.data} isOwn={isOwn} usernameInTitle={isOwn} />
             <SegmentedControl options={TABS} value={tab} onChange={setTab} />
           </View>
         }

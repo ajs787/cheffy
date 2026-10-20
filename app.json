@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "cheffy",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#FAF9F6",
+    "backgroundColor": "#F7F1E8",
     "ios": {
       "bundleIdentifier": "com.audreyshin.cheffy",
       "supportsTablet": false,
@@ -23,7 +23,7 @@
     "android": {
       "package": "com.audreyshin.cheffy",
       "adaptiveIcon": {
-        "backgroundColor": "#C4513C",
+        "backgroundColor": "#F7F1E8",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -35,9 +35,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FAF9F6",
+          "backgroundColor": "#F7F1E8",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 96
+          "imageWidth": 220
         }
       ],
       [

@@ -15,7 +15,7 @@ export default function EditProfileScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader title="Edit profile" leading="close" safeTop={Platform.OS !== 'ios'} bordered />
+      <AppHeader title="Edit profile" leading="close" bordered />
       {!p ? (
         <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
       ) : (

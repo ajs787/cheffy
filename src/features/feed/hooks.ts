@@ -3,12 +3,12 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query/keys';
 import type { Cursor } from '@/types/models';
 
-import { fetchFeedPage } from './api';
+import { fetchFollowingPage, fetchForYouPage, type FeedMode } from './api';
 
-export function useFeed() {
+export function useFeed(mode: FeedMode) {
   return useInfiniteQuery({
-    queryKey: queryKeys.feed,
-    queryFn: ({ pageParam }) => fetchFeedPage(pageParam),
+    queryKey: mode === 'following' ? queryKeys.feed : queryKeys.forYou,
+    queryFn: ({ pageParam }) => (mode === 'following' ? fetchFollowingPage(pageParam) : fetchForYouPage(pageParam)),
     initialPageParam: null as Cursor | null,
     getNextPageParam: (last) => last.nextCursor,
   });

@@ -5,7 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { PostGrid } from '@/components/shared/PostGrid';
 import { SectionHeader } from '@/components/shared/SectionHeader';
-import { AppHeader, AppText, CategoryIcon, EmptyState, GridSkeleton, PressableScale } from '@/components/ui';
+import { AppHeader, AppText, EmptyState, GridSkeleton, PressableScale } from '@/components/ui';
+import { CategoryTiles } from '@/features/discover/components/CategoryTiles';
 import { DiscoverRow } from '@/features/discover/components/DiscoverRow';
 import { SuggestedCooks } from '@/features/discover/components/SuggestedCooks';
 import { useDiscoverGrid, useTrending } from '@/features/discover/hooks';
@@ -53,26 +54,13 @@ export default function DiscoverScreen() {
         </AppText>
       </PressableScale>
 
-      <View style={styles.categories}>
-        {(taxonomy.data?.primaries ?? []).map((primary) => (
-          <PressableScale
-            key={primary.id}
-            onPress={() => browse({ primaryId: primary.id, title: primary.name })}
-            activeScale={0.96}
-            accessibilityRole="link"
-            accessibilityLabel={`Browse ${primary.name}`}
-            style={styles.categoryTile}
-          >
-            <CategoryIcon slug={primary.slug} size="lg" />
-            <AppText variant="calloutStrong">{primary.name}</AppText>
-          </PressableScale>
-        ))}
-      </View>
+      <CategoryTiles categories={taxonomy.data?.primaries ?? []} />
+      <View style={styles.sectionsTop} />
 
       <DiscoverRow
-        title="What friends are making"
+        title="From your friends"
         params={{ sort: 'recent', followingOnly: true }}
-        onSeeAll={() => browse({ followingOnly: '1', title: 'What friends are making' })}
+        onSeeAll={() => browse({ followingOnly: '1', title: 'From your friends' })}
       />
       <DiscoverRow
         title="Top rated this month"
@@ -101,13 +89,13 @@ export default function DiscoverScreen() {
         );
       })}
       <SuggestedCooks />
-      {posts.length > 0 ? <SectionHeader title="Fresh from the community" /> : null}
+      {posts.length > 0 ? <SectionHeader title="Just posted" subtitle="The latest from the community" /> : null}
     </View>
   );
 
   return (
     <View style={styles.screen}>
-      <AppHeader title="Discover" large />
+      <AppHeader variant="large" title="Discover" />
       <PostGrid
         listRef={listRef}
         posts={posts}
@@ -118,8 +106,12 @@ export default function DiscoverScreen() {
           ) : (
             <EmptyState
               icon={Compass}
-              title="Nothing to discover yet"
-              message="As people share public posts, the best of them will show up here."
+              title="The table is just getting set"
+              message="Cheffy is new. As people share public entries, the best of them land here — yours could be first."
+              actionLabel="Log something you made"
+              onAction={() => router.push('/compose')}
+              secondaryLabel="Find friends to follow"
+              onSecondary={() => router.push({ pathname: '/search', params: { tab: 'people' } })}
             />
           )
         }
@@ -141,28 +133,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginHorizontal: SCREEN_GUTTER,
-    height: 46,
+    height: 44,
+    marginBottom: spacing.lg,
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  categories: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: SCREEN_GUTTER,
-    marginTop: spacing.lg,
-    marginBottom: spacing.xxl,
-  },
-  categoryTile: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs + 2,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
+  sectionsTop: { height: spacing.xxl },
 });

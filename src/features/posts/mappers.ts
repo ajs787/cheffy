@@ -1,12 +1,12 @@
 import { mapProfileSummary, PROFILE_SUMMARY_SELECT, type ProfileSummaryRow } from '@/features/profile/mappers';
 import { signPostImagePaths } from '@/lib/supabase/storage';
-import type { CategoryRef, Post, PostStatus, Temperature, Visibility } from '@/types/models';
+import type { CategoryRef, Post, PostImage, PostStatus, Temperature, Visibility } from '@/types/models';
 
 const CATEGORY_FIELDS = 'id, slug, name';
 
 /** One select string for every post-shaped query, so all lists share a mapper. */
 export const POST_SELECT = `
-  id, title, rating, review, visibility, status, made_on, would_make_again, recipe_url,
+  id, title, rating, review, story, visibility, status, made_on, would_make_again, recipe_url,
   ingredients, prep_notes, next_time_notes, cook_time_minutes, temperature, milk, sweetener,
   like_count, comment_count, published_at, created_at, updated_at,
   author:profiles!posts_author_id_fkey(${PROFILE_SUMMARY_SELECT}),
@@ -21,11 +21,31 @@ export const POST_SELECT = `
   viewer_has_saved
 `;
 
+/**
+ * Feed queries add the most recent likers for "Liked by …". Callers must
+ * order and limit the `likers` embed (see `withRecentLikers`).
+ */
+export const FEED_POST_SELECT = `${POST_SELECT},
+  likers:likes(created_at, profile:profiles!likes_user_id_fkey(${PROFILE_SUMMARY_SELECT}))
+`;
+
+type OrderLimitBuilder<T> = {
+  order: (column: string, options: { ascending: boolean; referencedTable: string }) => T;
+};
+
+/** Newest three likers per post. */
+export function withRecentLikers<T extends OrderLimitBuilder<T> & { limit: (n: number, o: { referencedTable: string }) => T }>(
+  query: T,
+): T {
+  return query.order('created_at', { ascending: false, referencedTable: 'likers' }).limit(3, { referencedTable: 'likers' });
+}
+
 export interface PostRow {
   id: string;
   title: string;
   rating: number | null;
   review: string;
+  story: string;
   visibility: Visibility;
   status: PostStatus;
   made_on: string;
@@ -53,6 +73,7 @@ export interface PostRow {
   post_tags: { tag: { id: string; slug: string; name: string } | null }[];
   viewer_has_liked: boolean;
   viewer_has_saved: boolean;
+  likers?: { created_at: string; profile: ProfileSummaryRow | null }[];
 }
 
 /** Maps a row to a Post. Returns null for rows whose author isn't visible. */
@@ -69,6 +90,7 @@ export function mapPost(row: PostRow): Post | null {
     dishType: row.dish_type,
     rating: row.rating === null ? null : Number(row.rating),
     review: row.review,
+    story: row.story ?? '',
     visibility: row.visibility,
     status: row.status,
     madeOn: row.made_on,
@@ -103,6 +125,7 @@ export function mapPost(row: PostRow): Post | null {
       .sort((a, b) => a.name.localeCompare(b.name)),
     viewerHasLiked: row.viewer_has_liked,
     viewerHasSaved: row.viewer_has_saved,
+    recentLikers: (row.likers ?? []).flatMap((l) => (l.profile ? [mapProfileSummary(l.profile)] : [])),
   };
 }
 
@@ -110,26 +133,41 @@ export function mapPosts(rows: PostRow[]): Post[] {
   return rows.map(mapPost).filter((p): p is Post => p !== null);
 }
 
-/**
- * Signs image URLs for a batch of posts in one request.
- * 'full' — every full-size image (carousels) plus the cover thumbnail.
- * 'thumb' — only the cover thumbnail (grids).
- */
-export async function attachImageUrls(posts: Post[], mode: 'full' | 'thumb'): Promise<Post[]> {
+export type ImageSigningMode = 'full' | 'card' | 'thumb';
+
+/** Which files a screen needs for image `index` of a post. */
+function wantedPaths(image: PostImage, index: number, mode: ImageSigningMode): { full: boolean; thumb: boolean } {
+  switch (mode) {
+    case 'full': // post detail carousel: every full image, cover thumb as placeholder
+      return { full: true, thumb: index === 0 };
+    case 'card': // feed card: a large cover, small thumbs for the rest of the mosaic
+      return { full: index === 0, thumb: true };
+    default: // grids: the cover thumbnail only
+      return { full: false, thumb: index === 0 };
+  }
+}
+
+/** Signs exactly the image files a screen will show, for a batch of posts, in one request. */
+export async function attachImageUrls(posts: Post[], mode: ImageSigningMode): Promise<Post[]> {
   const paths: string[] = [];
   for (const post of posts) {
-    const cover = post.images[0];
-    if (cover) paths.push(cover.thumbPath);
-    if (mode === 'full') for (const image of post.images) paths.push(image.storagePath);
+    post.images.forEach((image, index) => {
+      const want = wantedPaths(image, index, mode);
+      if (want.full) paths.push(image.storagePath);
+      if (want.thumb) paths.push(image.thumbPath);
+    });
   }
   if (paths.length === 0) return posts;
   const urls = await signPostImagePaths(paths);
   return posts.map((post) => ({
     ...post,
-    images: post.images.map((image, index) => ({
-      ...image,
-      url: mode === 'full' ? (urls[image.storagePath] ?? null) : null,
-      thumbUrl: index === 0 || mode === 'full' ? (urls[image.thumbPath] ?? null) : null,
-    })),
+    images: post.images.map((image, index) => {
+      const want = wantedPaths(image, index, mode);
+      return {
+        ...image,
+        url: want.full ? (urls[image.storagePath] ?? null) : null,
+        thumbUrl: want.thumb ? (urls[image.thumbPath] ?? null) : null,
+      };
+    }),
   }));
 }

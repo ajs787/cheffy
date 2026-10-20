@@ -50,3 +50,29 @@ Each milestone ends with: typecheck, lint, tests, PROGRESS.md update.
 | Pure logic | Jest unit tests (validation, formatting, cache helpers) |
 | Components | React Native Testing Library |
 | End-to-end | Two-device acceptance test on a real Supabase project (manual, documented) |
+
+## R1 — UI/UX refinement & social feed redesign (2026-10-20)
+
+Constraints: keep the identity (cream, oxblood, editorial), no schema changes
+beyond `posts.story`, no mock data, no regressions.
+
+1. **Headers** — one `AppHeader` with variants: `brand` (Home: logo, search,
+   activity), `large` (Discover, My Rankings: title + actions), `nav`
+   (pushed screens, Profile "@username", Create). Remove `TabHeader`.
+   Activity inbox from real likes/comments/follows; unread dot tracked locally.
+2. **Feed** — information-first entry card: creator → title + rating →
+   category/date → inset, balanced photos (1 = 4:3, 2–3 = mosaic) → review →
+   tags → "Liked by …" (real likers) → actions. Following / For You switch
+   (`feed_posts` / `discover_posts recent`). Compact modules: "Cooking lately"
+   (people you follow who posted recently) and "Top rated this week".
+3. **Discover** — compact category tiles with real cover photos (latest post
+   per category, icon fallback), data-backed sections only, low-content empty
+   state with actions.
+4. **Rankings** — "My Rankings" header with sort control, stats summary
+   (creations, average, top category) from the user's own ratings, larger
+   thumbnails and rating badges.
+5. **Create** — photo → name → category → rating → review, then collapsible
+   Tags / Story / More details rows; tighter spacing; full-screen modal
+   instead of the stacked card sheet.
+6. **Profile** — "@username" + settings header, refined hierarchy under the
+   burgundy card, easy Diary / Rankings / Collections navigation.

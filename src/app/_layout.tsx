@@ -1,9 +1,7 @@
-import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
-import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
-import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
-import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
-import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
-import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display/400Regular';
+import { Newsreader_400Regular } from '@expo-google-fonts/newsreader/400Regular';
+import { Newsreader_500Medium } from '@expo-google-fonts/newsreader/500Medium';
+import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBold';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
@@ -39,12 +37,10 @@ const navigationTheme = {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Fraunces_400Regular,
-    Fraunces_600SemiBold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    DMSerifDisplay_400Regular,
+    Newsreader_400Regular,
+    Newsreader_500Medium,
+    Newsreader_600SemiBold,
   });
 
   return (

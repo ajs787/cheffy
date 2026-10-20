@@ -1,20 +1,19 @@
-import { ArrowDownUp } from 'lucide-react-native';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { ActionSheet, AppText, CategoryChip, Chip } from '@/components/ui';
-import { colors, SCREEN_GUTTER, spacing, strokes } from '@/theme';
-import type { RankingSort } from '@/types/models';
+import { AppText, CategoryChip, Chip } from '@/components/ui';
+import { SCREEN_GUTTER, spacing } from '@/theme';
 import { pluralize } from '@/utils/format';
 
-import { SORT_LABELS, type RankingsController } from '../useRankingsController';
+import type { RankingsController } from '../useRankingsController';
+import { RankingSortButton } from './RankingSortButton';
 
-const SORTS: RankingSort[] = ['highest', 'lowest', 'recent', 'oldest'];
-
-export function RankingFilters({ controller }: { controller: RankingsController }) {
-  const [sortOpen, setSortOpen] = useState(false);
-  const { taxonomy, primaryId, setPrimaryId, secondary, setSecondary, secondaryOptions, sort, setSort, total, rankings } =
-    controller;
+/**
+ * Primary category chips, then chips for the cuisines/subcategories/tags the
+ * person has actually used. `inlineSort` adds the count + sort row (profiles);
+ * the Rankings tab puts sort in its header instead.
+ */
+export function RankingFilters({ controller, inlineSort = true }: { controller: RankingsController; inlineSort?: boolean }) {
+  const { taxonomy, primaryId, setPrimaryId, secondary, setSecondary, secondaryOptions, total, rankings } = controller;
 
   return (
     <View style={styles.container}>
@@ -45,35 +44,14 @@ export function RankingFilters({ controller }: { controller: RankingsController 
         </ScrollView>
       ) : null}
 
-      <View style={styles.summary}>
-        <AppText variant="caption" color="textSecondary">
-          {rankings.isPending ? ' ' : pluralize(total, 'creation')}
-        </AppText>
-        <Pressable
-          onPress={() => setSortOpen(true)}
-          hitSlop={10}
-          style={styles.sort}
-          accessibilityRole="button"
-          accessibilityLabel={`Sort: ${SORT_LABELS[sort]}`}
-        >
-          <ArrowDownUp size={14} color={colors.textSecondary} strokeWidth={strokes.bold} />
-          <AppText variant="calloutStrong" color="textSecondary">
-            {SORT_LABELS[sort]}
+      {inlineSort ? (
+        <View style={styles.summary}>
+          <AppText variant="caption" color="textSecondary">
+            {rankings.isPending ? ' ' : pluralize(total, 'creation')}
           </AppText>
-        </Pressable>
-      </View>
-
-      <ActionSheet
-        visible={sortOpen}
-        onClose={() => setSortOpen(false)}
-        title="Sort by"
-        actions={SORTS.map((s) => ({
-          key: s,
-          label: SORT_LABELS[s],
-          selected: s === sort,
-          onPress: () => setSort(s),
-        }))}
-      />
+          <RankingSortButton controller={controller} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -85,8 +63,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SCREEN_GUTTER,
-    paddingTop: spacing.xs,
+    paddingLeft: SCREEN_GUTTER,
+    paddingRight: spacing.xs,
   },
-  sort: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
 });
