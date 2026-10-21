@@ -52,7 +52,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     marginHorizontal: SCREEN_GUTTER,
-    marginBottom: spacing.lg,
     borderTopWidth: HAIRLINE,
     borderBottomWidth: HAIRLINE,
     borderColor: colors.rule,

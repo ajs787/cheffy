@@ -64,7 +64,8 @@ export function RankingFilters({
 }
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.sm + 2, paddingBottom: spacing.xs },
+  // The parent sets the space around the block; this only spaces its rows.
+  container: { gap: spacing.md },
   row: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm },
   summary: {
     flexDirection: 'row',

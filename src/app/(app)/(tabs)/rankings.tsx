@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { ListOrdered, SearchX } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { ListFooter } from '@/components/shared/ListFooter';
@@ -30,6 +30,12 @@ export default function RankingsScreen() {
   const { refreshing, onRefresh } = usePullToRefresh(() => rankings.refetch());
 
   const [view, setView] = useState<'mine' | 'friends'>('mine');
+  // The list's visible height minus the header: where an empty state centres.
+  const [listHeight, setListHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const centered = (child: ReactNode) => (
+    <View style={[styles.emptyArea, { minHeight: Math.max(0, listHeight - headerHeight) }]}>{child}</View>
+  );
   const switcher = <SegmentedControl options={VIEWS} value={view} onChange={setView} />;
 
   return (
@@ -43,35 +49,44 @@ export default function RankingsScreen() {
           ref={listRef}
           keyExtractor={(item) => item.postId}
           renderItem={({ item }) => <RankingRow item={item} />}
+          onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}
           ListHeaderComponent={
-            <View>
+            // One structure for every data state: the body's top padding and
+            // gap set all spacing under the tabs; children add no margins.
+            <View onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
               {switcher}
-              {me ? <RankingSummary userId={me} /> : null}
-              {/* Sorting gets its own row under the filters, never beside the title. */}
-              <RankingFilters controller={controller} />
-              <View style={styles.listTop} />
+              <View style={styles.headerBody}>
+                {me ? <RankingSummary userId={me} /> : null}
+                {/* Sorting gets its own row under the filters, never beside the title. */}
+                <RankingFilters controller={controller} />
+              </View>
             </View>
           }
           ListEmptyComponent={
             rankings.isPending ? (
               <RowSkeleton />
             ) : rankings.isError ? (
-              <ErrorState error={rankings.error} onRetry={() => void rankings.refetch()} />
+              centered(<ErrorState error={rankings.error} onRetry={() => void rankings.refetch()} />)
             ) : filtered ? (
-              <EmptyState
-                icon={SearchX}
-                compact
-                title="Nothing here yet"
-                message="Nothing you’ve made matches these filters."
-              />
+              centered(
+                <EmptyState
+                  icon={SearchX}
+                  compact
+                  title="Nothing here yet"
+                  message="Nothing you’ve made matches these filters."
+                />,
+              )
             ) : (
-              <EmptyState
-                icon={ListOrdered}
-                title="Your rankings start here"
-                message="Everything you rate lands in your personal ranking, best first."
-                actionLabel="Log something you made"
-                onAction={() => router.push('/compose')}
-              />
+              centered(
+                <EmptyState
+                  icon={ListOrdered}
+                  compact
+                  title="Your rankings start here"
+                  message="Everything you rate lands in your personal ranking, best first."
+                  actionLabel="Log something you made"
+                  onAction={() => router.push('/compose')}
+                />,
+              )
             )
           }
           ListFooterComponent={<ListFooter loading={rankings.isFetchingNextPage} />}
@@ -89,5 +104,7 @@ export default function RankingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  listTop: { height: spacing.sm },
+  headerBody: { paddingTop: spacing.xl, paddingBottom: spacing.sm, gap: spacing.lg },
+  // Centres the empty state in the space left under the header.
+  emptyArea: { justifyContent: 'center', paddingBottom: spacing.xxl },
 });
