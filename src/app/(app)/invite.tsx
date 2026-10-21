@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Search, Send } from 'lucide-react-native';
+import { BookUser, Search, Send } from 'lucide-react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,7 +14,8 @@ import { colors, HAIRLINE, radii, SCREEN_GUTTER, spacing } from '@/theme';
 /**
  * Invite friends through the system share sheet — Messages, Instagram DMs,
  * WhatsApp, Mail, Copy. No contact upload and no Instagram friend scraping:
- * the person chooses exactly who gets the invite.
+ * the person chooses exactly who gets the invite. "Find from contacts" is an
+ * optional on-device picker; it asks for Contacts access only once tapped.
  */
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
@@ -68,6 +69,16 @@ export default function InviteScreen() {
         <AppText variant="caption" color="textSecondary" align="center">
           Choose Messages, Instagram, WhatsApp, Mail — or copy it.
         </AppText>
+
+        <AppButton
+          label="Find from contacts"
+          icon={BookUser}
+          variant="secondary"
+          fullWidth
+          disabled={!me}
+          onPress={() => router.push('/invite-contacts')}
+          accessibilityHint="Pick people from your contacts to text an invite. Contacts stay on your phone."
+        />
 
         <View style={styles.divider} />
 
