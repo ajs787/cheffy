@@ -52,6 +52,19 @@ export async function setAccountPrivacy(userId: string, isPrivate: boolean): Pro
   return mapProfile(row);
 }
 
+/** Opts in or out of Discover's "Most Hated" section. */
+export async function setMostHatedOptIn(userId: string, allow: boolean): Promise<Profile> {
+  const row = unwrap(
+    await supabase
+      .from('profiles')
+      .update({ allow_most_hated: allow })
+      .eq('id', userId)
+      .select(PROFILE_SELECT)
+      .single(),
+  ) as ProfileRow;
+  return mapProfile(row);
+}
+
 export async function isUsernameAvailable(username: string): Promise<boolean> {
   return unwrap(await supabase.rpc('username_available', { p_username: username })) as boolean;
 }

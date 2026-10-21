@@ -3,7 +3,7 @@ import type { Profile, ProfileStats, ProfileSummary, ProfileWithViewer } from '@
 
 export const PROFILE_SUMMARY_SELECT = 'id, username, display_name, avatar_path';
 export const PROFILE_SELECT =
-  'id, username, display_name, bio, avatar_path, avatar_original_path, created_at, is_private, theme, frame';
+  'id, username, display_name, bio, avatar_path, avatar_original_path, created_at, is_private, allow_most_hated, theme, frame';
 export const PROFILE_WITH_VIEWER_SELECT = `${PROFILE_SELECT}, viewer_is_following, viewer_has_requested, viewer_has_blocked, unlocks:profile_unlocks(unlock)`;
 
 export interface ProfileSummaryRow {
@@ -17,6 +17,7 @@ export interface ProfileRow extends ProfileSummaryRow {
   bio: string;
   created_at: string;
   is_private: boolean;
+  allow_most_hated?: boolean;
   avatar_original_path?: string | null;
   theme?: 'saffron' | null;
   frame?: 'host' | null;
@@ -47,6 +48,7 @@ export function mapProfile(row: ProfileRow): Profile {
     avatarOriginalUrl: avatarUrl(row.avatar_original_path ?? null),
     createdAt: row.created_at,
     isPrivate: row.is_private ?? false,
+    allowMostHated: row.allow_most_hated ?? true,
     theme: row.theme ?? null,
     frame: row.frame ?? null,
   };

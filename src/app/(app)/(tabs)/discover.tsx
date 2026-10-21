@@ -8,6 +8,7 @@ import { SectionHeader } from '@/components/shared/SectionHeader';
 import { AppHeader, AppText, EmptyState, GridSkeleton, PressableScale } from '@/components/ui';
 import { CategoryTiles } from '@/features/discover/components/CategoryTiles';
 import { DiscoverRow } from '@/features/discover/components/DiscoverRow';
+import { MostHatedRow } from '@/features/discover/components/MostHatedRow';
 import { SuggestedCooks } from '@/features/discover/components/SuggestedCooks';
 import { useDiscoverGrid, useTrending } from '@/features/discover/hooks';
 import { useTaxonomy } from '@/features/taxonomy/hooks';
@@ -33,6 +34,7 @@ export default function DiscoverScreen() {
     Promise.all([
       qc.invalidateQueries({ queryKey: ['posts', 'discover'] }),
       qc.invalidateQueries({ queryKey: queryKeys.trending }),
+      qc.invalidateQueries({ queryKey: queryKeys.mostHated }),
       qc.invalidateQueries({ queryKey: queryKeys.suggestedCooks }),
     ]),
   );
@@ -73,6 +75,7 @@ export default function DiscoverScreen() {
         params={{ sort: 'loved', sinceDays: 14 }}
         onSeeAll={() => browse({ sort: 'loved', sinceDays: '14', title: 'Most loved' })}
       />
+      <MostHatedRow />
       {(trending.data ?? []).slice(0, 4).map((item) => {
         const title = item.kind === 'tag' ? `#${item.name}` : item.name;
         const params =

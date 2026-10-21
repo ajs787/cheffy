@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { queryKeys, type DiscoverQueryParams } from '@/lib/query/keys';
 import type { Cursor } from '@/types/models';
 
-import { fetchDiscoverPage, fetchTrending, searchPosts, searchTags, type DiscoverPageParam } from './api';
+import { fetchDiscoverPage, fetchMostHated, fetchTrending, searchPosts, searchTags, type DiscoverPageParam } from './api';
 
 /** First page only — for horizontal Discover sections. */
 export function useDiscoverSection(params: DiscoverQueryParams, enabled = true) {
@@ -23,6 +23,10 @@ export function useDiscoverGrid(params: DiscoverQueryParams) {
     initialPageParam: null as DiscoverPageParam,
     getNextPageParam: (last) => last.nextPageParam ?? undefined,
   });
+}
+
+export function useMostHated() {
+  return useQuery({ queryKey: queryKeys.mostHated, queryFn: fetchMostHated, staleTime: 10 * 60_000 });
 }
 
 export function useTrending() {

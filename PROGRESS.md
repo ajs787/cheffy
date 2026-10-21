@@ -608,3 +608,55 @@ unlocking, Made Together after a real collaboration, the recap at 10.
 3. Run the two-device acceptance test with your friend; log results.
 4. Fix whatever that surfaces, then do the VoiceOver and performance pass on a device.
 5. EAS build → TestFlight.
+
+## V4 · Priority 0 — Email verification (in progress)
+
+**Diagnosis (2026-10-21, live project `yqzycfujpzibzkkdybyu`).** Confirmations are on
+(`mailer_autoconfirm: false`) and emails are being delivered: 5 of 6 accounts confirmed
+within seconds of the email. The break is the redirect: the live **Site URL is
+`http://localhost:3000` and `cheffy://` is not in the redirect allow-list**, so Supabase
+ignores the app's `cheffy://auth/callback` and sends the phone's browser to
+`localhost:3000`, which fails. The email gets confirmed but Cheffy never opens, and the
+PKCE codes are never exchanged (every row in `auth.flow_state` still holds an unused
+code). Verified by requesting `/auth/v1/verify` with an invalid token and three
+`redirect_to` values: all were sent to `http://localhost:3000`.
+
+**App changes (done).**
+- Resend confirmation with a 60s cooldown on the "Check your inbox" screen, and on sign-in
+  when Supabase answers "Email not confirmed".
+- Callback screen states: verified, confirmed (but link opened elsewhere → sign in),
+  expired, and invalid. A signed-in user who opens an old link just continues home.
+- Unit tests for the cooldown and callback parsing.
+
+**Needs you, in the Supabase Dashboard → Authentication → URL Configuration:**
+1. Site URL: `cheffy://auth/callback`
+2. Redirect URLs, add: `cheffy://**` and, for Expo Go development, `exp://**`
+3. Authentication → Emails → SMTP: the built-in sender is limited (a few emails per hour,
+   and it may only deliver to project team members). Set up custom SMTP (e.g. Resend,
+   Postmark) with your domain's SPF/DKIM records before inviting testers. The SMTP
+   password lives only in the Dashboard, never in the app.
+
+**Unverified:** the full flow on a physical iPhone with a real inbox (sign up → email →
+tap link → Cheffy opens → "You're verified" → onboarding). Not yet claimed fixed.
+
+**Re-check after the Dashboard update (2026-10-21):** the live project still redirects
+`cheffy://auth/callback` to `http://localhost:3000`, polled for more than 3 minutes. The URL
+settings have not taken effect yet.
+
+## V4 · Priority 1 — Most Hated (built; migration not yet pushed)
+
+- `20261022000001_most_hated.sql`: `most_hated_posts()` returns the week's lowest
+  self-rated public creations. Lowest first; ties go newest first, then by id.
+  - Eligible: public posts from public accounts with a photo, rated ≤ 5.0, published in the
+    last 7 days.
+  - Excluded: opted-out creators, posts with open or actioned reports, creators with an
+    actioned report, and anyone blocked either way.
+  - Anti-abuse: one post per creator; verified accounts at least 48 hours old only.
+  - Returns nothing below 3 eligible posts.
+  - Tunables live in `app_config`, which clients can't read.
+- `profiles.allow_most_hated` (default on) with a Settings switch. No notifications are
+  sent to featured creators.
+- Discover: a crème-band carousel showing rank, photo, rating ring, title and @username.
+  It hides itself when the RPC returns nothing.
+- Tests: `tests/db/most-hated.test.ts` covers threshold, ordering, eligibility, anti-spam,
+  reports and blocks, and access.

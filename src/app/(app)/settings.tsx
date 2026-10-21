@@ -4,6 +4,7 @@ import {
   Ban,
   Bookmark,
   FileText,
+  Flame,
   Lock,
   LogOut,
   Mail,
@@ -24,7 +25,12 @@ import { SUPPORT_EMAIL } from '@/constants/app';
 import { NotificationSettings } from '@/features/activity/components/NotificationSettings';
 import { signOut } from '@/features/auth/api';
 import { useSession } from '@/features/auth/store';
-import { useDeleteAccount, useMyProfile, useSetAccountPrivacy } from '@/features/profile/hooks';
+import {
+  useDeleteAccount,
+  useMyProfile,
+  useSetAccountPrivacy,
+  useSetMostHatedOptIn,
+} from '@/features/profile/hooks';
 import { useFollowRequests } from '@/features/social/hooks';
 import { toUserMessage } from '@/lib/errors';
 import { toast } from '@/stores/toast';
@@ -36,6 +42,8 @@ export default function SettingsScreen() {
   const deleteAccount = useDeleteAccount();
   const profile = useMyProfile();
   const setPrivacy = useSetAccountPrivacy();
+  const setMostHated = useSetMostHatedOptIn();
+  const allowMostHated = profile.data?.allowMostHated ?? true;
   const requests = useFollowRequests();
   const isPrivate = profile.data?.isPrivate ?? false;
   const pending = requests.data?.length ?? 0;
@@ -82,6 +90,30 @@ export default function SettingsScreen() {
           {isPrivate
             ? 'Only people you approve can see your creations, rankings and collections. Anyone can still find your name and photo.'
             : 'Anyone can follow you and see your public creations. Turn this on to approve followers first.'}
+        </AppText>
+
+        <SettingsGroup title="Discover">
+          <SettingsRow
+            icon={Flame}
+            label="Feature me in Most Hated"
+            trailing={
+              <Switch
+                value={allowMostHated}
+                disabled={!profile.data || setMostHated.isPending}
+                onValueChange={(value) =>
+                  setMostHated.mutate(value, {
+                    onError: (error) => toast.error(toUserMessage(error, 'Couldn’t change this setting.')),
+                  })
+                }
+                trackColor={{ true: colors.accent, false: colors.border }}
+                accessibilityLabel="Feature me in Most Hated"
+              />
+            }
+          />
+        </SettingsGroup>
+        <AppText variant="caption" color="textSecondary" style={styles.note}>
+          Your lowest-rated public creations of the week can appear in Discover’s Most Hated. Only your own
+          ratings count, and nobody gets notified.
         </AppText>
 
         <NotificationSettings />

@@ -11,6 +11,7 @@ import {
   fetchProfile,
   fetchProfileStats,
   setAccountPrivacy,
+  setMostHatedOptIn,
   updateProfile,
   type ProfileInput,
 } from './api';
@@ -92,6 +93,32 @@ export function useSetAccountPrivacy() {
       void qc.invalidateQueries({ queryKey: [...queryKeys.profile(profile.id), 'viewer'] });
       void qc.invalidateQueries({ queryKey: queryKeys.followRequests });
       void qc.invalidateQueries({ queryKey: queryKeys.profileStats(profile.id) });
+    },
+  });
+}
+
+/** Most Hated opt-in/out. Optimistic. */
+export function useSetMostHatedOptIn() {
+  const qc = useQueryClient();
+  const userId = useUserId();
+  return useMutation({
+    mutationFn: (allow: boolean) => {
+      if (!userId) throw new Error('Not signed in');
+      return setMostHatedOptIn(userId, allow);
+    },
+    onMutate: async (allow) => {
+      const key = queryKeys.profile(userId ?? 'anonymous');
+      await qc.cancelQueries({ queryKey: key, exact: true });
+      const previous = qc.getQueryData<Profile | null>(key);
+      if (previous) qc.setQueryData(key, { ...previous, allowMostHated: allow });
+      return { previous, key };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) qc.setQueryData(context.key, context.previous);
+    },
+    onSuccess: (profile) => {
+      qc.setQueryData(queryKeys.profile(profile.id), profile);
+      void qc.invalidateQueries({ queryKey: queryKeys.mostHated });
     },
   });
 }

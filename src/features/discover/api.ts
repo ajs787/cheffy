@@ -61,6 +61,22 @@ export async function fetchDiscoverPage(
   return { items: posts, nextPageParam };
 }
 
+/**
+ * The week's lowest self-rated public creations. The database decides who's
+ * eligible and returns nothing until there are enough to make a section.
+ */
+export async function fetchMostHated(): Promise<Post[]> {
+  const rows = await fetchRows<PostRow>(supabase.rpc('most_hated_posts').select(POST_SELECT));
+  // Re-apply the RPC's order: lowest first, newest first on ties, then id.
+  rows.sort(
+    (a, b) =>
+      Number(a.rating) - Number(b.rating) ||
+      (b.published_at ?? '').localeCompare(a.published_at ?? '') ||
+      a.id.localeCompare(b.id),
+  );
+  return attachImageUrls(mapPosts(rows), 'thumb');
+}
+
 export interface TrendingItem {
   kind: 'subcategory' | 'cuisine' | 'tag';
   id: string;

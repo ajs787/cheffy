@@ -24,6 +24,8 @@ export interface Profile extends ProfileSummary {
   createdAt: string;
   /** Private accounts approve followers; only followers see their content. */
   isPrivate: boolean;
+  /** May their lowest-rated public creations appear in Discover's Most Hated. */
+  allowMostHated: boolean;
   /** Unlocked profile style, shown to everyone. */
   theme: 'saffron' | null;
   frame: 'host' | null;

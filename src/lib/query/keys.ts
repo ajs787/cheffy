@@ -55,5 +55,6 @@ export const queryKeys = {
   postCollections: (postId: string) => ['post-collections', postId] as const,
 
   trending: ['discover', 'trending'] as const,
+  mostHated: ['discover', 'most-hated'] as const,
   tagSuggestions: (q: string) => ['tags', q] as const,
 };
