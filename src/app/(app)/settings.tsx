@@ -119,7 +119,7 @@ export default function SettingsScreen() {
         <NotificationSettings />
 
         <SettingsGroup title="Account">
-          <SettingsRow icon={Send} label="Invite friends" onPress={() => router.push('/invite')} />
+          <SettingsRow icon={Send} label="Find friends" onPress={() => router.push('/invite')} />
           <Divider inset={spacing.lg} />
           <SettingsRow
             icon={Palette}

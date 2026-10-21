@@ -660,3 +660,30 @@ settings have not taken effect yet.
   It hides itself when the RPC returns nothing.
 - Tests: `tests/db/most-hated.test.ts` covers threshold, ordering, eligibility, anti-spam,
   reports and blocks, and access.
+
+## V4 · Priority 2 — Find Friends and referrals (built, not committed)
+
+- **Find friends** (`/invite`, Settings → Find friends) puts everything on one screen:
+  - username search and suggestions;
+  - a referral card ("Invite 2 friends who join Cheffy to unlock an exclusive profile frame"),
+    with live progress from `my_unlocks`;
+  - Share your invite (system share sheet), Copy invite link, and Invite from contacts;
+  - the invite code, plus code entry for accounts under 14 days old.
+- **Contacts:** unchanged privacy model. The feature is explained first, and permission is
+  requested only on tap. Limited access works, including "choose more". People are picked one
+  at a time and the person sends the text themselves. Nothing is uploaded and there's no
+  contact matching, and the copy never claims otherwise.
+- **Clipboard:** `expo-clipboard`, loaded only when the build includes it. Older builds fall
+  back to the share sheet.
+- **Attribution:** a pending code from `cheffy://invite/CODE` survives onboarding and is now
+  kept when redemption fails offline (it used to be dropped). The server still requires a
+  verified, new (14 days or less), complete account, with no self, repeat, reverse or blocked
+  referrals, and credits only after redemption. Existing tests: `tests/db/unlocks.test.ts`.
+- **Limits that need you:** Cheffy has no web domain, so invite links use `cheffy://` and only
+  open once the app is installed. Attribution can't survive an App Store/TestFlight install;
+  the fallback is typing the code, which the invite text includes. Real `https://…/invite/CODE`
+  links need a domain with an `apple-app-site-association` file plus `associatedDomains` in
+  app.json. Set `APP_DOWNLOAD_URL` to the TestFlight public link so invites include it.
+- **App Store:** the contacts purpose string is set. In App Privacy, contacts are not
+  "collected", because they never leave the device.
+- **Needs a new build:** expo-clipboard (Expo Go already has it).

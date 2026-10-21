@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 
 import { useUserId } from '@/features/auth/store';
-import { toUserMessage } from '@/lib/errors';
+import { isNetworkError, toUserMessage } from '@/lib/errors';
 import { queryKeys } from '@/lib/query/keys';
 import { toast } from '@/stores/toast';
 
@@ -109,13 +109,16 @@ export function useRedeemPendingInvite() {
     void (async () => {
       const code = await AsyncStorage.getItem('cheffy-pending-invite').catch(() => null);
       if (!code) return;
-      await AsyncStorage.removeItem('cheffy-pending-invite').catch(() => undefined);
+      const forget = () => AsyncStorage.removeItem('cheffy-pending-invite').catch(() => undefined);
       try {
         await redeemInviteCode(code);
+        await forget();
         toast.success('Welcome! Your friend has been credited for inviting you.');
         void qc.invalidateQueries({ queryKey: unlocksKey });
-      } catch {
-        // Not eligible (e.g. not a new account) — nothing to say.
+      } catch (error) {
+        // Offline: keep the code and try again next launch. Otherwise the
+        // server said no (not a new account, already used…) — drop it quietly.
+        if (!isNetworkError(error)) await forget();
       }
     })();
   }, [me, qc]);

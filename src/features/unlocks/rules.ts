@@ -23,7 +23,7 @@ export const UNLOCKS: UnlockInfo[] = [
     title: 'Host’s frame',
     description: 'A double ring around your photo, for bringing friends to the table.',
     progress: (s) =>
-      s.unlocked.includes('frame_host') ? null : of(s.referrals, 2, 'friends joined with your code'),
+      s.unlocked.includes('frame_host') ? null : of(s.referrals, REFERRAL_GOAL, 'friends joined with your code'),
   },
   {
     id: 'made_together',
@@ -74,5 +74,32 @@ export function recapView(r: Recap): RecapView {
     distribution,
     top: r.top,
     cuisines: r.cuisineTagged >= 3 && r.cuisines.length > 0 ? r.cuisines : null,
+  };
+}
+
+/** The referral goal for the Host's frame, shown on Find Friends. */
+export const REFERRAL_GOAL = 2;
+
+export interface ReferralStatus {
+  joined: number;
+  goal: number;
+  unlocked: boolean;
+  /** Short line under the progress, e.g. "1 more friend to go". */
+  label: string;
+}
+
+export function referralStatus(state: { referrals: number; unlocked: readonly string[] }): ReferralStatus {
+  const unlocked = state.unlocked.includes('frame_host');
+  const joined = Math.max(0, state.referrals);
+  const left = Math.max(0, REFERRAL_GOAL - joined);
+  return {
+    joined,
+    goal: REFERRAL_GOAL,
+    unlocked,
+    label: unlocked
+      ? 'Unlocked — the Host’s frame is yours.'
+      : left === 1
+        ? '1 more friend to go'
+        : `${left} friends to go`,
   };
 }

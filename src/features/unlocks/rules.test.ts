@@ -1,4 +1,4 @@
-import { newlyUnlocked, recapView, UNLOCKS } from './rules';
+import { newlyUnlocked, recapView, referralStatus, UNLOCKS } from './rules';
 
 jest.mock('@/lib/supabase/client', () => ({ supabase: {} }));
 
@@ -52,5 +52,15 @@ describe('recapView', () => {
     });
     expect(tied.mostMade).toBeNull();
     expect(tied.cuisines).toBeNull();
+  });
+});
+
+describe('referralStatus', () => {
+  it('counts down to the frame', () => {
+    expect(referralStatus({ referrals: 0, unlocked: [] })).toMatchObject({ joined: 0, goal: 2, unlocked: false, label: '2 friends to go' });
+    expect(referralStatus({ referrals: 1, unlocked: [] }).label).toBe('1 more friend to go');
+  });
+  it('reports the unlock, even past the goal', () => {
+    expect(referralStatus({ referrals: 3, unlocked: ['frame_host'] })).toMatchObject({ joined: 3, unlocked: true });
   });
 });
