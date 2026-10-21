@@ -8,6 +8,7 @@ import { APP_DOWNLOAD_URL } from '@/constants/app';
 import { useMyProfile } from '@/features/profile/hooks';
 import { toUserMessage } from '@/lib/errors';
 import { shareInvite } from '@/lib/share';
+import { contactsSupported } from '@/features/invite/deviceContacts';
 import { RedeemInviteCode } from '@/features/unlocks/components/RedeemInviteCode';
 import { useInviteCode } from '@/features/unlocks/hooks';
 import { toast } from '@/stores/toast';
@@ -73,15 +74,17 @@ export default function InviteScreen() {
           Choose Messages, Instagram, WhatsApp, Mail — or copy it.
         </AppText>
 
-        <AppButton
-          label="Find from contacts"
-          icon={BookUser}
-          variant="secondary"
-          fullWidth
-          disabled={!me}
-          onPress={() => router.push('/invite-contacts')}
-          accessibilityHint="Pick people from your contacts to text an invite. Contacts stay on your phone."
-        />
+        {contactsSupported() ? (
+          <AppButton
+            label="Find from contacts"
+            icon={BookUser}
+            variant="secondary"
+            fullWidth
+            disabled={!me}
+            onPress={() => router.push('/invite-contacts')}
+            accessibilityHint="Pick people from your contacts to text an invite. Contacts stay on your phone."
+          />
+        ) : null}
 
         {code.data ? (
           <View
