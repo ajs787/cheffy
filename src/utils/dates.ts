@@ -45,12 +45,12 @@ export function formatEntryDate(madeOn: string, now: Date = new Date()): string 
 }
 
 const memberSinceFormat = new Intl.DateTimeFormat('en-US', {
-  month: 'numeric',
+  month: 'long',
   day: 'numeric',
   year: 'numeric',
 });
 
-/** "10/19/2026": the account's creation date, month/day/year. */
+/** "October 19, 2026": the account's creation date, in English. */
 export function formatMemberSince(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? '' : memberSinceFormat.format(date);

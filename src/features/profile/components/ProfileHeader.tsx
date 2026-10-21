@@ -115,10 +115,14 @@ export function ProfileHeader({
             />
           ) : null}
         </View>
-        <AppText variant="caption" color="textSecondary">
+        {profile.bio ? (
+          <AppText variant="callout" style={styles.bio}>
+            {profile.bio}
+          </AppText>
+        ) : null}
+        <AppText variant="caption" color="textTertiary" style={styles.memberSince}>
           Member since {formatMemberSince(profile.createdAt)}
         </AppText>
-        {profile.bio ? <AppText variant="callout">{profile.bio}</AppText> : null}
       </View>
 
       <View style={styles.actions}>
@@ -226,6 +230,9 @@ const styles = StyleSheet.create({
   stat: { alignItems: 'center', minWidth: 64, minHeight: 44, justifyContent: 'center' },
   statValue: { fontVariant: ['tabular-nums'] },
   identity: { gap: 2 },
+  bio: { marginTop: spacing.xxs },
+  // Understated: the quietest line in the header.
+  memberSince: { marginTop: spacing.xs },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   name: { fontFamily: fonts.textSemiBold, flexShrink: 1 },
   actions: { flexDirection: 'row', gap: spacing.sm },

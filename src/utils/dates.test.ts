@@ -36,7 +36,7 @@ describe('dates', () => {
 
 describe('formatMemberSince', () => {
   it('formats the creation date as month/day/year', () => {
-    expect(formatMemberSince('2026-10-19T15:30:00')).toBe('10/19/2026');
+    expect(formatMemberSince('2026-10-19T15:30:00')).toBe('October 19, 2026');
     expect(formatMemberSince('not a date')).toBe('');
   });
 });

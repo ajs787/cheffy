@@ -36,7 +36,8 @@ const STOP_COLORS = [...ratingScale.colors];
 export function RatingRing({ value, size = 'md' }: RatingRingProps) {
   const reduceMotion = useReducedMotion();
   const d = RING_SIZES[size];
-  const stroke = size === 'lg' ? 3.5 : 3;
+  // ~20% heavier than V3's 3 / 3.5; the radius subtracts it, so nothing clips.
+  const stroke = size === 'lg' ? 4.2 : 3.6;
   const r = (d - stroke) / 2;
   const circumference = 2 * Math.PI * r;
 

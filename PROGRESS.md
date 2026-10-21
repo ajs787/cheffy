@@ -687,3 +687,13 @@ settings have not taken effect yet.
 - **App Store:** the contacts purpose string is set. In App Privacy, contacts are not
   "collected", because they never leave the device.
 - **Needs a new build:** expo-clipboard (Expo Go already has it).
+
+## V4 · Priorities 4 and 5 — Profile order and rating ring (built, not committed)
+
+- **Profile header order:** photo and counts, display name, bio (full, wrapping), then
+  "Member since October 20, 2026" (the account's real `created_at`, long English format, in
+  the tertiary color), then the actions and tabs.
+- **RatingRing:** stroke goes from 3 to 3.6 (sm/md) and from 3.5 to 4.2 (lg), about 20%
+  thicker. The radius subtracts the stroke, so nothing clips. Progress (rating / 10), color
+  interpolation, rounded caps and the centered number are unchanged. Reviewed at 0.0, 3.5,
+  6.5, 9.2 and 10.0 at all three sizes in the simulator.
