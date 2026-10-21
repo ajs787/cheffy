@@ -26,7 +26,9 @@ const SUPABASE_STUBS = `
 
   create table auth.users (
     id uuid primary key,
-    email text not null unique
+    email text not null unique,
+    created_at timestamptz not null default now(),
+    email_confirmed_at timestamptz default now()
   );
 
   create function auth.uid() returns uuid

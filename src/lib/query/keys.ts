@@ -35,7 +35,8 @@ export const queryKeys = {
   feed: ['posts', 'feed'] as const,
   forYou: ['posts', 'for-you'] as const,
   post: (id: string) => ['posts', 'detail', id] as const,
-  diary: (userId: string, primaryId: string | null) => ['posts', 'diary', userId, primaryId ?? 'all'] as const,
+  diary: (userId: string, primaryId: string | null) =>
+    ['posts', 'diary', userId, primaryId ?? 'all'] as const,
   drafts: ['posts', 'drafts'] as const,
   saved: ['posts', 'saved'] as const,
   discover: (params: DiscoverQueryParams) => ['posts', 'discover', params] as const,

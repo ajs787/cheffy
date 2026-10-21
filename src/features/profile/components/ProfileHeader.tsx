@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
-import { Lock } from 'lucide-react-native';
+import { Lock, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { FollowButton } from '@/components/shared/FollowButton';
 import { AppButton, AppText, Avatar, categoryColorFor } from '@/components/ui';
 import { shareProfile } from '@/lib/share';
 import { avatarForViewer, openImageViewer } from '@/stores/imageViewer';
-import { colors, fonts, SCREEN_GUTTER, spacing, strokes } from '@/theme';
+import { colors, fonts, HAIRLINE, profileThemes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import { followStateOf, type ProfileStats, type ProfileWithViewer } from '@/types/models';
 import { formatMemberSince } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
@@ -59,13 +59,21 @@ export function ProfileHeader({
   const openConnections = (type: 'followers' | 'following') =>
     router.push({ pathname: '/user/[id]/connections', params: { id: profile.id, type } });
 
+  const accent = profileThemes[profile.theme ?? 'default'].accent;
+
   return (
     <View style={styles.container}>
       <View style={styles.top}>
         <Pressable
           disabled={!photo}
           onPress={() => photo && openImageViewer([photo])}
-          style={({ pressed }) => [styles.avatarRing, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.avatarRing,
+            { borderColor: accent },
+            // Host's frame: a second, gold ring outside the first.
+            profile.frame === 'host' && styles.hostFrame,
+            pressed && styles.pressed,
+          ]}
           accessibilityRole={photo ? 'imagebutton' : 'image'}
           accessibilityLabel={photo ? photo.label : `${profile.displayName}, no profile photo`}
           accessibilityHint={photo ? 'Opens the photo full screen' : undefined}
@@ -92,6 +100,12 @@ export function ProfileHeader({
           <AppText variant="bodyStrong" style={styles.name} numberOfLines={1} accessibilityRole="header">
             {profile.displayName}
           </AppText>
+          {profile.madeTogether ? (
+            <View style={styles.madeTogether} accessible accessibilityLabel="Made Together">
+              <Users size={11} color={colors.textSecondary} strokeWidth={strokes.bold} />
+              <AppText style={styles.madeTogetherText}>Made Together</AppText>
+            </View>
+          ) : null}
           {profile.isPrivate ? (
             <Lock
               size={14}
@@ -183,6 +197,31 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   // A thin oxblood ring keeps the identity without the big card.
   avatarRing: { padding: 2, borderRadius: 999, borderWidth: 1.5, borderColor: colors.accent },
+  hostFrame: {
+    padding: 4,
+    borderWidth: 2,
+    outlineColor: '#B8892E',
+    outlineWidth: 1.5,
+    outlineOffset: 2,
+    outlineStyle: 'solid',
+  },
+  madeTogether: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: HAIRLINE,
+    borderColor: colors.rule,
+  },
+  madeTogetherText: {
+    fontFamily: fonts.textSemiBold,
+    fontSize: 10,
+    lineHeight: 13,
+    color: colors.textSecondary,
+    letterSpacing: 0.4,
+  },
   stats: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
   stat: { alignItems: 'center', minWidth: 64, minHeight: 44, justifyContent: 'center' },
   statValue: { fontVariant: ['tabular-nums'] },

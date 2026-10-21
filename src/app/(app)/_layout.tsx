@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { NotificationBannerHost } from '@/features/activity/components/NotificationBannerHost';
 import { PushHost } from '@/features/activity/components/PushHost';
 import { RankingMomentHost } from '@/features/rankings/components/RankingMomentHost';
+import { useAnnounceUnlocks, useRedeemPendingInvite } from '@/features/unlocks/hooks';
 import { colors } from '@/theme';
 
 export const unstable_settings = {
@@ -12,6 +13,8 @@ export const unstable_settings = {
 };
 
 export default function AppLayout() {
+  useAnnounceUnlocks();
+  useRedeemPendingInvite();
   return (
     <View style={styles.root}>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>

@@ -17,7 +17,11 @@ function mapUsers(data: UserCacheShape, fn: (user: UserListItem) => UserListItem
 export type UserCacheSnapshot = [QueryKey, UserCacheShape][];
 
 /** Optimistically sets the follow state for one user in every cached list; returns a snapshot for rollback. */
-export function setFollowStateInUserCaches(qc: QueryClient, userId: string, state: FollowState): UserCacheSnapshot {
+export function setFollowStateInUserCaches(
+  qc: QueryClient,
+  userId: string,
+  state: FollowState,
+): UserCacheSnapshot {
   const snapshot: UserCacheSnapshot = [];
   for (const root of USER_LIST_ROOTS) {
     for (const [key, data] of qc.getQueriesData<UserCacheShape>({ queryKey: root })) {

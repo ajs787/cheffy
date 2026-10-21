@@ -24,6 +24,9 @@ export interface Profile extends ProfileSummary {
   createdAt: string;
   /** Private accounts approve followers; only followers see their content. */
   isPrivate: boolean;
+  /** Unlocked profile style, shown to everyone. */
+  theme: 'saffron' | null;
+  frame: 'host' | null;
 }
 
 export interface ProfileWithViewer extends Profile {
@@ -31,6 +34,8 @@ export interface ProfileWithViewer extends Profile {
   /** The viewer has a pending follow request to this account. */
   viewerHasRequested: boolean;
   viewerHasBlocked: boolean;
+  /** Has co-created at least one creation ("Made Together"). */
+  madeTogether: boolean;
 }
 
 /** Where the viewer stands with someone: drives the Follow button. */

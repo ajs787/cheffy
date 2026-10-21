@@ -8,6 +8,7 @@ import {
   LogOut,
   Mail,
   NotebookPen,
+  Palette,
   Send,
   Trash2,
   UserCheck,
@@ -87,6 +88,12 @@ export default function SettingsScreen() {
 
         <SettingsGroup title="Account">
           <SettingsRow icon={Send} label="Invite friends" onPress={() => router.push('/invite')} />
+          <Divider inset={spacing.lg} />
+          <SettingsRow
+            icon={Palette}
+            label="Personalize profile"
+            onPress={() => router.push('/personalize')}
+          />
           <Divider inset={spacing.lg} />
           <SettingsRow icon={UserPen} label="Edit profile" onPress={() => router.push('/edit-profile')} />
           <Divider inset={spacing.lg} />

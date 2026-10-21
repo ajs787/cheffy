@@ -2,7 +2,13 @@ import { QueryClient, type InfiniteData } from '@tanstack/react-query';
 
 import type { Page, Post } from '@/types/models';
 
-import { removeAuthorFromCaches, removePostFromCaches, restorePostCaches, snapshotPostCaches, updatePostInCaches } from './cache';
+import {
+  removeAuthorFromCaches,
+  removePostFromCaches,
+  restorePostCaches,
+  snapshotPostCaches,
+  updatePostInCaches,
+} from './cache';
 import { queryKeys } from './keys';
 
 const post = (id: string, authorId = 'a'): Post =>
@@ -36,7 +42,9 @@ describe('post cache helpers', () => {
     updatePostInCaches(qc, 'p1', (p) => ({ ...p, likeCount: 1, viewerHasLiked: true }));
     expect(feedItems(qc)[0]).toMatchObject({ likeCount: 1, viewerHasLiked: true });
     expect(qc.getQueryData<Post>(queryKeys.post('p1'))).toMatchObject({ likeCount: 1 });
-    expect(qc.getQueryData<Post[]>([...queryKeys.discover({ sort: 'top' }), 'section'])![0]).toMatchObject({ likeCount: 1 });
+    expect(qc.getQueryData<Post[]>([...queryKeys.discover({ sort: 'top' }), 'section'])![0]).toMatchObject({
+      likeCount: 1,
+    });
     expect(feedItems(qc)[1]).toMatchObject({ likeCount: 0 });
   });
 
@@ -59,6 +67,8 @@ describe('post cache helpers', () => {
     const qc = seed();
     removeAuthorFromCaches(qc, 'b');
     expect(feedItems(qc).map((p) => p.id)).toEqual(['p1']);
-    expect(qc.getQueryData<Post[]>([...queryKeys.discover({ sort: 'top' }), 'section'])!.map((p) => p.id)).toEqual(['p1']);
+    expect(
+      qc.getQueryData<Post[]>([...queryKeys.discover({ sort: 'top' }), 'section'])!.map((p) => p.id),
+    ).toEqual(['p1']);
   });
 });

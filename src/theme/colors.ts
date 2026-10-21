@@ -67,3 +67,9 @@ export const ratingColors = {
   good: '#8C6534',
   low: '#8C7B6E',
 } as const;
+
+/** Unlockable profile accents. Each keeps AA contrast on ivory. */
+export const profileThemes = {
+  default: { accent: brand.oxblood, soft: '#EFE3E3' },
+  saffron: { accent: '#8A5A12', soft: '#F3E6CC' },
+} as const;

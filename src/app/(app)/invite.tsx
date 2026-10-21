@@ -8,6 +8,8 @@ import { APP_DOWNLOAD_URL } from '@/constants/app';
 import { useMyProfile } from '@/features/profile/hooks';
 import { toUserMessage } from '@/lib/errors';
 import { shareInvite } from '@/lib/share';
+import { RedeemInviteCode } from '@/features/unlocks/components/RedeemInviteCode';
+import { useInviteCode } from '@/features/unlocks/hooks';
 import { toast } from '@/stores/toast';
 import { colors, HAIRLINE, radii, SCREEN_GUTTER, spacing } from '@/theme';
 
@@ -19,11 +21,12 @@ import { colors, HAIRLINE, radii, SCREEN_GUTTER, spacing } from '@/theme';
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
   const { data: me } = useMyProfile();
+  const code = useInviteCode();
 
   const share = async () => {
     if (!me) return;
     try {
-      await shareInvite(me);
+      await shareInvite(me, code.data);
     } catch (error) {
       toast.error(toUserMessage(error, 'Couldn’t open sharing.'));
     }
@@ -69,6 +72,24 @@ export default function InviteScreen() {
           Choose Messages, Instagram, WhatsApp, Mail — or copy it.
         </AppText>
 
+        {code.data ? (
+          <View
+            style={styles.code}
+            accessible
+            accessibilityLabel={`Your invite code: ${code.data.split('').join(' ')}`}
+          >
+            <AppText variant="overline" color="textSecondary">
+              Your invite code
+            </AppText>
+            <AppText variant="title2" style={styles.codeText} selectable>
+              {code.data}
+            </AppText>
+            <AppText variant="caption" color="textTertiary" align="center">
+              Friends who join with it count toward the Host’s frame.
+            </AppText>
+          </View>
+        ) : null}
+
         <View style={styles.divider} />
 
         <AppButton
@@ -84,6 +105,7 @@ export default function InviteScreen() {
             ? 'Your invite includes a link to get the app and a link to your profile.'
             : 'Your invite includes your username and a link that opens your profile once a friend has Cheffy installed.'}
         </AppText>
+        <RedeemInviteCode />
       </ScrollView>
     </View>
   );
@@ -110,4 +132,6 @@ const styles = StyleSheet.create({
   rose: { color: '#E3C4C9' },
   divider: { height: HAIRLINE, backgroundColor: colors.rule, marginVertical: spacing.sm },
   note: { paddingTop: spacing.sm },
+  code: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm },
+  codeText: { letterSpacing: 4, fontVariant: ['tabular-nums'] },
 });

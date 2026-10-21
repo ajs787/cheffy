@@ -20,7 +20,9 @@ describe('uploadImageFile', () => {
   });
 
   it('throws other errors', async () => {
-    mockUpload.mockResolvedValue({ error: { message: 'new row violates row-level security policy', statusCode: '403' } });
+    mockUpload.mockResolvedValue({
+      error: { message: 'new row violates row-level security policy', statusCode: '403' },
+    });
     await expect(uploadImageFile(BUCKETS.postImages, 'u/p/i.jpg', 'file:///x.jpg')).rejects.toMatchObject({
       statusCode: '403',
     });
@@ -34,7 +36,10 @@ describe('signPostImagePaths', () => {
       error: null,
     }));
     const first = await signPostImagePaths(['a.jpg', 'b.jpg', 'a.jpg']);
-    expect(first).toEqual({ 'a.jpg': 'https://cdn.test/a.jpg?token=1', 'b.jpg': 'https://cdn.test/b.jpg?token=1' });
+    expect(first).toEqual({
+      'a.jpg': 'https://cdn.test/a.jpg?token=1',
+      'b.jpg': 'https://cdn.test/b.jpg?token=1',
+    });
     expect(mockCreateSignedUrls).toHaveBeenLastCalledWith(['a.jpg', 'b.jpg'], expect.any(Number));
 
     mockCreateSignedUrls.mockClear();

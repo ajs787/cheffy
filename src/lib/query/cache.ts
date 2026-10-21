@@ -7,11 +7,18 @@ import { queryKeys } from './keys';
 type PostCacheShape = Post | Post[] | InfiniteData<Page<Post>> | undefined | null;
 
 function isPost(value: unknown): value is Post {
-  return typeof value === 'object' && value !== null && 'id' in value && 'author' in value && 'title' in value;
+  return (
+    typeof value === 'object' && value !== null && 'id' in value && 'author' in value && 'title' in value
+  );
 }
 
 function isInfinitePages(value: unknown): value is InfiniteData<Page<Post>> {
-  return typeof value === 'object' && value !== null && 'pages' in value && Array.isArray((value as InfiniteData<unknown>).pages);
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'pages' in value &&
+    Array.isArray((value as InfiniteData<unknown>).pages)
+  );
 }
 
 /** Applies `fn` to every post in a cached value, whatever its shape. */
@@ -38,7 +45,10 @@ export function mapPostsInData(data: PostCacheShape, fn: (post: Post) => Post | 
 /** Updates one post everywhere it is cached (feed, detail, grids, search…). */
 export function updatePostInCaches(qc: QueryClient, postId: string, update: (post: Post) => Post): void {
   for (const [key, data] of qc.getQueriesData<PostCacheShape>({ queryKey: queryKeys.posts })) {
-    qc.setQueryData(key, mapPostsInData(data, (post) => (post.id === postId ? update(post) : post)));
+    qc.setQueryData(
+      key,
+      mapPostsInData(data, (post) => (post.id === postId ? update(post) : post)),
+    );
   }
 }
 
@@ -49,7 +59,10 @@ export function removePostFromCaches(qc: QueryClient, postId: string): void {
       qc.removeQueries({ queryKey: key, exact: true });
       continue;
     }
-    qc.setQueryData(key, mapPostsInData(data, (post) => (post.id === postId ? null : post)));
+    qc.setQueryData(
+      key,
+      mapPostsInData(data, (post) => (post.id === postId ? null : post)),
+    );
   }
 }
 
@@ -60,7 +73,10 @@ export function removeAuthorFromCaches(qc: QueryClient, authorId: string): void 
       qc.removeQueries({ queryKey: key, exact: true });
       continue;
     }
-    qc.setQueryData(key, mapPostsInData(data, (post) => (post.author.id === authorId ? null : post)));
+    qc.setQueryData(
+      key,
+      mapPostsInData(data, (post) => (post.author.id === authorId ? null : post)),
+    );
   }
 }
 

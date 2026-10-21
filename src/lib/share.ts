@@ -29,19 +29,25 @@ export async function shareProfile(profile: { id: string; username: string }): P
  */
 export function inviteMessage(
   inviter: { id: string; username: string },
-  options: { downloadUrl?: string | null; profileUrl?: string } = {},
+  options: { downloadUrl?: string | null; profileUrl?: string; code?: string | null } = {},
 ): string {
   const downloadUrl = options.downloadUrl === undefined ? APP_DOWNLOAD_URL : options.downloadUrl;
   const lines = [
     `I'm keeping a diary of what I cook, bake and pour on Cheffy. Come cook with me — I'm @${inviter.username}.`,
     downloadUrl ? `Get the app: ${downloadUrl}` : null,
+    options.code
+      ? `When you join, use my invite code ${options.code} (or open ${Linking.createURL(`invite/${options.code}`)}).`
+      : null,
     `Open my profile: ${options.profileUrl ?? profileLink(inviter.id)}`,
   ];
   return lines.filter(Boolean).join('\n\n');
 }
 
 /** Opens the system share sheet (Messages, Instagram, WhatsApp, Mail, Copy…). */
-export async function shareInvite(inviter: { id: string; username: string }): Promise<boolean> {
-  const result = await Share.share({ message: inviteMessage(inviter) });
+export async function shareInvite(
+  inviter: { id: string; username: string },
+  code?: string | null,
+): Promise<boolean> {
+  const result = await Share.share({ message: inviteMessage(inviter, { code }) });
   return result.action === Share.sharedAction;
 }

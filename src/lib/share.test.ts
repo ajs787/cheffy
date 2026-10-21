@@ -13,6 +13,12 @@ describe('inviteMessage', () => {
     expect(message).not.toContain('Get the app');
   });
 
+  it('includes the personal invite code and its link', () => {
+    const message = inviteMessage(me, { downloadUrl: null, code: 'AB12CD34' });
+    expect(message).toContain('invite code AB12CD34');
+    expect(message).toContain('cheffy://invite/AB12CD34');
+  });
+
   it('includes the download link when one is configured', () => {
     expect(inviteMessage(me, { downloadUrl: 'https://testflight.apple.com/join/abc' })).toContain(
       'Get the app: https://testflight.apple.com/join/abc',

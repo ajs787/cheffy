@@ -437,6 +437,50 @@ Simulator: Mine/Friends switch, Friends' Rankings with live data, opening a
 friend's Rankings tab. Not verified live: the post-publish sheet (needs a
 real new entry — try it on your phone).
 
+## V3 — Milestone 5: minimal unlocks (2026-10-21)
+
+Migration `20261021000009_unlocks.sql` (applied live).
+
+Four unlocks only — no XP, levels, streaks or badge walls; nothing basic is
+gated:
+- **Saffron theme** — 3 published creations (warm gold accent, AA on ivory).
+- **Host’s frame** — 2 verified referrals (double ring around the photo).
+- **Made Together** — first accepted collaboration, for both people (a quiet
+  mark beside the name).
+- **Cooking recap** — 10 published creations.
+
+**Server-side, idempotent.** `profile_unlocks` (one row per unlock, never
+revoked) is written only by `refresh_unlocks`, run by triggers on publishing
+and accepting collaborations and on verified referrals; `my_unlocks` also
+backfills what people earned before this shipped. Clients can't insert
+unlocks, call `refresh_unlocks`, or set theme/frame directly —
+`set_profile_style` checks the unlock.
+
+**Referrals without fraud.** Personal 8-character codes (`my_invite_code`).
+Credit only through `redeem_invite_code` by the *new* account: email
+confirmed, account under 14 days old, profile finished, one redemption ever,
+not your own code, no referring back, nothing across a block. Opening
+`cheffy://invite/CODE` just remembers the code; it's redeemed after the new
+account has a profile. `referrals` and `invite_codes` are unreadable to
+clients; people only see their own count.
+
+**App.** Settings → Personalize profile (themes, frames, distinction, recap,
+with honest progress like "2 of 3 creations"); Invite friends shows your code
+and includes it in the share message, plus "Joined because of a friend?" to
+enter one; one quiet toast when something new unlocks. Recap screen (total,
+average, since, Cooking/Baking/Drinks split, most made only when one leads,
+highest rated, favorite cuisines only with 3+ cuisine-tagged entries).
+
+Verified: typecheck, lint, 299 tests (8 unlock DB tests: thresholds, drafts
+excluded, idempotence, no revocation, no forging/self-granting/locked style,
+made-together for both, two verified referrals → frame, self/repeat/reverse/
+old/unverified/bad-code rejection, private referral data, recap gating and
+contents; unit tests for progress, one-time announcements and recap rules).
+In the simulator with live data: Personalize shows Saffron unlocked (4
+creations), frame 0 of 2, recap 4 of 10; applying Saffron saved and was
+reverted. Needs real accounts: redeeming a code from a new signup, the frame
+unlocking, Made Together after a real collaboration, the recap at 10.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,
