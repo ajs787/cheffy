@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { FollowButton } from '@/components/shared/FollowButton';
 import { AppButton, AppText, Avatar, FoodImage, PressableScale } from '@/components/ui';
+import { useRespondToCollaboration } from '@/features/collaboration/hooks';
 import { useRespondToFollowRequest } from '@/features/social/hooks';
 import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 import { followStateOf } from '@/types/models';
@@ -13,6 +14,7 @@ import { activityTarget, describe, type ActivityItem } from '../api';
 
 function ActivityRowBase({ item }: { item: ActivityItem }) {
   const respond = useRespondToFollowRequest();
+  const collab = useRespondToCollaboration();
   const sentence = describe(item);
   const showComment = item.commentBody && item.type !== 'comment_like';
 
@@ -30,6 +32,19 @@ function ActivityRowBase({ item }: { item: ActivityItem }) {
           size="sm"
           variant="secondary"
           onPress={() => respond.mutate({ userId: item.actor.id, accept: false })}
+        />
+      </View>
+    );
+  } else if (item.type === 'collab_invite' && item.post) {
+    const postId = item.post.id;
+    trailing = (
+      <View style={styles.requestActions}>
+        <AppButton label="Accept" size="sm" onPress={() => collab.mutate({ postId, accept: true })} />
+        <AppButton
+          label="Decline"
+          size="sm"
+          variant="secondary"
+          onPress={() => collab.mutate({ postId, accept: false })}
         />
       </View>
     );

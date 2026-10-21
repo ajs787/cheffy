@@ -10,7 +10,7 @@ import { likedBySummary } from '@/features/social/likedBy';
 import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
 import { colors, fonts, HAIRLINE, iconSizes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
-import type { Post } from '@/types/models';
+import { madeByNames, type Post } from '@/types/models';
 import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
@@ -52,12 +52,12 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
           onPress={() => openProfile(post.author.id)}
           style={styles.author}
           accessibilityRole="link"
-          accessibilityLabel={`${post.author.displayName}, @${post.author.username}`}
+          accessibilityLabel={`${madeByNames([post.author.displayName, ...post.coCreators.map((c) => c.profile.displayName)])}, @${post.author.username}`}
         >
           <Avatar uri={post.author.avatarUrl} name={post.author.displayName} size="sm" />
           <View style={styles.flex}>
             <AppText variant="calloutStrong" numberOfLines={1}>
-              {post.author.displayName}
+              {madeByNames([post.author.displayName, ...post.coCreators.map((c) => c.profile.displayName)])}
             </AppText>
             <AppText variant="caption" color="textSecondary" numberOfLines={1}>
               @{post.author.username}

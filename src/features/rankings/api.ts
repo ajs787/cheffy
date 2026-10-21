@@ -112,15 +112,31 @@ export function summarizeRatings(rows: readonly { rating: number; primary_catego
   return { count: rows.length, average: Math.round((total / rows.length) * 10) / 10, topPrimaryId };
 }
 
-/** A user's published ratings, summarised (only the two columns needed). */
+/**
+ * A user's published ratings, summarised: posts they created plus their own
+ * ratings of shared creations (evaluations exist only while accepted).
+ */
 export async function fetchRatingSummary(userId: string): Promise<RatingSummary> {
-  const rows = await fetchRows<{ rating: number; primary_category_id: string }>(
-    supabase
-      .from('posts')
-      .select('rating, primary_category_id')
-      .eq('author_id', userId)
-      .eq('status', 'published')
-      .limit(5000),
+  const [own, shared] = await Promise.all([
+    fetchRows<{ rating: number; primary_category_id: string }>(
+      supabase
+        .from('posts')
+        .select('rating, primary_category_id')
+        .eq('author_id', userId)
+        .eq('status', 'published')
+        .limit(5000),
+    ),
+    fetchRows<{ rating: number; post: { primary_category_id: string; status: string } | null }>(
+      supabase
+        .from('post_evaluations')
+        .select('rating, post:posts!inner(primary_category_id, status)')
+        .eq('user_id', userId)
+        .eq('post.status', 'published')
+        .limit(5000),
+    ),
+  ]);
+  const sharedRows = shared.flatMap((e) =>
+    e.post ? [{ rating: Number(e.rating), primary_category_id: e.post.primary_category_id }] : [],
   );
-  return summarizeRatings(rows);
+  return summarizeRatings([...own, ...sharedRows]);
 }

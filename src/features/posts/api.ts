@@ -24,19 +24,20 @@ export async function fetchDiaryPage(
   primaryId: string | null,
   cursor: Cursor | null,
 ): Promise<Page<Post>> {
-  let query = supabase
-    .from('posts')
-    .select(POST_SELECT)
-    .eq('author_id', userId)
-    .eq('status', 'published')
-    .order('made_on', { ascending: false })
-    .order('id', { ascending: false })
-    .limit(PAGE_SIZE);
-  if (primaryId) query = query.eq('primary_category_id', primaryId);
-  if (cursor) {
-    query = query.or(`made_on.lt.${cursor.before},and(made_on.eq.${cursor.before},id.lt.${cursor.beforeId})`);
-  }
-  const rows = await fetchRows<PostRow>(query);
+  // What they created plus accepted collaborations (diary_posts).
+  const rows = await fetchRows<PostRow>(
+    supabase
+      .rpc('diary_posts', {
+        p_user_id: userId,
+        p_primary_id: primaryId,
+        p_before: cursor?.before ?? null,
+        p_before_id: cursor?.beforeId ?? null,
+        p_limit: PAGE_SIZE,
+      })
+      .select(POST_SELECT)
+      .order('made_on', { ascending: false })
+      .order('id', { ascending: false }),
+  );
   const posts = await attachImageUrls(mapPosts(rows), 'thumb');
   const last = rows[rows.length - 1];
   return {

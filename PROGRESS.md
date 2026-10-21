@@ -357,6 +357,52 @@ TestFlight build containing `expo-notifications` and an APNs key configured
 by EAS (answer yes when the build offers to set up push), plus the user
 allowing notifications.
 
+## V3 — Milestone 2: collaborative posts (2026-10-21)
+
+Migration `20261021000007_collaborations.sql` (applied live).
+
+**Model (normalized, no duplicated posts).** `posts.author_id` is the
+creator. `post_collaborators(post_id, user_id, status, invited_by, …)` with
+pending → accepted / declined, accepted → removed. `post_evaluations(post_id,
+user_id, rating, review)` holds each accepted co-creator's own score; the
+creator's stays on `posts.rating`. Likes, comments and photos belong to the
+one shared post.
+
+**Permissions** (all writes through checked functions; clients can't insert
+rows, so nobody can add themselves):
+- creator: `invite_collaborators` (published posts only, ≤5 active, no
+  blocked users, re-invite after decline/leave), `remove_collaborator`,
+  edits shared details (posts RLS unchanged — collaborators can't edit);
+- invitee: `respond_to_collaboration` (own pending invite only);
+- co-creator: `set_my_evaluation` (own row only), leave via
+  `remove_collaborator(self)` — the creation stays, their rating goes.
+- Visibility: creator's account/post rules as before, plus invitees and
+  co-creators always see the shared post (and so its photos/comments).
+  Pending/declined rows are visible only to creator and invitee.
+
+**Everywhere it shows up.** Diary (`diary_posts`), rankings
+(`creations_of` — each person's own rating; unrated collaborations aren't
+ranked until rated), ranking filters, profile counts, the feed (followers of
+any co-creator), rating summary. Notifications `collab_invite` (to invitee,
+cleared once answered) and `collab_accepted` (to creator), with push text.
+
+**App.** Feed cards read "Audrey and Sophie"; post detail has the shared-
+creation panel (invitation Accept/Decline, co-creators with their own rings
+and reviews, Add/Edit your rating, Leave, creator's Invite/Remove, waiting
+list); Create has "Made with" (invites sent on publish); Activity has inline
+Accept/Decline.
+
+Verified: typecheck, lint, 274 tests (14 collaboration DB tests: creator-only
+invites, published-only, cap, blocks, no forged rows, invitee visibility,
+accept/decline/re-invite, independent ratings, per-user rankings, diary/
+stats/feed inclusion without duplication, leave/remove, creator-only edits,
+private pending rows; unit tests for mapping and names). Simulator: feed and
+diary load through the new queries; creator panel and people picker.
+
+Needs two accounts: send an invitation, accept/decline on the other phone,
+each adding their own rating, the shared post on both profiles and in both
+rankings, leaving.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

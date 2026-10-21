@@ -28,6 +28,8 @@ import { CategorySelector } from '@/features/posts/components/CategorySelector';
 import { ComposeFooter } from '@/features/posts/components/ComposeFooter';
 import { DetailsSection } from '@/features/posts/components/DetailsSection';
 import { FormSection } from '@/features/posts/components/FormSection';
+import { inviteCollaborators } from '@/features/collaboration/api';
+import { MadeWithField } from '@/features/collaboration/components/MadeWithField';
 import { ClassificationField } from '@/features/posts/components/ClassificationField';
 import { PhotoStrip } from '@/features/posts/components/PhotoStrip';
 import { StoryField } from '@/features/posts/components/StoryField';
@@ -53,7 +55,7 @@ import { usePreferencesStore } from '@/stores/preferences';
 import { usePushPromptStore } from '@/stores/pushPrompt';
 import { toast } from '@/stores/toast';
 import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
-import type { Post } from '@/types/models';
+import type { Post, ProfileSummary } from '@/types/models';
 
 export default function ComposeScreen() {
   const { postId: editId } = useLocalSearchParams<{ postId?: string }>();
@@ -103,6 +105,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
   const uploadCache = useRef(new Map<string, UploadedImage>());
   const [progress, setProgress] = useState<SaveProgress | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [madeWith, setMadeWith] = useState<ProfileSummary[]>([]);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const revealOnFocus = useRevealOnFocus(scrollRef);
   // Tag text typed but not yet committed; included on submit so it isn't lost.
@@ -154,6 +157,17 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
         onProgress: setProgress,
       });
       setDefaultVisibility(parsed.data.visibility);
+      // Invitations go out once the creation is published.
+      if (status === 'published' && madeWith.length > 0) {
+        await inviteCollaborators(
+          postId,
+          madeWith.map((p) => p.id),
+        ).catch((error) =>
+          toast.error(
+            toUserMessage(error, 'Saved, but the invitations didn’t send. Try again from the post.'),
+          ),
+        );
+      }
       haptics.success();
       toast.success(
         status === 'draft' ? 'Draft saved' : editingPublished ? 'Changes saved' : 'Logged to your diary',
@@ -370,6 +384,8 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
                 )}
               />
             </Collapsible>
+
+            {!editingPublished ? <MadeWithField people={madeWith} onChange={setMadeWith} /> : null}
 
             {taxonomy.data ? (
               <DetailsSection

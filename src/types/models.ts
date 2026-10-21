@@ -127,6 +127,10 @@ export interface Post {
   viewerHasSaved: boolean;
   /** Newest likers (feed only; empty elsewhere). */
   recentLikers: ProfileSummary[];
+  /** Accepted co-creators, each with their own rating and review. */
+  coCreators: CoCreator[];
+  /** Invitations still waiting (visible to the creator and the invitee only). */
+  pendingInvitees: ProfileSummary[];
 }
 
 export interface Comment {
@@ -208,4 +212,19 @@ export interface UserListItem extends ProfileSummary {
   viewerIsFollowing: boolean;
   viewerHasRequested: boolean;
   isPrivate: boolean;
+}
+
+export type CollaborationStatus = 'pending' | 'accepted' | 'declined' | 'removed';
+
+export interface CoCreator {
+  profile: ProfileSummary;
+  /** Their own 0–10 rating; null until they rate it. */
+  rating: number | null;
+  review: string;
+}
+
+/** "Audrey", "Audrey and Sophie", "Audrey, Sophie and Jun". */
+export function madeByNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }

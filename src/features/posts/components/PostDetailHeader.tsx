@@ -13,6 +13,8 @@ import type { Post } from '@/types/models';
 import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
+import { CollaborationPanel } from '@/features/collaboration/components/CollaborationPanel';
+
 import { PostDetails } from './PostDetails';
 import { StoryBody } from './StoryBody';
 
@@ -148,6 +150,8 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
             ))}
           </View>
         ) : null}
+
+        <CollaborationPanel post={post} />
 
         <PostDetails post={post} />
 

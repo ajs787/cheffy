@@ -12,7 +12,9 @@ export type NotificationType =
   | 'post_like'
   | 'comment'
   | 'comment_reply'
-  | 'comment_like';
+  | 'comment_like'
+  | 'collab_invite'
+  | 'collab_accepted';
 
 export interface ActivityPost {
   id: string;
@@ -53,7 +55,14 @@ const NOTIFICATION_SELECT = `
 
 export const ACTIVITY_LIMIT = 100;
 
-const POST_TYPES: readonly NotificationType[] = ['post_like', 'comment', 'comment_reply', 'comment_like'];
+const POST_TYPES: readonly NotificationType[] = [
+  'post_like',
+  'comment',
+  'comment_reply',
+  'comment_like',
+  'collab_invite',
+  'collab_accepted',
+];
 
 /** Maps a row; drops ones whose actor or post the viewer can no longer see. */
 export function mapNotification(row: NotificationRow): ActivityItem | null {
@@ -124,6 +133,10 @@ export function describe(item: Pick<ActivityItem, 'type' | 'post' | 'commentBody
       return `replied to you on ${title}`;
     case 'comment_like':
       return `liked your comment on ${title}`;
+    case 'collab_invite':
+      return `invited you to co-post ${item.post?.title ?? 'a creation'}`;
+    case 'collab_accepted':
+      return `is now a co-creator of ${title}`;
   }
 }
 

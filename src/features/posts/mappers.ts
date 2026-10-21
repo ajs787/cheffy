@@ -7,6 +7,8 @@ import { signPostImagePaths } from '@/lib/supabase/storage';
 import type {
   CategoryKind,
   CategoryRef,
+  CoCreator,
+  CollaborationStatus,
   Post,
   PostImage,
   PostStatus,
@@ -28,7 +30,9 @@ export const POST_SELECT = `
   images:post_images(id, storage_path, thumb_path, width, height, position),
   post_tags(tag:tags(id, slug, name)),
   viewer_has_liked,
-  viewer_has_saved
+  viewer_has_saved,
+  collaborators:post_collaborators(status, user:profiles!post_collaborators_user_id_fkey(${PROFILE_SUMMARY_SELECT})),
+  evaluations:post_evaluations(user_id, rating, review)
 `;
 
 /**
@@ -91,6 +95,36 @@ export interface PostRow {
   viewer_has_liked: boolean;
   viewer_has_saved: boolean;
   likers?: { created_at: string; profile: ProfileSummaryRow | null }[];
+  collaborators?: { status: CollaborationStatus; user: ProfileSummaryRow | null }[];
+  evaluations?: { user_id: string; rating: number | string; review: string }[];
+}
+
+/**
+ * Co-creators (accepted, with their own rating and review) and pending
+ * invitations. RLS only returns pending rows to the invitee and the creator.
+ */
+export function mapCollaboration(
+  rows: PostRow['collaborators'],
+  evaluations: PostRow['evaluations'],
+): Pick<Post, 'coCreators' | 'pendingInvitees'> {
+  const byUser = new Map((evaluations ?? []).map((e) => [e.user_id, e]));
+  const coCreators: CoCreator[] = [];
+  const pendingInvitees: Post['pendingInvitees'] = [];
+  for (const row of rows ?? []) {
+    if (!row.user) continue;
+    const profile = mapProfileSummary(row.user);
+    if (row.status === 'accepted') {
+      const evaluation = byUser.get(profile.id);
+      coCreators.push({
+        profile,
+        rating: evaluation ? Number(evaluation.rating) : null,
+        review: evaluation?.review ?? '',
+      });
+    } else if (row.status === 'pending') {
+      pendingInvitees.push(profile);
+    }
+  }
+  return { coCreators, pendingInvitees };
 }
 
 /** Splits a post's ordered classifications by kind. */
@@ -159,6 +193,7 @@ export function mapPost(row: PostRow): Post | null {
     viewerHasLiked: row.viewer_has_liked,
     viewerHasSaved: row.viewer_has_saved,
     recentLikers: (row.likers ?? []).flatMap((l) => (l.profile ? [mapProfileSummary(l.profile)] : [])),
+    ...mapCollaboration(row.collaborators, row.evaluations),
   };
 }
 
