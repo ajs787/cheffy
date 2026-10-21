@@ -50,6 +50,7 @@ import { quickPickFor } from '@/features/taxonomy/taxonomy';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { usePreferencesStore } from '@/stores/preferences';
+import { usePushPromptStore } from '@/stores/pushPrompt';
 import { toast } from '@/stores/toast';
 import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
 import type { Post } from '@/types/models';
@@ -158,6 +159,8 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
       );
       reset(parsed.data);
       router.back();
+      // A good moment to offer notifications (only ever offered once).
+      if (status === 'published') usePushPromptStore.getState().offerOnce();
     } catch (error) {
       haptics.error();
       toast.error(toUserMessage(error, 'Couldn’t save. Your entry is still here — try again.'));
@@ -326,7 +329,11 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
                 control={control}
                 name="story"
                 render={({ field }) => (
-                  <StoryField initial={field.value} onChange={field.onChange} onFocus={revealOnFocus.reveal} />
+                  <StoryField
+                    initial={field.value}
+                    onChange={field.onChange}
+                    onFocus={revealOnFocus.reveal}
+                  />
                 )}
               />
             </Collapsible>

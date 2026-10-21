@@ -2,36 +2,51 @@ import { router } from 'expo-router';
 import { Bell } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
-import { IconButton } from '@/components/ui';
-import { colors } from '@/theme';
+import { AppText, IconButton } from '@/components/ui';
+import { colors, fonts } from '@/theme';
 
-import { useHasUnreadActivity } from '../hooks';
+import { useUnreadCount } from '../hooks';
 
-/** Home's activity button, with an oxblood dot when something new happened. */
+/** Caps the badge at "9+" so it stays a badge. */
+export function badgeLabel(count: number): string {
+  return count > 9 ? '9+' : String(count);
+}
+
+/** Home's activity button, with an oxblood count badge for unread notifications. */
 export function ActivityBell() {
-  const unread = useHasUnreadActivity();
+  const { data: unread = 0 } = useUnreadCount();
   return (
     <View>
       <IconButton
         icon={Bell}
-        label={unread ? 'Activity, new' : 'Activity'}
+        label={unread > 0 ? `Activity, ${unread} new` : 'Activity'}
         onPress={() => router.push('/activity')}
       />
-      {unread ? <View pointerEvents="none" style={styles.dot} /> : null}
+      {unread > 0 ? (
+        <View pointerEvents="none" style={styles.badge} accessibilityElementsHidden>
+          <AppText style={styles.badgeText} maxFontSizeMultiplier={1.2}>
+            {badgeLabel(unread)}
+          </AppText>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  dot: {
+  badge: {
     position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 4,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.accent,
     borderWidth: 1.5,
     borderColor: colors.background,
   },
+  badgeText: { fontFamily: fonts.textSemiBold, fontSize: 11, lineHeight: 13, color: colors.ivory },
 });

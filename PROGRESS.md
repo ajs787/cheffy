@@ -239,6 +239,56 @@ Known limits:
   build) and a privacy decision on matching (Cheffy doesn't store phone
   numbers or expose emails).
 
+## V2 — Milestone 4: profile redesign & notifications (2026-10-21)
+
+Migrations `20261021000004_notifications.sql` and `20261021000005_push.sql`,
+both applied to the live project.
+
+- **Profile.** The big membership card is gone. Instagram-style top row
+  (photo with an oxblood ring — tap to enlarge — and tappable counts), name,
+  "Membre depuis", bio, Edit/Share or Follow/Share, a compact Cooking ·
+  Baking · Drinks line, a "Top rated" preview (top three with rank badges and
+  rings, links to Rankings), then Diary / Rankings / Collections. Private
+  profiles show a lock next to the name.
+- **Notifications.** A `notifications` table written only by triggers for
+  follow, follow request, request accepted, post like, comment, reply and
+  comment like. Self-actions are skipped, repeats don't stack, and undoing
+  (unlike, unfollow, cancel, delete) removes them. Server-side read state:
+  the bell shows an oxblood count badge ("9+" cap); unread rows are tinted
+  with a dot; follow requests can be confirmed inline; every row opens the
+  post or profile. Existing activity was copied in as already read.
+- **In-app banners.** Supabase Realtime on `notifications` (RLS applies)
+  refreshes the badge and inbox and shows a tappable banner with sender,
+  action and thumbnail; suppressed while creating/editing or in Activity;
+  each event shows once; auto-dismisses.
+- **Push.** One-time explanation sheet after the first published entry or
+  first follow ("Turn on notifications" / "Not now"); iOS is only asked after
+  tapping Turn on; never auto-offered again (Settings can reopen it; denied
+  links to iOS Settings). Tokens registered via `register_push_token`,
+  removed on sign-out. Settings → Notifications has status plus Follows &
+  requests / Likes / Comments & replies switches. Delivery runs in the
+  database: a trigger posts to Expo's push service with `pg_net`, honouring
+  preferences, with an unread badge and a link back into the app. No push
+  credentials in the client.
+
+Verified: typecheck, lint, 239 tests (8 notification and 7 push DB tests:
+every type, undo removal, request→accepted, read state, blocks, no forging,
+token registration/moving/validation, message text, preferences and
+upserts; unit tests for mapping, sentences, routes, badge, push paths). In
+the simulator: new profile layout with live data, Activity from the new
+table, bell with no badge after the read backfill.
+
+**Push needs a new build** — `expo-notifications` is a native module. Until
+then the app detects it's missing and Settings shows "Needs app update".
+Run (it asks to set up an Apple push key; answer yes):
+
+    export PATH=~/.local/node24/bin:$PATH && npx eas-cli@latest build -p ios --profile development-device --auto-submit
+
+Needs checking on devices (two accounts): a like/comment/follow producing the
+banner and badge live, confirming a request from Activity, the push
+explanation sheet, the iOS prompt, push delivery on a locked phone, tapping a
+push into the right post, and preferences switching kinds off.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

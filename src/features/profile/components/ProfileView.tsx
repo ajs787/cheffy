@@ -167,7 +167,13 @@ export function ProfileView({ userId, isOwn, isTabRoot = false }: ProfileViewPro
         onRefreshProfile={() => Promise.all([profile.refetch(), stats.refetch()])}
         header={
           <View>
-            <ProfileHeader profile={p} stats={stats.data} isOwn={isOwn} usernameInTitle={isOwn} />
+            <ProfileHeader
+              profile={p}
+              stats={stats.data}
+              isOwn={isOwn}
+              showPreview
+              onOpenRankings={() => setTab('rankings')}
+            />
             <SegmentedControl options={TABS} value={tab} onChange={setTab} />
           </View>
         }

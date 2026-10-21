@@ -134,6 +134,18 @@ and date → inset photos (`PhotoMosaic`: one photo 4:3; two or three as a
 mosaic with "+N") → review, story teaser, tags → "Liked by **name** and N
 others" (real likers only) → espresso rule with like / comment / save.
 
+### Profile
+
+Compact social header: avatar (oxblood ring) beside tappable counts; name,
+"Membre depuis" overline, bio; actions; category line; Top rated preview
+(rank badge + ring); then tabs with a 3-column photo grid.
+
+### Notifications
+
+Bell with an oxblood count badge (9+ cap). Unread rows: tint background and
+an oxblood dot. Live banners reuse the toast surface with the sender's
+avatar and the post thumbnail.
+
 ### Screen headers
 
 Only Home shows the wordmark. Every other tab names itself with a large

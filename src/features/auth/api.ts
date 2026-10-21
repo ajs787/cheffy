@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 
 import { supabase } from '@/lib/supabase/client';
+import { unregisterPush } from '@/lib/push';
 
 /** Deep link Supabase sends email links back to. Must be in the project's redirect allow-list. */
 export const authCallbackUrl = (params?: Record<string, string>) =>
@@ -23,6 +24,8 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
+  // Stop this phone getting the signed-out person's notifications.
+  await unregisterPush().catch(() => undefined);
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }

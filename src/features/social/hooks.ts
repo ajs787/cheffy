@@ -1,9 +1,4 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useRequiredUserId } from '@/features/auth/store';
 import { toUserMessage } from '@/lib/errors';
@@ -17,6 +12,7 @@ import {
 import { invalidateAfterGraphChange } from '@/lib/query/invalidate';
 import { queryKeys } from '@/lib/query/keys';
 import { restoreUserCaches, setFollowStateInUserCaches } from '@/lib/query/userCache';
+import { usePushPromptStore } from '@/stores/pushPrompt';
 import { toast } from '@/stores/toast';
 import type { FollowState, Post, ProfileWithViewer, ReportReason, ReportTarget } from '@/types/models';
 
@@ -144,6 +140,8 @@ export function useFollowAction() {
     },
     onSuccess: (state, { userId }) => {
       apply(userId, state);
+      // First follow: offer notifications (only ever offered once).
+      if (state !== 'none') usePushPromptStore.getState().offerOnce();
     },
     onError: (error, _vars, context) => {
       if (context?.previous) qc.setQueryData(context.key, context.previous);
@@ -173,7 +171,10 @@ export function useRespondToFollowRequest() {
     onMutate: async ({ userId }) => {
       await qc.cancelQueries({ queryKey: queryKeys.followRequests });
       const previous = qc.getQueryData<{ user: { id: string } }[]>(queryKeys.followRequests);
-      qc.setQueryData(queryKeys.followRequests, previous?.filter((r) => r.user.id !== userId));
+      qc.setQueryData(
+        queryKeys.followRequests,
+        previous?.filter((r) => r.user.id !== userId),
+      );
       haptics.light();
       return { previous };
     },
@@ -183,6 +184,7 @@ export function useRespondToFollowRequest() {
     },
     onSettled: (_data, _error, { userId }) => {
       void qc.invalidateQueries({ queryKey: queryKeys.followRequests });
+      void qc.invalidateQueries({ queryKey: ['activity'] });
       void invalidateAfterGraphChange(qc, userId);
       void qc.invalidateQueries({ queryKey: queryKeys.profileStats(me) });
     },
@@ -213,7 +215,8 @@ export function useConnections(userId: string | undefined, type: 'followers' | '
     queryKey: queryKeys.connections(userId ?? '', type),
     queryFn: ({ pageParam }) => fetchConnections(userId!, type, pageParam),
     initialPageParam: 0,
-    getNextPageParam: (last, pages) => (last.length === CONNECTIONS_PAGE ? pages.length * CONNECTIONS_PAGE : undefined),
+    getNextPageParam: (last, pages) =>
+      last.length === CONNECTIONS_PAGE ? pages.length * CONNECTIONS_PAGE : undefined,
     enabled: !!userId,
   });
 }
@@ -229,7 +232,11 @@ export function useUserSearch(query: string) {
 }
 
 export function useSuggestedCooks() {
-  return useQuery({ queryKey: queryKeys.suggestedCooks, queryFn: fetchSuggestedCooks, staleTime: 5 * 60_000 });
+  return useQuery({
+    queryKey: queryKeys.suggestedCooks,
+    queryFn: fetchSuggestedCooks,
+    staleTime: 5 * 60_000,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -278,8 +285,15 @@ export function useUnblockUser() {
 export function useReport() {
   const me = useRequiredUserId();
   return useMutation({
-    mutationFn: ({ target, reason, details }: { target: ReportTarget; reason: ReportReason; details: string }) =>
-      reportContent(me, target, reason, details),
+    mutationFn: ({
+      target,
+      reason,
+      details,
+    }: {
+      target: ReportTarget;
+      reason: ReportReason;
+      details: string;
+    }) => reportContent(me, target, reason, details),
     onSuccess: () => {
       haptics.success();
       toast.success('Thanks — we’ll review this report.');

@@ -3,64 +3,80 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { FollowButton } from '@/components/shared/FollowButton';
-import { AppText, Avatar, FoodImage, PressableScale } from '@/components/ui';
-import { SCREEN_GUTTER, spacing } from '@/theme';
+import { AppButton, AppText, Avatar, FoodImage, PressableScale } from '@/components/ui';
+import { useRespondToFollowRequest } from '@/features/social/hooks';
+import { colors, SCREEN_GUTTER, spacing } from '@/theme';
+import { followStateOf } from '@/types/models';
 import { formatRelativeTime } from '@/utils/dates';
 
-import type { ActivityItem } from '../api';
-
-function sentence(item: ActivityItem): string {
-  switch (item.kind) {
-    case 'like':
-      return ` liked your ${item.post.title}`;
-    case 'comment':
-      return ` commented on ${item.post.title}`;
-    default:
-      return ' started following you';
-  }
-}
+import { activityTarget, describe, type ActivityItem } from '../api';
 
 function ActivityRowBase({ item }: { item: ActivityItem }) {
-  const open = () =>
-    item.kind === 'follow'
-      ? router.push({ pathname: '/user/[id]', params: { id: item.actor.id } })
-      : router.push({ pathname: '/post/[id]', params: { id: item.post.id } });
+  const respond = useRespondToFollowRequest();
+  const sentence = describe(item);
+  const showComment = item.commentBody && item.type !== 'comment_like';
+
+  let trailing: React.ReactNode = null;
+  if (item.type === 'follow_request') {
+    trailing = (
+      <View style={styles.requestActions}>
+        <AppButton
+          label="Confirm"
+          size="sm"
+          onPress={() => respond.mutate({ userId: item.actor.id, accept: true })}
+        />
+        <AppButton
+          label="Delete"
+          size="sm"
+          variant="secondary"
+          onPress={() => respond.mutate({ userId: item.actor.id, accept: false })}
+        />
+      </View>
+    );
+  } else if (item.type === 'follow' && !item.actor.viewerIsFollowing) {
+    trailing = (
+      <FollowButton
+        userId={item.actor.id}
+        state={followStateOf(item.actor)}
+        isPrivate={item.actor.isPrivate}
+      />
+    );
+  } else if (item.post) {
+    trailing = (
+      <FoodImage
+        uri={item.post.thumbUrl}
+        cacheKey={item.post.thumbPath ?? undefined}
+        style={styles.thumb}
+        radius="sm"
+      />
+    );
+  }
 
   return (
     <PressableScale
-      onPress={open}
+      onPress={() => router.push(activityTarget(item))}
       activeScale={0.98}
       accessibilityRole="link"
-      accessibilityLabel={`${item.actor.username}${sentence(item)}, ${formatRelativeTime(item.at)}`}
-      style={styles.row}
+      accessibilityLabel={`${item.read ? '' : 'New. '}${item.actor.username} ${sentence}, ${formatRelativeTime(item.at)}`}
+      style={[styles.row, !item.read && styles.unread]}
     >
+      {!item.read ? <View style={styles.dot} /> : null}
       <Avatar uri={item.actor.avatarUrl} name={item.actor.displayName} size="md" />
       <View style={styles.text}>
-        <AppText variant="callout" numberOfLines={2}>
-          <AppText variant="calloutStrong">{item.actor.username}</AppText>
-          {sentence(item)}
+        <AppText variant="callout" numberOfLines={3}>
+          <AppText variant="calloutStrong">{item.actor.username}</AppText> {sentence}
           <AppText variant="callout" color="textTertiary">
             {'  '}
             {formatRelativeTime(item.at)}
           </AppText>
         </AppText>
-        {item.kind === 'comment' ? (
+        {showComment ? (
           <AppText variant="callout" color="textSecondary" numberOfLines={2}>
-            “{item.body}”
+            “{item.commentBody}”
           </AppText>
         ) : null}
       </View>
-      {item.kind === 'follow' ? (
-        item.viewerIsFollowing ? null : (
-          <FollowButton
-            userId={item.actor.id}
-            state={item.viewerHasRequested ? 'requested' : 'none'}
-            isPrivate={item.actorIsPrivate}
-          />
-        )
-      ) : (
-        <FoodImage uri={item.post.thumbUrl} cacheKey={item.post.thumbPath ?? undefined} style={styles.thumb} radius="sm" />
-      )}
+      {trailing}
     </PressableScale>
   );
 }
@@ -75,6 +91,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: SCREEN_GUTTER,
     paddingVertical: spacing.sm + 2,
   },
+  // Unread: a warm tint and an oxblood dot in the gutter.
+  unread: { backgroundColor: colors.tint },
+  dot: {
+    position: 'absolute',
+    left: spacing.xs + 2,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+  },
   text: { flex: 1, gap: 2 },
   thumb: { width: 48, height: 48 },
+  requestActions: { flexDirection: 'row', gap: spacing.xs },
 });

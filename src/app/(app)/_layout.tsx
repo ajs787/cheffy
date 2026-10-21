@@ -1,5 +1,8 @@
 import { Stack } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
+import { NotificationBannerHost } from '@/features/activity/components/NotificationBannerHost';
+import { PushHost } from '@/features/activity/components/PushHost';
 import { colors } from '@/theme';
 
 export const unstable_settings = {
@@ -9,11 +12,18 @@ export const unstable_settings = {
 
 export default function AppLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="compose" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="edit-profile" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="collection/edit" options={{ presentation: 'fullScreenModal' }} />
-    </Stack>
+    <View style={styles.root}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="compose" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="edit-profile" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="collection/edit" options={{ presentation: 'fullScreenModal' }} />
+      </Stack>
+      {/* Live activity banners (signed-in only). */}
+      <NotificationBannerHost />
+      <PushHost />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ root: { flex: 1 } });

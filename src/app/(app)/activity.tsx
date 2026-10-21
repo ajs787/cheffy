@@ -1,37 +1,48 @@
 import { FlashList } from '@shopify/flash-list';
 import { router, useFocusEffect } from 'expo-router';
 import { Bell, ChevronRight, UserCheck } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AppHeader, AppText, EmptyState, ErrorState, PressableScale, RowSkeleton } from '@/components/ui';
 import type { ActivityItem } from '@/features/activity/api';
 import { ActivityRow } from '@/features/activity/components/ActivityRow';
-import { useActivity } from '@/features/activity/hooks';
+import { useActivity, useMarkActivityRead } from '@/features/activity/hooks';
 import { useFollowRequests } from '@/features/social/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { useActivitySeenStore } from '@/stores/activity';
 import { colors, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 
 type Row = { type: 'heading'; label: string } | { type: 'item'; item: ActivityItem };
 
 export default function ActivityScreen() {
   const activity = useActivity();
-  const markSeen = useActivitySeenStore((s) => s.markSeen);
-  // Split at the previous visit so new items stand out, then mark this visit.
-  const [seenAt] = useState(() => useActivitySeenStore.getState().seenAt);
-  useFocusEffect(useCallback(() => () => markSeen(), [markSeen]));
+  const markRead = useMarkActivityRead();
+  // Unread items stay highlighted while you're here; leaving marks them read.
+  const { mutate: markAllRead } = markRead;
+  useFocusEffect(useCallback(() => () => markAllRead(), [markAllRead]));
   const requests = useFollowRequests();
   const pending = requests.data?.length ?? 0;
-  const { refreshing, onRefresh } = usePullToRefresh(() => Promise.all([activity.refetch(), requests.refetch()]));
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([activity.refetch(), requests.refetch()]),
+  );
 
   const items = activity.data ?? [];
-  const fresh = items.filter((i) => !seenAt || i.at > seenAt);
-  const earlier = items.filter((i) => seenAt && i.at <= seenAt);
+  // Follow requests sit in their own row above; the rest split by read state.
+  const listed = items.filter((i) => i.type !== 'follow_request');
+  const fresh = listed.filter((i) => !i.read);
+  const earlier = listed.filter((i) => i.read);
   const rows: Row[] = [
-    ...(fresh.length ? [{ type: 'heading' as const, label: 'New' }, ...fresh.map((item) => ({ type: 'item' as const, item }))] : []),
+    ...(fresh.length
+      ? [
+          { type: 'heading' as const, label: 'New' },
+          ...fresh.map((item) => ({ type: 'item' as const, item })),
+        ]
+      : []),
     ...(earlier.length
-      ? [{ type: 'heading' as const, label: 'Earlier' }, ...earlier.map((item) => ({ type: 'item' as const, item }))]
+      ? [
+          { type: 'heading' as const, label: 'Earlier' },
+          ...earlier.map((item) => ({ type: 'item' as const, item })),
+        ]
       : []),
   ];
 
@@ -45,7 +56,7 @@ export default function ActivityScreen() {
       ) : (
         <FlashList
           data={rows}
-          keyExtractor={(row) => (row.type === 'heading' ? `h:${row.label}` : row.item.key)}
+          keyExtractor={(row) => (row.type === 'heading' ? `h:${row.label}` : row.item.id)}
           getItemType={(row) => row.type}
           ListHeaderComponent={pending > 0 ? <FollowRequestsRow count={pending} /> : null}
           renderItem={({ item: row }) =>
@@ -64,7 +75,9 @@ export default function ActivityScreen() {
               message="When people like or comment on your entries, or follow you, it shows up here."
             />
           }
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />
+          }
         />
       )}
     </View>

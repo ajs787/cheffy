@@ -1,6 +1,18 @@
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
-import { Ban, Bookmark, FileText, Lock, LogOut, Mail, NotebookPen, Send, Trash2, UserCheck, UserPen } from 'lucide-react-native';
+import {
+  Ban,
+  Bookmark,
+  FileText,
+  Lock,
+  LogOut,
+  Mail,
+  NotebookPen,
+  Send,
+  Trash2,
+  UserCheck,
+  UserPen,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SettingsGroup, SettingsRow } from '@/components/shared/SettingsRow';
 import { AppHeader, AppText, ConfirmationDialog, Divider } from '@/components/ui';
 import { SUPPORT_EMAIL } from '@/constants/app';
+import { NotificationSettings } from '@/features/activity/components/NotificationSettings';
 import { signOut } from '@/features/auth/api';
 import { useSession } from '@/features/auth/store';
 import { useDeleteAccount, useMyProfile, useSetAccountPrivacy } from '@/features/profile/hooks';
@@ -42,7 +55,8 @@ export default function SettingsScreen() {
                 disabled={!profile.data || setPrivacy.isPending}
                 onValueChange={(value) =>
                   setPrivacy.mutate(value, {
-                    onSuccess: () => toast.success(value ? 'Your account is private' : 'Your account is public'),
+                    onSuccess: () =>
+                      toast.success(value ? 'Your account is private' : 'Your account is public'),
                     onError: (error) => toast.error(toUserMessage(error, 'Couldn’t change your privacy.')),
                   })
                 }
@@ -69,6 +83,8 @@ export default function SettingsScreen() {
             : 'Anyone can follow you and see your public creations. Turn this on to approve followers first.'}
         </AppText>
 
+        <NotificationSettings />
+
         <SettingsGroup title="Account">
           <SettingsRow icon={Send} label="Invite friends" onPress={() => router.push('/invite')} />
           <Divider inset={spacing.lg} />
@@ -84,7 +100,11 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="About">
-          <SettingsRow icon={FileText} label="Terms & Community Guidelines" onPress={() => router.push('/terms')} />
+          <SettingsRow
+            icon={FileText}
+            label="Terms & Community Guidelines"
+            onPress={() => router.push('/terms')}
+          />
           {SUPPORT_EMAIL ? (
             <>
               <Divider inset={spacing.lg} />
