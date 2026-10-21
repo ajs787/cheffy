@@ -55,7 +55,10 @@ export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   };
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]} accessibilityRole="tablist">
+    <View
+      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}
+      accessibilityRole="tablist"
+    >
       {routes.slice(0, 2).map(renderTab)}
       <View style={styles.createSlot}>
         <PressableScale

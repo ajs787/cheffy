@@ -53,6 +53,15 @@ export const categoryColors: Record<string, string> = {
   drinks: brand.rose,
 };
 
+/**
+ * Rating ring scale: muted red → coral → orange → golden → yellow-green →
+ * green → deep green. Each color sits at a rating; values between blend.
+ */
+export const ratingScale = {
+  stops: [1, 3, 5, 6.5, 7.5, 8.5, 9.5],
+  colors: ['#A3473F', '#D9694F', '#E08A35', '#D9A92E', '#99A83A', '#4E9550', '#22663D'],
+} as const;
+
 export const ratingColors = {
   great: brand.oxblood,
   good: '#8C6534',

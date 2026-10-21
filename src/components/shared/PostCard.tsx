@@ -7,6 +7,7 @@ import { AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/component
 import { useUserId } from '@/features/auth/store';
 import { StoryTeaser } from '@/features/posts/components/StoryTeaser';
 import { likedBySummary } from '@/features/social/likedBy';
+import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
 import { colors, fonts, HAIRLINE, iconSizes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import type { Post } from '@/types/models';
@@ -38,7 +39,10 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const openPost = (focusComment = false) =>
-    router.push({ pathname: '/post/[id]', params: focusComment ? { id: post.id, focus: 'comment' } : { id: post.id } });
+    router.push({
+      pathname: '/post/[id]',
+      params: focusComment ? { id: post.id, focus: 'comment' } : { id: post.id },
+    });
   const likedBy = likedBySummary(post.recentLikers, post.likeCount, post.viewerHasLiked, me);
 
   return (
@@ -61,10 +65,21 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
             </AppText>
           </View>
         </Pressable>
-        <IconButton icon={Ellipsis} label="More options" color={colors.textSecondary} size="md" onPress={() => onOpenMenu(post)} />
+        <IconButton
+          icon={Ellipsis}
+          label="More options"
+          color={colors.textSecondary}
+          size="md"
+          onPress={() => onOpenMenu(post)}
+        />
       </View>
 
-      <Pressable onPress={() => openPost()} style={styles.entry} accessibilityRole="link" accessibilityLabel={`Open ${post.title}`}>
+      <Pressable
+        onPress={() => openPost()}
+        style={styles.entry}
+        accessibilityRole="link"
+        accessibilityLabel={`Open ${post.title}`}
+      >
         <View style={styles.titleRow}>
           <View style={styles.titleText}>
             <AppText variant="title1" color="accent" numberOfLines={3}>
@@ -85,14 +100,23 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
 
       {post.images.length > 0 ? (
         <View style={styles.photos}>
-          <PhotoMosaic images={post.images} width={width - SCREEN_GUTTER * 2} title={post.title} onPress={() => openPost()} />
+          <PhotoMosaic
+            images={post.images}
+            width={width - SCREEN_GUTTER * 2}
+            title={post.title}
+            onPress={(index) => openImageViewer(postImagesForViewer(post.images, post.title), index)}
+          />
         </View>
       ) : null}
 
       {post.review || post.story || post.tags.length > 0 ? (
         <View style={styles.words}>
           {post.review ? (
-            <AppText variant="body" numberOfLines={expanded ? undefined : 3} onPress={() => setExpanded((v) => !v)}>
+            <AppText
+              variant="body"
+              numberOfLines={expanded ? undefined : 3}
+              onPress={() => setExpanded((v) => !v)}
+            >
               {post.review}
             </AppText>
           ) : null}
@@ -107,7 +131,9 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
                 <TagChip
                   key={tag.id}
                   name={tag.name}
-                  onPress={() => router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })}
+                  onPress={() =>
+                    router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })
+                  }
                 />
               ))}
             </View>
@@ -119,8 +145,13 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
         <AppText variant="caption" color="textSecondary" style={styles.likedBy}>
           {likedBy.lead ? (
             <>
-              Liked by <AppText variant="caption" style={styles.likedByName}>{likedBy.lead}</AppText>
-              {likedBy.others > 0 ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}` : ''}
+              Liked by{' '}
+              <AppText variant="caption" style={styles.likedByName}>
+                {likedBy.lead}
+              </AppText>
+              {likedBy.others > 0
+                ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}`
+                : ''}
             </>
           ) : (
             `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
@@ -129,7 +160,11 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
       ) : null}
 
       <View style={styles.actions}>
-        <LikeButton liked={post.viewerHasLiked} count={post.likeCount} onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })} />
+        <LikeButton
+          liked={post.viewerHasLiked}
+          count={post.likeCount}
+          onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
+        />
         <Pressable
           onPress={() => openPost(true)}
           hitSlop={8}
@@ -138,7 +173,9 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
           accessibilityLabel={`Comments, ${post.commentCount}`}
         >
           <MessageCircle size={iconSizes.lg} color={colors.text} strokeWidth={strokes.regular} />
-          {post.commentCount > 0 ? <AppText variant="calloutStrong">{formatCount(post.commentCount)}</AppText> : null}
+          {post.commentCount > 0 ? (
+            <AppText variant="calloutStrong">{formatCount(post.commentCount)}</AppText>
+          ) : null}
         </Pressable>
         <View style={styles.flex} />
         <IconButton
@@ -158,7 +195,12 @@ export const PostCard = memo(PostCardBase);
 const styles = StyleSheet.create({
   card: { paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
   flex: { flex: 1 },
-  creator: { flexDirection: 'row', alignItems: 'center', paddingLeft: SCREEN_GUTTER, paddingRight: spacing.xs },
+  creator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: SCREEN_GUTTER,
+    paddingRight: spacing.xs,
+  },
   author: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   entry: { paddingHorizontal: SCREEN_GUTTER },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
@@ -179,5 +221,11 @@ const styles = StyleSheet.create({
     borderTopWidth: HAIRLINE,
     borderTopColor: colors.rule,
   },
-  action: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, minHeight: 44, paddingHorizontal: spacing.xs },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+  },
 });

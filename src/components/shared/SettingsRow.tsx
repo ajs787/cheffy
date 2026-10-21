@@ -36,7 +36,9 @@ export function SettingsRow({
           {value}
         </AppText>
       ) : null}
-      {onPress && !destructive ? <ChevronRight size={iconSizes.sm} color={colors.textTertiary} strokeWidth={strokes.bold} /> : null}
+      {onPress && !destructive ? (
+        <ChevronRight size={iconSizes.sm} color={colors.textTertiary} strokeWidth={strokes.bold} />
+      ) : null}
     </PressableScale>
   );
 }
@@ -53,7 +55,13 @@ export function SettingsGroup({ title, children }: { title: string; children: Re
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52, paddingHorizontal: spacing.lg },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+  },
   label: { flex: 1 },
   group: { gap: spacing.sm },
   groupTitle: { paddingHorizontal: SCREEN_GUTTER },

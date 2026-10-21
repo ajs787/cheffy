@@ -32,13 +32,19 @@ function PostGridItemBase({ post, size, variant = 'flush' }: PostGridItemProps) 
             uri={cover.thumbUrl}
             cacheKey={cover.thumbPath}
             radius={variant === 'card' ? 'md' : 0}
-            style={{ width: variant === 'card' ? size : size - 2, height: variant === 'card' ? size * 1.2 : size - 2 }}
+            style={{
+              width: variant === 'card' ? size : size - 2,
+              height: variant === 'card' ? size * 1.2 : size - 2,
+            }}
           />
         ) : (
           <View
             style={[
               styles.textTile,
-              { width: variant === 'card' ? size : size - 2, height: variant === 'card' ? size * 1.2 : size - 2 },
+              {
+                width: variant === 'card' ? size : size - 2,
+                height: variant === 'card' ? size * 1.2 : size - 2,
+              },
               variant === 'card' && styles.rounded,
             ]}
           >
@@ -49,7 +55,9 @@ function PostGridItemBase({ post, size, variant = 'flush' }: PostGridItemProps) 
         )}
         {post.rating !== null ? (
           <View style={styles.ratingPill}>
-            <AppText style={[styles.ratingText, { color: ratingColor(post.rating) }]}>{formatRating(post.rating)}</AppText>
+            <AppText style={[styles.ratingText, { color: ratingColor(post.rating) }]}>
+              {formatRating(post.rating)}
+            </AppText>
           </View>
         ) : null}
       </View>

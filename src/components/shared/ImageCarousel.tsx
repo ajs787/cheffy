@@ -22,7 +22,8 @@ export interface ImageCarouselProps {
   images: PostImage[];
   width: number;
   title: string;
-  onPress?: () => void;
+  /** Single tap, with the page showing. */
+  onPress?: (index: number) => void;
   onDoubleTap?: () => void;
   priority?: 'high' | 'normal';
 }
@@ -33,10 +34,14 @@ export function ImageCarousel({ images, width, title, onPress, onDoubleTap, prio
   const height = width / FEED_IMAGE_ASPECT;
   const heartScale = useSharedValue(0);
   const listRef = useRef<FlatList<PostImage>>(null);
+  const indexRef = useRef(0);
+  const pressCurrent = () => onPress?.(indexRef.current);
 
   const burst = () => {
     'worklet';
-    heartScale.set(withSequence(withSpring(1, springs.pop), withDelay(350, withTiming(0, { duration: 180 }))));
+    heartScale.set(
+      withSequence(withSpring(1, springs.pop), withDelay(350, withTiming(0, { duration: 180 }))),
+    );
   };
 
   const doubleTap = useTapGesture({
@@ -49,7 +54,7 @@ export function ImageCarousel({ images, width, title, onPress, onDoubleTap, prio
   });
   const singleTap = useTapGesture({
     onDeactivate: (event) => {
-      if (!event.canceled && onPress) scheduleOnRN(onPress);
+      if (!event.canceled && onPress) scheduleOnRN(pressCurrent);
     },
   });
   const taps = useExclusiveGestures(doubleTap, singleTap);
@@ -61,6 +66,7 @@ export function ImageCarousel({ images, width, title, onPress, onDoubleTap, prio
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(event.nativeEvent.contentOffset.x / width);
+    indexRef.current = next;
     if (next !== index) setIndex(next);
   };
 

@@ -1,6 +1,7 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Avatar } from '@/components/ui';
+import { avatarForViewer, openImageViewer } from '@/stores/imageViewer';
 import { colors, radii, shadows, spacing } from '@/theme';
 import type { ProfileStats, ProfileWithViewer } from '@/types/models';
 
@@ -25,14 +26,11 @@ export function MembershipCard({
   showUsername?: boolean;
 }) {
   const since = new Date(profile.createdAt).getFullYear();
+  const photo = avatarForViewer(profile);
   return (
-    <View
-      style={styles.card}
-      accessible
-      accessibilityLabel={`${profile.displayName}, @${profile.username}. Member since ${since}. ${specialties(stats)}.`}
-    >
+    <View style={styles.card}>
       <View style={styles.top}>
-        <View style={styles.member}>
+        <View style={styles.member} accessible accessibilityLabel={`Member since ${since}`}>
           <AppText variant="overline" style={styles.ivory}>
             Membre
           </AppText>
@@ -40,11 +38,23 @@ export function MembershipCard({
             Depuis {since}
           </AppText>
         </View>
-        <View style={styles.avatarRing}>
+        {/* Tapping the photo enlarges it (only when there is one). */}
+        <Pressable
+          disabled={!photo}
+          onPress={() => photo && openImageViewer([photo])}
+          style={({ pressed }) => [styles.avatarRing, pressed && styles.pressed]}
+          accessibilityRole={photo ? 'imagebutton' : 'image'}
+          accessibilityLabel={photo ? photo.label : `${profile.displayName}, no profile photo`}
+          accessibilityHint={photo ? 'Opens the photo full screen' : undefined}
+        >
           <Avatar uri={profile.avatarUrl} name={profile.displayName} size="lg" />
-        </View>
+        </Pressable>
       </View>
-      <View style={styles.identity}>
+      <View
+        style={styles.identity}
+        accessible
+        accessibilityLabel={`${profile.displayName}, @${profile.username}. ${specialties(stats)}.`}
+      >
         <AppText variant="display" numberOfLines={1} style={styles.ivory} accessibilityRole="header">
           {profile.displayName}
         </AppText>
@@ -69,6 +79,7 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   member: { gap: 2 },
   identity: { gap: spacing.xs },
+  pressed: { opacity: 0.7 },
   avatarRing: { padding: 2, borderRadius: 999, borderWidth: 1, borderColor: colors.rose },
   ivory: { color: colors.ivory },
   rose: { color: '#E3C4C9' },

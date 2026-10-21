@@ -13,6 +13,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorState, ToastHost } from '@/components/ui';
+import { ImageViewerHost } from '@/features/media/ImageViewerHost';
 import { ConfigurationMissing } from '@/components/shared/ConfigurationMissing';
 import { useAuthStore } from '@/features/auth/store';
 import { useAuthListener } from '@/features/auth/useAuthListener';
@@ -51,6 +52,7 @@ export default function RootLayout() {
             <StatusBar style="dark" />
             {fontsLoaded || fontError ? <RootNavigator /> : null}
             <ToastHost />
+            <ImageViewerHost />
           </ThemeProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

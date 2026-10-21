@@ -162,6 +162,35 @@ rows keeping the date whole when classifications are long.
 Needs checking on a device: haptics, Reduce Motion, the Story box with the
 on-screen keyboard up (the simulator used a hardware keyboard), and Dynamic Type at the largest sizes on the headers.
 
+## V2 — Milestone 2: rating rings & photo viewer (2026-10-20)
+
+- **RatingRing** (`components/ui/RatingRing.tsx`): SVG progress ring filled to
+  rating / 10 from 12 o'clock, colour blended through muted red → coral →
+  orange → golden → yellow-green → green → deep green (`theme.ratingScale`),
+  espresso number in the centre so it never relies on colour. Sizes sm/md/lg;
+  animates only when the value changes, snaps with Reduce Motion; unrated
+  shows an empty track and "–". `RatingDisplay` badges (feed, rankings, post
+  detail) now render it.
+- **Full-screen photo viewer** (`features/media`): one host at the root,
+  opened with `openImageViewer(images, index)`. Pinch zooms around the
+  fingers (to 4×), double-tap toggles 2.5× at the tapped point, pan with
+  momentum while zoomed, swipe between photos, swipe down or tap to close
+  (backdrop fades while dragging). Thumbnail shows instantly from the shared
+  disk cache while the full image loads (signed on demand for feed posts);
+  failed loads show a message. Feed photos open at the tapped photo; post
+  detail opens at the current page.
+- **Profile photos** open enlarged in the same viewer from the profile card
+  (only when there is a photo).
+
+Verified in the simulator against live data: ring fill and colour at 3.7,
+8.2, 8.5, 8.9 and 9.0 in the feed, rankings and post detail; viewer open,
+pinch to ~3.9×, pan while zoomed, double-tap back to 1×, swipe-down dismiss,
+paging between two photos with the counter, thumbnail-first loading, and the
+enlarged profile photo. Unit tests cover ring fill and colour blending.
+
+Needs checking on a device: gesture feel with real fingers (especially
+pinch + pan together), haptics, and VoiceOver on the viewer.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

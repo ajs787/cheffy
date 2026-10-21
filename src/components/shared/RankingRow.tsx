@@ -21,7 +21,12 @@ function RankingRowBase({ item }: { item: RankingItem }) {
       <AppText style={[styles.rank, podium && styles.rankPodium]} accessibilityElementsHidden>
         {item.rank}
       </AppText>
-      <FoodImage uri={item.thumbUrl} cacheKey={item.thumbPath ?? undefined} style={styles.thumb} radius="md" />
+      <FoodImage
+        uri={item.thumbUrl}
+        cacheKey={item.thumbPath ?? undefined}
+        style={styles.thumb}
+        radius="md"
+      />
       <View style={styles.text}>
         <AppText variant="bodyStrong" numberOfLines={2}>
           {item.title}

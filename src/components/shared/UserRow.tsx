@@ -28,7 +28,9 @@ function UserRowBase({ user, showFollow = true }: { user: UserListItem; showFoll
           @{user.username}
         </AppText>
       </View>
-      {showFollow && user.id !== me ? <FollowButton userId={user.id} following={user.viewerIsFollowing} /> : null}
+      {showFollow && user.id !== me ? (
+        <FollowButton userId={user.id} following={user.viewerIsFollowing} />
+      ) : null}
     </PressableScale>
   );
 }

@@ -1,4 +1,4 @@
-import { ratingColors } from '@/theme';
+import { ratingColors, ratingScale } from '@/theme';
 
 export const RATING_MIN = 0;
 export const RATING_MAX = 10;
@@ -33,6 +33,33 @@ export function ratingTier(value: number): RatingTier {
 export function ratingColor(value: number | null | undefined): string {
   if (value === null || value === undefined) return ratingColors.low;
   return ratingColors[ratingTier(value)];
+}
+
+const hex = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+const toHex = (rgb: number[]) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+
+/** The rating ring's color for a value, blended between the scale's stops. */
+export function ratingRingColor(value: number | null | undefined): string {
+  const { stops, colors } = ratingScale;
+  const first = colors[0].toLowerCase();
+  if (value === null || value === undefined || Number.isNaN(value)) return first;
+  const v = clampRating(value);
+  if (v <= stops[0]) return first;
+  for (let i = 1; i < stops.length; i++) {
+    if (v <= stops[i]) {
+      const t = (v - stops[i - 1]) / (stops[i] - stops[i - 1]);
+      const a = hex(colors[i - 1]);
+      const b = hex(colors[i]);
+      return toHex(a.map((x, k) => x + (b[k] - x) * t));
+    }
+  }
+  return colors[colors.length - 1].toLowerCase();
+}
+
+/** Fraction of the ring to fill: rating / 10, clamped. */
+export function ratingFill(value: number | null | undefined): number {
+  if (value === null || value === undefined || Number.isNaN(value)) return 0;
+  return clampRating(value) / RATING_MAX;
 }
 
 /**

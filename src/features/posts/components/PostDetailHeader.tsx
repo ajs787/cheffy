@@ -7,6 +7,7 @@ import { ImageCarousel } from '@/components/shared/ImageCarousel';
 import { LikeButton } from '@/components/shared/LikeButton';
 import { AppButton, AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
+import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
 import { colors, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import type { Post } from '@/types/models';
 import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
@@ -37,6 +38,7 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
           width={width}
           title={post.title}
           priority="high"
+          onPress={(index) => openImageViewer(postImagesForViewer(post.images, post.title), index)}
           onDoubleTap={() => {
             if (published && !post.viewerHasLiked) toggleLike.mutate({ post, like: true });
           }}

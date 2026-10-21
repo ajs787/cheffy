@@ -112,7 +112,8 @@ lucide-react-native, stroke 1.75 (2.25 when selected). Sizes: `sm 16 · md 20 ·
 | `AppHeader` | `brand` (Home only: logo + search + activity) · `large` (Discover, My Rankings: display title + actions) · `nav` (back/close + centred title; Profile "@username", Create "New entry") |
 | `Avatar` | image or initials on a tinted circle; sizes xs–xl |
 | `FoodImage` | expo-image with placeholder tint, fade-in, `cacheKey` |
-| `RatingDisplay` | tier-colored number; `badge` / `inline` / `large` |
+| `RatingDisplay` | `badge` → `RatingRing`; `inline` plain number |
+| `RatingRing` | progress ring, fill = rating / 10 from 12 o'clock, colour from `ratingScale` (red → deep green), espresso number in the centre; sm 36 / md 44 / lg 58 |
 | `RatingInput` | compact readout (number beside descriptor) + slider + ±0.1 steppers; tap the number to type an exact score |
 | `Collapsible` | one ruled row (icon, title, one-line summary, chevron) that opens in place; Create's Story, Tags, More details |
 | `Chip` / `CategoryChip` / `TagChip` | selectable, removable |

@@ -24,3 +24,4 @@ export * from './ToastHost';
 export * from './Wordmark';
 export * from './Monogram';
 export { Collapsible, type CollapsibleProps } from './Collapsible';
+export { RatingRing, RING_SIZES, type RatingRingProps } from './RatingRing';

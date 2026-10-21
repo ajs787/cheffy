@@ -7,7 +7,13 @@ import { SCREEN_GUTTER, spacing } from '@/theme';
 import type { Comment } from '@/types/models';
 import { formatRelativeTime } from '@/utils/dates';
 
-function CommentRowBase({ comment, onLongPress }: { comment: Comment; onLongPress?: (comment: Comment) => void }) {
+function CommentRowBase({
+  comment,
+  onLongPress,
+}: {
+  comment: Comment;
+  onLongPress?: (comment: Comment) => void;
+}) {
   const pending = comment.id.startsWith('pending-');
   return (
     <Pressable
@@ -41,7 +47,12 @@ function CommentRowBase({ comment, onLongPress }: { comment: Comment; onLongPres
 export const CommentRow = memo(CommentRowBase);
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm + 2 },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: spacing.sm + 2,
+  },
   pending: { opacity: 0.6 },
   body: { flex: 1, gap: 2 },
   meta: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },

@@ -10,7 +10,8 @@ export interface PhotoMosaicProps {
   images: PostImage[];
   width: number;
   title: string;
-  onPress: () => void;
+  /** Tapped photo's index (the "+N" tile opens at that photo). */
+  onPress: (index: number) => void;
 }
 
 /**
@@ -24,7 +25,12 @@ export function PhotoMosaic({ images, width, title, onPress }: PhotoMosaicProps)
   if (images.length === 1) {
     const image = images[0]!;
     return (
-      <Pressable onPress={onPress} accessibilityRole="imagebutton" accessibilityLabel={`${title}, photo`}>
+      <Pressable
+        onPress={() => onPress(0)}
+        accessibilityRole="imagebutton"
+        accessibilityLabel={`${title}, photo`}
+        accessibilityHint="Opens the photo full screen"
+      >
         <FoodImage
           uri={image.url ?? image.thumbUrl}
           cacheKey={image.url ? image.storagePath : image.thumbPath}
@@ -40,14 +46,15 @@ export function PhotoMosaic({ images, width, title, onPress }: PhotoMosaicProps)
   const extra = images.length - shown.length;
   const size = (width - GAP * (shown.length - 1)) / shown.length;
   return (
-    <Pressable
-      onPress={onPress}
-      style={styles.row}
-      accessibilityRole="imagebutton"
-      accessibilityLabel={`${title}, ${images.length} photos`}
-    >
+    <View style={styles.row}>
       {shown.map((image, i) => (
-        <View key={image.id}>
+        <Pressable
+          key={image.id}
+          onPress={() => onPress(i)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={`${title}, photo ${i + 1} of ${images.length}`}
+          accessibilityHint="Opens the photo full screen"
+        >
           <FoodImage
             uri={i === 0 ? (image.url ?? image.thumbUrl) : image.thumbUrl}
             cacheKey={i === 0 && image.url ? image.storagePath : image.thumbPath}
@@ -61,9 +68,9 @@ export function PhotoMosaic({ images, width, title, onPress }: PhotoMosaicProps)
               </AppText>
             </View>
           ) : null}
-        </View>
+        </Pressable>
       ))}
-    </Pressable>
+    </View>
   );
 }
 

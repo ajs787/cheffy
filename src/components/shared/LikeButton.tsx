@@ -1,7 +1,13 @@
 import { Heart } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui';
 import { colors, iconSizes, spacing, springs, strokes } from '@/theme';
@@ -54,5 +60,11 @@ export function LikeButton({ liked, count, onToggle }: LikeButtonProps) {
 }
 
 const styles = StyleSheet.create({
-  button: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, minHeight: 44, paddingRight: spacing.sm },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    minHeight: 44,
+    paddingRight: spacing.sm,
+  },
 });

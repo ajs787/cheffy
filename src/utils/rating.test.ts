@@ -1,4 +1,4 @@
-import { formatRating, parseRatingInput, ratingTier, roundRating, stepRating } from './rating';
+import { formatRating, parseRatingInput, ratingFill, ratingRingColor, ratingTier, roundRating, stepRating } from './rating';
 
 describe('rating utils', () => {
   it('rounds and clamps to one decimal', () => {
@@ -45,5 +45,26 @@ describe('rating utils', () => {
     expect(ratingTier(8)).toBe('great');
     expect(ratingTier(7.9)).toBe('good');
     expect(ratingTier(5.9)).toBe('low');
+  });
+});
+
+describe('rating ring', () => {
+  it('fills rating / 10, clamped, empty when unrated', () => {
+    expect(ratingFill(6.5)).toBeCloseTo(0.65);
+    expect(ratingFill(9.2)).toBeCloseTo(0.92);
+    expect(ratingFill(10)).toBe(1);
+    expect(ratingFill(0)).toBe(0);
+    expect(ratingFill(12)).toBe(1);
+    expect(ratingFill(null)).toBe(0);
+  });
+
+  it('runs from muted red to deep green and blends between stops', () => {
+    expect(ratingRingColor(0)).toBe('#a3473f');
+    expect(ratingRingColor(1)).toBe('#a3473f');
+    expect(ratingRingColor(10)).toBe('#22663d');
+    expect(ratingRingColor(5)).toBe('#e08a35');
+    // Halfway between orange (5) and golden (6.5).
+    expect(ratingRingColor(5.75)).toBe('#dd9a32');
+    expect(ratingRingColor(null)).toBe('#a3473f');
   });
 });
