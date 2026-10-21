@@ -12,9 +12,12 @@ import { Wordmark } from './Wordmark';
 
 /**
  * - `brand`: the wordmark with actions (Home only — the logo appears once).
- * - `large`: an editorial screen title with actions (Discover, My Rankings).
+ * - `large`: a screen title with actions (Discover, My Rankings).
  * - `nav`: back/close, a centered title and actions (pushed screens, Create,
  *   Profile "@username").
+ *
+ * Tab roots (`brand`, `large`) share one 52 pt bar so switching tabs doesn't
+ * make content jump.
  */
 export type HeaderVariant = 'brand' | 'large' | 'nav';
 
@@ -55,8 +58,8 @@ export function AppHeader({
 
   if (variant === 'large') {
     return (
-      <View style={[styles.large, { paddingTop: top + spacing.md }, bordered && styles.bordered]}>
-        <AppText variant="display" accessibilityRole="header" numberOfLines={1} style={styles.largeTitle}>
+      <View style={[styles.brand, { paddingTop: top }, bordered && styles.bordered]}>
+        <AppText variant="title1" accessibilityRole="header" numberOfLines={1} style={styles.largeTitle}>
           {title}
         </AppText>
         {right ? <View style={styles.actions}>{right}</View> : null}
@@ -86,6 +89,7 @@ export function AppHeader({
 const styles = StyleSheet.create({
   brand: {
     minHeight: 52,
+    gap: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -94,17 +98,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
     backgroundColor: colors.background,
   },
-  large: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingLeft: SCREEN_GUTTER,
-    paddingRight: spacing.xs,
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.background,
-  },
-  largeTitle: { flexShrink: 1 },
+  largeTitle: { flexShrink: 1, paddingRight: spacing.md },
   actions: { flexDirection: 'row', alignItems: 'center' },
   bar: {
     flexDirection: 'row',

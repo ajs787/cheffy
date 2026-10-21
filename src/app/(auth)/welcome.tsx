@@ -3,14 +3,15 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppText, CategoryIcon, Wordmark } from '@/components/ui';
+import { AppButton, AppText, Wordmark } from '@/components/ui';
+import { PlayfulCategory } from '@/features/auth/components/PlayfulCategory';
 import { colors, HAIRLINE, SCREEN_GUTTER, spacing } from '@/theme';
 
 const CATEGORIES = [
-  { slug: 'cooking', label: 'Cook' },
-  { slug: 'baking', label: 'Bake' },
-  { slug: 'drinks', label: 'Pour' },
-];
+  { slug: 'cooking', label: 'Cook', motion: 'wiggle' },
+  { slug: 'baking', label: 'Bake', motion: 'bounce' },
+  { slug: 'drinks', label: 'Pour', motion: 'tilt' },
+] as const;
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
@@ -31,8 +32,7 @@ export default function WelcomeScreen() {
       <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.categories}>
         {CATEGORIES.map((c, i) => (
           <View key={c.slug} style={[styles.category, i > 0 && styles.categoryRule]}>
-            <CategoryIcon slug={c.slug} size="lg" />
-            <AppText variant="overline">{c.label}</AppText>
+            <PlayfulCategory slug={c.slug} label={c.label} motion={c.motion} />
           </View>
         ))}
       </Animated.View>
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: HAIRLINE,
     borderColor: colors.rule,
   },
-  category: { flex: 1, alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
+  category: { flex: 1, alignItems: 'center', paddingVertical: spacing.lg },
   categoryRule: { borderLeftWidth: HAIRLINE, borderLeftColor: colors.rule },
   actions: { gap: spacing.xs },
   motto: { marginTop: spacing.md },

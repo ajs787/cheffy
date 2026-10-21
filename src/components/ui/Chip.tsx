@@ -1,4 +1,4 @@
-import { X } from 'lucide-react-native';
+import { Check, X } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -14,6 +14,8 @@ export interface ChipProps {
   onPress?: () => void;
   onRemove?: () => void;
   leading?: ReactNode;
+  /** Multi-select pickers: show a check when selected, so state isn't color-only. */
+  checkable?: boolean;
   size?: 'sm' | 'md';
   accessibilityHint?: string;
   testID?: string;
@@ -25,13 +27,18 @@ export function Chip({
   onPress,
   onRemove,
   leading,
+  checkable = false,
   size = 'md',
   accessibilityHint,
   testID,
 }: ChipProps) {
   const content = (
     <>
-      {leading}
+      {checkable && selected ? (
+        <Check size={size === 'sm' ? 12 : 14} color={colors.accent} strokeWidth={strokes.bold} />
+      ) : (
+        leading
+      )}
       <AppText variant={size === 'sm' ? 'caption' : 'calloutStrong'} color={selected ? 'text' : 'textSecondary'}>
         {label}
       </AppText>

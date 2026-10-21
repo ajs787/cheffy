@@ -47,8 +47,12 @@ export function PostDetails({ post }: { post: Post }) {
   if (post.sweetener) facts.push(['Sweetener', post.sweetener]);
   if (post.cookTimeMinutes) facts.push(['Total time', formatCookTime(post.cookTimeMinutes)]);
   if (post.mealType) facts.push(['Meal', post.mealType.name]);
-  if (post.cuisine && post.subcategory) facts.push(['Cuisine', post.cuisine.name]);
-  if (post.dishType) facts.push(['Dish', post.dishType.name]);
+  const names = (list: { name: string }[]) => list.map((c) => c.name).join(', ');
+  // Cuisines show here only when the line under the title lists subcategories.
+  if (post.cuisines.length > 0 && post.subcategories.length > 0) {
+    facts.push([post.cuisines.length > 1 ? 'Cuisines' : 'Cuisine', names(post.cuisines)]);
+  }
+  if (post.dishTypes.length > 0) facts.push([post.dishTypes.length > 1 ? 'Dishes' : 'Dish', names(post.dishTypes)]);
 
   return (
     <View style={styles.container}>

@@ -144,7 +144,7 @@ export class TestDb {
   async createPost(
     userId: string,
     overrides: Record<string, unknown> = {},
-    options: { images?: number; tags?: string[] } = {},
+    options: { images?: number; tags?: string[]; categories?: string[] } = {},
   ): Promise<string> {
     const id = randomUUID();
     const post = {
@@ -166,10 +166,11 @@ export class TestDb {
         height: 1800,
       };
     });
-    await this.query(userId, 'select public.save_post($1::jsonb, $2::jsonb, $3::text[])', [
+    await this.query(userId, 'select public.save_post($1::jsonb, $2::jsonb, $3::text[], $4::uuid[])', [
       JSON.stringify(post),
       JSON.stringify(images),
       options.tags ?? [],
+      options.categories ?? null,
     ]);
     return id;
   }

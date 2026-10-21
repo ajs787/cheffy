@@ -25,13 +25,16 @@ const optionalText = (max: number, label: string) => z.string().max(max, `${labe
 
 const nullableId = z.string().nullable();
 
+export const MAX_CLASSIFICATIONS = 12;
+const ids = z.array(z.string());
+
 export const postFormSchema = z.object({
   title: z.string().trim().min(1, 'Name what you made.').max(80, 'Keep the name under 80 characters.'),
   primaryCategoryId: z.string({ error: 'Choose a category.' }).min(1, 'Choose a category.'),
-  subcategoryId: nullableId,
-  cuisineId: nullableId,
+  subcategoryIds: ids,
+  cuisineIds: ids,
   mealTypeId: nullableId,
-  dishTypeId: nullableId,
+  dishTypeIds: ids,
   rating: z.number().min(0).max(10).nullable(),
   review: optionalText(2000, 'Review'),
   story: optionalText(10000, 'Story'),
@@ -66,10 +69,10 @@ export function emptyPostForm(defaults?: { visibility?: Visibility; primaryCateg
   return {
     title: '',
     primaryCategoryId: defaults?.primaryCategoryId ?? '',
-    subcategoryId: null,
-    cuisineId: null,
+    subcategoryIds: [],
+    cuisineIds: [],
     mealTypeId: null,
-    dishTypeId: null,
+    dishTypeIds: [],
     rating: null,
     review: '',
     story: '',
@@ -93,10 +96,10 @@ export function postToForm(post: Post): PostFormValues {
   return {
     title: post.title,
     primaryCategoryId: post.primary.id,
-    subcategoryId: post.subcategory?.id ?? null,
-    cuisineId: post.cuisine?.id ?? null,
+    subcategoryIds: post.subcategories.map((c) => c.id),
+    cuisineIds: post.cuisines.map((c) => c.id),
     mealTypeId: post.mealType?.id ?? null,
-    dishTypeId: post.dishType?.id ?? null,
+    dishTypeIds: post.dishTypes.map((c) => c.id),
     rating: post.rating,
     review: post.review,
     story: post.story,
@@ -141,6 +144,8 @@ export function normalizeTags(tags: string[]): string[] {
 export interface SavePostPayload {
   p_post: Record<string, unknown>;
   p_tags: string[];
+  /** Subcategories, then cuisines, then dish types, each in picked order. */
+  p_categories: string[];
 }
 
 /**
@@ -156,8 +161,12 @@ export function toSavePayload(
 ): SavePostPayload {
   const primary = taxonomy.byId[values.primaryCategoryId];
   const isDrink = primary?.slug === 'drinks';
-  const subcategory = values.subcategoryId ? taxonomy.byId[values.subcategoryId] : undefined;
-  const validSubcategory = subcategory?.parentId === values.primaryCategoryId ? subcategory.id : null;
+  // Subcategories of a different primary (after switching) are dropped.
+  const subcategories = values.subcategoryIds.filter(
+    (id) => taxonomy.byId[id]?.parentId === values.primaryCategoryId,
+  );
+  const dishTypes = primary?.slug === 'cooking' ? values.dishTypeIds : [];
+  const categories = [...new Set([...subcategories, ...values.cuisineIds, ...dishTypes])].slice(0, MAX_CLASSIFICATIONS);
   const trimmed = (v: string) => v.trim();
 
   return {
@@ -165,10 +174,7 @@ export function toSavePayload(
       id: postId,
       title: values.title.trim(),
       primary_category_id: values.primaryCategoryId,
-      subcategory_id: validSubcategory,
-      cuisine_id: values.cuisineId,
       meal_type_id: values.mealTypeId,
-      dish_type_id: primary?.slug === 'cooking' ? values.dishTypeId : null,
       rating: values.rating,
       review: trimmed(values.review),
       story: trimmed(values.story),
@@ -186,5 +192,6 @@ export function toSavePayload(
       sweetener: isDrink ? trimmed(values.sweetener) || null : null,
     },
     p_tags: normalizeTags(values.tags),
+    p_categories: categories,
   };
 }

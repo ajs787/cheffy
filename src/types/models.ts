@@ -76,10 +76,11 @@ export interface Post {
   author: ProfileSummary;
   title: string;
   primary: CategoryRef;
-  subcategory: CategoryRef | null;
-  cuisine: CategoryRef | null;
+  /** Every classification, in the order the author picked them. */
+  subcategories: CategoryRef[];
+  cuisines: CategoryRef[];
   mealType: CategoryRef | null;
-  dishType: CategoryRef | null;
+  dishTypes: CategoryRef[];
   rating: number | null;
   review: string;
   /** Optional long-form write-up: the backstory, the process. */

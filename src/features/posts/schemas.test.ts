@@ -17,6 +17,8 @@ const taxonomy = buildTaxonomy([
   cat('baking', 'primary', 'baking'),
   cat('cooking', 'primary', 'cooking'),
   cat('matcha', 'subcategory', 'matcha', 'drinks'),
+  cat('lattes', 'subcategory', 'lattes', 'drinks'),
+  cat('korean', 'cuisine', 'korean'),
   cat('cookies', 'subcategory', 'cookies', 'baking'),
   cat('rice', 'dish_type', 'rice'),
 ]);
@@ -74,8 +76,8 @@ describe('toSavePayload', () => {
   });
 
   it('keeps drink fields for drinks', () => {
-    const { p_post, p_tags } = toSavePayload(
-      { ...base(), rating: 9.2, subcategoryId: 'matcha', temperature: 'iced', milk: ' Oat ', tags: ['Iced'] },
+    const { p_post, p_tags, p_categories } = toSavePayload(
+      { ...base(), rating: 9.2, subcategoryIds: ['matcha'], temperature: 'iced', milk: ' Oat ', tags: ['Iced'] },
       'post-1',
       'published',
       taxonomy,
@@ -83,21 +85,21 @@ describe('toSavePayload', () => {
     expect(p_post).toMatchObject({
       id: 'post-1',
       status: 'published',
-      subcategory_id: 'matcha',
       temperature: 'iced',
       milk: 'Oat',
       cook_time_minutes: null,
     });
     expect(p_tags).toEqual(['iced']);
+    expect(p_categories).toEqual(['matcha']);
   });
 
   it('clears fields that no longer apply after switching category', () => {
-    const { p_post } = toSavePayload(
+    const { p_post, p_categories } = toSavePayload(
       {
         ...base(),
         primaryCategoryId: 'baking',
-        subcategoryId: 'matcha',
-        dishTypeId: 'rice',
+        subcategoryIds: ['matcha'],
+        dishTypeIds: ['rice'],
         temperature: 'iced',
         milk: 'oat',
         cookTimeMinutes: 25,
@@ -107,14 +109,30 @@ describe('toSavePayload', () => {
       'draft',
       taxonomy,
     );
+    expect(p_categories).toEqual([]);
     expect(p_post).toMatchObject({
-      subcategory_id: null,
-      dish_type_id: null,
       temperature: null,
       milk: null,
       cook_time_minutes: 25,
       recipe_url: null,
       status: 'draft',
     });
+  });
+
+  it('sends every classification in order, deduped', () => {
+    const { p_categories } = toSavePayload(
+      {
+        ...base(),
+        primaryCategoryId: 'drinks',
+        subcategoryIds: ['matcha', 'lattes', 'matcha'],
+        cuisineIds: ['korean'],
+        dishTypeIds: ['rice'],
+      },
+      'post-4',
+      'draft',
+      taxonomy,
+    );
+    // Dish types only apply to cooking.
+    expect(p_categories).toEqual(['matcha', 'lattes', 'korean']);
   });
 });

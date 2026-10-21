@@ -1,6 +1,6 @@
 import { mapProfileSummary, PROFILE_SUMMARY_SELECT, type ProfileSummaryRow } from '@/features/profile/mappers';
 import { signPostImagePaths } from '@/lib/supabase/storage';
-import type { CategoryRef, Post, PostImage, PostStatus, Temperature, Visibility } from '@/types/models';
+import type { CategoryKind, CategoryRef, Post, PostImage, PostStatus, Temperature, Visibility } from '@/types/models';
 
 const CATEGORY_FIELDS = 'id, slug, name';
 
@@ -11,10 +11,8 @@ export const POST_SELECT = `
   like_count, comment_count, published_at, created_at, updated_at,
   author:profiles!posts_author_id_fkey(${PROFILE_SUMMARY_SELECT}),
   primary:categories!posts_primary_category_id_fkey(${CATEGORY_FIELDS}),
-  subcategory:categories!posts_subcategory_id_fkey(${CATEGORY_FIELDS}),
-  cuisine:categories!posts_cuisine_id_fkey(${CATEGORY_FIELDS}),
   meal_type:categories!posts_meal_type_id_fkey(${CATEGORY_FIELDS}),
-  dish_type:categories!posts_dish_type_id_fkey(${CATEGORY_FIELDS}),
+  classifications:post_categories(position, category:categories(${CATEGORY_FIELDS}, kind)),
   images:post_images(id, storage_path, thumb_path, width, height, position),
   post_tags(tag:tags(id, slug, name)),
   viewer_has_liked,
@@ -65,15 +63,27 @@ export interface PostRow {
   updated_at: string;
   author: ProfileSummaryRow | null;
   primary: CategoryRef | null;
-  subcategory: CategoryRef | null;
-  cuisine: CategoryRef | null;
   meal_type: CategoryRef | null;
-  dish_type: CategoryRef | null;
+  classifications?: { position: number; category: (CategoryRef & { kind: CategoryKind }) | null }[];
   images: { id: string; storage_path: string; thumb_path: string; width: number; height: number; position: number }[];
   post_tags: { tag: { id: string; slug: string; name: string } | null }[];
   viewer_has_liked: boolean;
   viewer_has_saved: boolean;
   likers?: { created_at: string; profile: ProfileSummaryRow | null }[];
+}
+
+/** Splits a post's ordered classifications by kind. */
+export function groupClassifications(
+  rows: PostRow['classifications'],
+): Pick<Post, 'subcategories' | 'cuisines' | 'dishTypes'> {
+  const groups: Pick<Post, 'subcategories' | 'cuisines' | 'dishTypes'> = { subcategories: [], cuisines: [], dishTypes: [] };
+  const key = { subcategory: 'subcategories', cuisine: 'cuisines', dish_type: 'dishTypes' } as const;
+  for (const { category } of [...(rows ?? [])].sort((a, b) => a.position - b.position)) {
+    if (!category) continue;
+    const group = key[category.kind as keyof typeof key];
+    if (group) groups[group].push({ id: category.id, slug: category.slug, name: category.name });
+  }
+  return groups;
 }
 
 /** Maps a row to a Post. Returns null for rows whose author isn't visible. */
@@ -84,10 +94,8 @@ export function mapPost(row: PostRow): Post | null {
     author: mapProfileSummary(row.author),
     title: row.title,
     primary: row.primary,
-    subcategory: row.subcategory,
-    cuisine: row.cuisine,
+    ...groupClassifications(row.classifications),
     mealType: row.meal_type,
-    dishType: row.dish_type,
     rating: row.rating === null ? null : Number(row.rating),
     review: row.review,
     story: row.story ?? '',

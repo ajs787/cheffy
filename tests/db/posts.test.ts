@@ -219,6 +219,100 @@ describe('stories', () => {
   });
 });
 
+describe('classifications', () => {
+  const names = async (postId: string) =>
+    (
+      await db.admin<{ name: string }>(
+        `select c.name from public.post_categories pc join public.categories c on c.id = pc.category_id
+         where pc.post_id = $1 order by pc.position`,
+        [postId],
+      )
+    ).map((r) => r.name);
+
+  it('stores several cuisines, subcategories and dish types in order', async () => {
+    const korean = await db.categoryId('cuisine', 'korean');
+    const italian = await db.categoryId('cuisine', 'italian');
+    const id = await db.createPost(
+      alice.id,
+      { title: 'Gochujang carbonara', primary_category_id: await db.categoryId('primary', 'cooking') },
+      { categories: [korean, italian] },
+    );
+    expect(await names(id)).toEqual(['Korean', 'Italian']);
+    // The single column keeps the first pick for older readers.
+    const [row] = await db.admin<{ cuisine_id: string }>('select cuisine_id from public.posts where id = $1', [id]);
+    expect(row.cuisine_id).toBe(korean);
+  });
+
+  it('replaces the set on edit and keeps leads in sync', async () => {
+    const baking = await db.categoryId('primary', 'baking');
+    const cakes = await db.categoryId('subcategory', 'cakes', 'baking');
+    const cheesecakes = await db.categoryId('subcategory', 'cheesecakes', 'baking');
+    const id = await db.createPost(alice.id, { primary_category_id: baking }, { categories: [cakes, cheesecakes] });
+    expect(await names(id)).toEqual(['Cakes', 'Cheesecakes']);
+
+    await db.query(alice.id, 'select public.save_post($1::jsonb, $2::jsonb, $3::text[], $4::uuid[])', [
+      JSON.stringify({ id, title: 'Basque cheesecake', primary_category_id: baking, rating: 9 }),
+      '[]',
+      [],
+      [cheesecakes],
+    ]);
+    expect(await names(id)).toEqual(['Cheesecakes']);
+    const [row] = await db.admin<{ subcategory_id: string }>('select subcategory_id from public.posts where id = $1', [id]);
+    expect(row.subcategory_id).toBe(cheesecakes);
+  });
+
+  it('still accepts the single columns from older clients', async () => {
+    const matcha = await db.categoryId('subcategory', 'matcha', 'drinks');
+    const id = await db.createPost(alice.id, { subcategory_id: matcha });
+    expect(await names(id)).toEqual(['Matcha']);
+  });
+
+  it('rejects subcategories of another primary and non-classification kinds', async () => {
+    const cakes = await db.categoryId('subcategory', 'cakes', 'baking');
+    await expectDbError(db.createPost(alice.id, {}, { categories: [cakes] }), /primary category/);
+    const drinks = await db.categoryId('primary', 'drinks');
+    await expectDbError(db.createPost(alice.id, {}, { categories: [drinks] }), /subcategories, cuisines or dish types/);
+  });
+
+  it('cannot be written directly for someone else\'s post', async () => {
+    const id = await db.createPost(alice.id);
+    const korean = await db.categoryId('cuisine', 'korean');
+    await expectDbError(
+      db.query(bob.id, 'insert into public.post_categories (post_id, category_id) values ($1, $2)', [id, korean]),
+      /row-level security/,
+    );
+  });
+
+  it('follows post visibility', async () => {
+    const matcha = await db.categoryId('subcategory', 'matcha', 'drinks');
+    const id = await db.createPost(alice.id, { visibility: 'private' }, { categories: [matcha] });
+    expect(await db.query(bob.id, 'select 1 from public.post_categories where post_id = $1', [id])).toHaveLength(0);
+  });
+
+  it('filters and searches by any classification', async () => {
+    const drinks = await db.categoryId('primary', 'drinks');
+    const matcha = await db.categoryId('subcategory', 'matcha', 'drinks');
+    const lattes = await db.categoryId('subcategory', 'lattes', 'drinks');
+    const id = await db.createPost(
+      alice.id,
+      { title: 'Morning cup', primary_category_id: drinks },
+      { categories: [matcha, lattes] },
+    );
+    const discovered = await db.query<{ id: string }>(bob.id, 'select id from public.discover_posts(p_category_id => $1)', [
+      lattes,
+    ]);
+    expect(discovered.map((r) => r.id)).toContain(id);
+    const found = await db.query<{ id: string }>(bob.id, `select id from public.search_posts('latte')`);
+    expect(found.map((r) => r.id)).toContain(id);
+    const ranked = await db.query<{ post_id: string; secondary_name: string }>(
+      alice.id,
+      'select post_id, secondary_name from public.get_rankings($1, p_category_id => $2)',
+      [alice.id, lattes],
+    );
+    expect(ranked.find((r) => r.post_id === id)?.secondary_name).toBe('Matcha · Lattes');
+  });
+});
+
 describe('drafts', () => {
   it('allows drafts without a rating and hides them from everyone else', async () => {
     const draftId = await db.createPost(alice.id, { status: 'draft', rating: null });

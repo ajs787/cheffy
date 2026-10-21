@@ -132,6 +132,36 @@ swipe-to-dismiss blocked when dirty), the collapsible sections, Following/For
 You with two real accounts, the activity inbox and unread dot, Discover
 category photos, and the Rankings sort sheet.
 
+## V2 — Milestone 1: UI/UX fixes (2026-10-20)
+
+- **Multiple classifications.** New `post_categories` table (migration
+  `20261021000001_multi_classification.sql`, applied to the live project):
+  several subcategories, cuisines and dish types per post, in picked order.
+  Existing classifications were copied over. The single columns on `posts`
+  stay, synced to each kind's first pick, so older readers keep working.
+  `save_post` takes `p_categories`; search, Discover, Rankings filters and the
+  ranking label ("Matcha · Lattes") match any classification. RLS mirrors
+  `post_tags` (readable with the post, written by its author). Chips show a
+  check when selected; editing restores every pick.
+- **Animated welcome icons.** Cook wiggles, Bake hops with a tilt, Pour tips
+  and springs back; light haptic; every tap restarts; Reduce Motion dims instead.
+- **Story box.** Grows to ~⅓ of the screen, then scrolls inside itself;
+  the form scrolls the box above the keyboard on focus; collapsing and
+  reopening the section no longer loses what you typed.
+- **Headers.** Discover and My Rankings use the same 52 pt bar as Home with a
+  26 pt title; the Rankings sort control moved to its own row under the filters.
+
+Verified: typecheck, lint, 188 tests (incl. 7 new RLS/classification DB
+tests and unit tests for chip toggling, grouping and the category line).
+In the simulator against live data: all three welcome animations (recorded
+frame by frame), picking Matcha + Lattes together, the Story box growing to
+its cap and scrolling with the caret visible, Story text surviving
+collapse/reopen, the compact Discover and My Rankings headers, and ranking
+rows keeping the date whole when classifications are long.
+
+Needs checking on a device: haptics, Reduce Motion, the Story box with the
+on-screen keyboard up (the simulator used a hardware keyboard), and Dynamic Type at the largest sizes on the headers.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

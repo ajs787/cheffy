@@ -117,6 +117,7 @@ export async function savePost({
       p_post: payload.p_post,
       p_images: images,
       p_tags: payload.p_tags,
+      p_categories: payload.p_categories,
     }),
   );
 

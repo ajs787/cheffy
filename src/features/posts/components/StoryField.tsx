@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { useRef, useState, type ComponentRef } from 'react';
+import { StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AppText } from '@/components/ui';
 import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, radii, SCREEN_GUTTER, spacing } from '@/theme';
@@ -7,23 +7,33 @@ import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, radii, SCREEN_GUTTER, spacing 
 export const MAX_STORY = 10_000;
 
 export interface StoryFieldProps {
-  /** Starting text (editing an existing entry). */
+  /** Text to start from: the form's current story, so reopening keeps it. */
   initial: string;
   onChange: (story: string) => void;
+  /** Lets the form scroll the field above the keyboard. */
+  onFocus?: (field: ComponentRef<typeof TextInput> | null) => void;
 }
 
 /**
  * The entry's long-form story, like a post body: the backstory, the process,
  * what went wrong. Lives inside a Collapsible so quick logging stays quick.
+ *
+ * Grows with the text up to about a third of the screen, then scrolls inside
+ * itself; iOS keeps the caret in view while it does.
  */
-export function StoryField({ initial, onChange }: StoryFieldProps) {
+export function StoryField({ initial, onChange, onFocus }: StoryFieldProps) {
   const [length, setLength] = useState(initial.length);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+  const { height } = useWindowDimensions();
+  const maxHeight = Math.round(Math.min(320, Math.max(200, height * 0.32)));
 
   return (
     <View style={styles.editor}>
       {/* Uncontrolled: the native field owns the text so long typing never drops keys. */}
       <TextInput
+        ref={input}
         defaultValue={initial}
+        onFocus={() => onFocus?.(input.current)}
         onChangeText={(text) => {
           setLength(text.length);
           onChange(text);
@@ -32,11 +42,11 @@ export function StoryField({ initial, onChange }: StoryFieldProps) {
         placeholder={'It started with a craving…\n\nWhat you tried, what surprised you, what you’d change.'}
         placeholderTextColor={colors.textTertiary}
         multiline
-        scrollEnabled={false}
+        scrollEnabled
         maxLength={MAX_STORY}
         maxFontSizeMultiplier={MAX_FONT_SCALE}
         accessibilityLabel="Story"
-        style={styles.input}
+        style={[styles.input, { maxHeight }]}
       />
       <AppText variant="caption" color="textTertiary" align="right">
         {length.toLocaleString()}/{MAX_STORY.toLocaleString()}

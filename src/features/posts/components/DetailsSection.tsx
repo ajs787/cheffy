@@ -158,9 +158,10 @@ export function DetailsSection({
         {fields.dishType ? (
           <Controller
             control={control}
-            name="dishTypeId"
+            name="dishTypeIds"
             render={({ field }) => (
               <OptionChips
+                multiple
                 label="Dish type"
                 options={taxonomy.dishTypes.map((c) => ({ id: c.id, label: c.name }))}
                 value={field.value}
@@ -173,9 +174,10 @@ export function DetailsSection({
         {showCuisine ? (
           <Controller
             control={control}
-            name="cuisineId"
+            name="cuisineIds"
             render={({ field }) => (
               <OptionChips
+                multiple
                 label="Cuisine"
                 options={taxonomy.cuisines.map((c) => ({ id: c.id, label: c.name }))}
                 value={field.value}

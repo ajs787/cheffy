@@ -8,7 +8,6 @@ import { RankingRow } from '@/components/shared/RankingRow';
 import { AppHeader, EmptyState, ErrorState, RowSkeleton } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { RankingFilters } from '@/features/rankings/components/RankingFilters';
-import { RankingSortButton } from '@/features/rankings/components/RankingSortButton';
 import { RankingSummary } from '@/features/rankings/components/RankingSummary';
 import { useRankingsController } from '@/features/rankings/useRankingsController';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -25,7 +24,7 @@ export default function RankingsScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader variant="large" title="My Rankings" right={<RankingSortButton controller={controller} />} />
+      <AppHeader variant="large" title="My Rankings" />
       <FlashList
         data={items}
         ref={listRef}
@@ -34,7 +33,8 @@ export default function RankingsScreen() {
         ListHeaderComponent={
           <View>
             {me ? <RankingSummary userId={me} /> : null}
-            <RankingFilters controller={controller} inlineSort={false} />
+            {/* Sorting gets its own row under the filters, never beside the title. */}
+            <RankingFilters controller={controller} />
             <View style={styles.listTop} />
           </View>
         }

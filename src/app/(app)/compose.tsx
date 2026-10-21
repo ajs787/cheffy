@@ -31,6 +31,7 @@ import { FormSection } from '@/features/posts/components/FormSection';
 import { OptionChips } from '@/features/posts/components/OptionChips';
 import { PhotoStrip } from '@/features/posts/components/PhotoStrip';
 import { StoryField } from '@/features/posts/components/StoryField';
+import { useRevealOnFocus } from '@/hooks/useRevealOnFocus';
 import { TagInput } from '@/features/posts/components/TagInput';
 import { VisibilitySelector } from '@/features/posts/components/VisibilitySelector';
 import { usePost, useSavePost } from '@/features/posts/hooks';
@@ -102,6 +103,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
   const [progress, setProgress] = useState<SaveProgress | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const revealOnFocus = useRevealOnFocus(scrollRef);
   // Tag text typed but not yet committed; included on submit so it isn't lost.
   const pendingTag = useRef('');
 
@@ -203,6 +205,8 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
+          onScroll={revealOnFocus.onScroll}
+          scrollEventThrottle={32}
         >
           <Controller
             control={control}
@@ -250,7 +254,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
                     error={fieldState.error?.message}
                     onChange={(id) => {
                       field.onChange(id);
-                      setValue('subcategoryId', null, { shouldDirty: true });
+                      setValue('subcategoryIds', [], { shouldDirty: true });
                     }}
                   />
                 </View>
@@ -263,12 +267,13 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
           {pick && primaryId ? (
             <Controller
               control={control}
-              name={pick.kind === 'subcategory' ? 'subcategoryId' : 'cuisineId'}
+              name={pick.kind === 'subcategory' ? 'subcategoryIds' : 'cuisineIds'}
               render={({ field }) => (
                 <OptionChips
+                  multiple
                   label={pick.label}
                   options={pick.options.map((c) => ({ id: c.id, label: c.name }))}
-                  value={field.value as string | null}
+                  value={field.value}
                   onChange={field.onChange}
                 />
               )}
@@ -320,7 +325,9 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
               <Controller
                 control={control}
                 name="story"
-                render={({ field }) => <StoryField initial={initial.story} onChange={field.onChange} />}
+                render={({ field }) => (
+                  <StoryField initial={field.value} onChange={field.onChange} onFocus={revealOnFocus.reveal} />
+                )}
               />
             </Collapsible>
 

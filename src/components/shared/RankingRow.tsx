@@ -28,8 +28,12 @@ function RankingRowBase({ item }: { item: RankingItem }) {
         </AppText>
         <View style={styles.meta}>
           <View style={[styles.dot, { backgroundColor: categoryColorFor(item.primarySlug) }]} />
+          {/* Classifications truncate; the date always stays whole. */}
           <AppText variant="overline" color="textSecondary" numberOfLines={1} style={styles.metaText}>
-            {item.secondaryName ?? item.primaryName} · {formatEntryDate(item.madeOn)}
+            {item.secondaryName ?? item.primaryName}
+          </AppText>
+          <AppText variant="overline" color="textSecondary" numberOfLines={1} style={styles.metaDate}>
+            · {formatEntryDate(item.madeOn)}
           </AppText>
         </View>
       </View>
@@ -60,7 +64,8 @@ const styles = StyleSheet.create({
   rankPodium: { color: colors.accent, fontSize: 24, lineHeight: 30 },
   thumb: { width: 64, height: 64 },
   text: { flex: 1, gap: spacing.xs },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   dot: { width: 6, height: 6, borderRadius: 3 },
   metaText: { flexShrink: 1 },
+  metaDate: { flexShrink: 0 },
 });
