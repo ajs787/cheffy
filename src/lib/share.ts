@@ -1,15 +1,23 @@
-import * as Linking from 'expo-linking';
 import { Share } from 'react-native';
 
-import { APP_DOWNLOAD_URL } from '@/constants/app';
+import { APP_DOWNLOAD_URL, WEB_URL } from '@/constants/app';
 import { formatRating } from '@/utils/rating';
 
+/** Shareable https links: they open Cheffy when installed, cheffy.me otherwise. */
+export function webLink(path: string): string {
+  return `${WEB_URL}/${path}`;
+}
+
 export function postLink(postId: string): string {
-  return Linking.createURL(`post/${postId}`);
+  return webLink(`post/${postId}`);
 }
 
 export function profileLink(userId: string): string {
-  return Linking.createURL(`user/${userId}`);
+  return webLink(`user/${userId}`);
+}
+
+export function inviteLink(code: string): string {
+  return webLink(`invite/${code}`);
 }
 
 export async function sharePost(post: { id: string; title: string; rating: number | null }): Promise<void> {
@@ -36,7 +44,7 @@ export function inviteMessage(
     `I'm keeping a diary of what I cook, bake and pour on Cheffy. Come cook with me — I'm @${inviter.username}.`,
     downloadUrl ? `Get the app: ${downloadUrl}` : null,
     options.code
-      ? `When you join, use my invite code ${options.code} (or open ${Linking.createURL(`invite/${options.code}`)}).`
+      ? `Join with my invite: ${inviteLink(options.code)} (code ${options.code}).`
       : null,
     `Open my profile: ${options.profileUrl ?? profileLink(inviter.id)}`,
   ];

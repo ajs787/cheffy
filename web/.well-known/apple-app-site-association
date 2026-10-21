@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.audreyshin.cheffy"],
+        "components": [
+          { "/": "/invite/*", "comment": "Personal invite links" },
+          { "/": "/auth/callback", "comment": "Email confirmation and password reset" },
+          { "/": "/user/*", "comment": "Shared profiles" },
+          { "/": "/post/*", "comment": "Shared creations" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>You’re invited to Cheffy</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#F7F1E8">
+  <link rel="icon" href="/images/favicon.png">
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Newsreader:ital,wght@0,400;0,600;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/">cheffy<span>.</span></a>
+    <nav class="nav" aria-label="Main"><a href="/">Home</a><a href="/#download">Download Cheffy</a></nav>
+  </header>
+  <main class="card-page">
+    <div class="card">
+      <p class="eyebrow">Une invitation</p>
+      <h1>You’re invited to Cheffy</h1>
+      <p>A friend wants you at the table. Get the app, then use their invite code when you sign up.</p>
+      <div class="code" id="code" aria-label="Invite code">— — — —</div>
+      <a class="btn btn-light" data-get-app href="#">Get Cheffy for iPhone</a>
+      <a class="btn btn-ghost" id="open" href="cheffy://">I have Cheffy — open it</a>
+      <button class="btn btn-ghost" id="copy" type="button">Copy code</button>
+      <p class="fine">Your friend is credited once you create and verify a new account with this code.</p>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <nav aria-label="Footer">
+      <a href="mailto:hello@cheffy.me">Contact us</a>
+      <a href="/privacy/">App privacy policy</a>
+      <a href="/terms/">Terms of service</a>
+    </nav>
+  </footer>
+  <script src="/site.js"></script>
+  <script>
+    (function () {
+      var raw = location.pathname.split('/').filter(Boolean)[1] || '';
+      var code = /^[A-Za-z0-9]{8}$/.test(raw) ? raw.toUpperCase() : '';
+      var codeEl = document.getElementById('code');
+      var copy = document.getElementById('copy');
+      if (code) {
+        codeEl.textContent = code;
+        document.getElementById('open').href = 'cheffy://invite/' + code;
+        copy.addEventListener('click', function () {
+          navigator.clipboard.writeText(code).then(function () { copy.textContent = 'Copied'; });
+        });
+      } else {
+        codeEl.textContent = 'No code';
+        copy.hidden = true;
+      }
+    })();
+  </script>
+</body>
+</html>

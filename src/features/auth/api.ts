@@ -1,11 +1,24 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Linking from 'expo-linking';
+
+import { WEB_URL } from '@/constants/app';
 
 import { supabase } from '@/lib/supabase/client';
 import { unregisterPush } from '@/lib/push';
 
-/** Deep link Supabase sends email links back to. Must be in the project's redirect allow-list. */
-export const authCallbackUrl = (params?: Record<string, string>) =>
-  Linking.createURL('auth/callback', { queryParams: params });
+/**
+ * Where Supabase sends email links. Real builds use https://cheffy.me, which
+ * opens Cheffy (Universal Links) or a page with an "Open Cheffy" button. Expo
+ * Go can't claim the domain, so development keeps its own exp:// link. Both
+ * must be in the project's redirect allow-list.
+ */
+export function authCallbackUrl(params?: Record<string, string>): string {
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    return Linking.createURL('auth/callback', { queryParams: params });
+  }
+  const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+  return `${WEB_URL}/auth/callback${query}`;
+}
 
 /** Returns true when a session started immediately (email confirmation disabled). */
 export async function signUp(email: string, password: string): Promise<{ needsConfirmation: boolean }> {

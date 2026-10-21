@@ -10,7 +10,13 @@ export const TERMS_VERSION = '2026-10-18';
 
 /**
  * Where friends get the app (public TestFlight link now, App Store later).
- * Invites include it when set. Without a web domain, invite links use the
- * cheffy:// scheme, which opens Cheffy only once it's installed.
+ * Invites include it when set.
  */
 export const APP_DOWNLOAD_URL: string | null = null;
+
+/**
+ * Cheffy's website. Its links open the app directly when it's installed
+ * (Universal Links, `associatedDomains` in app.json) and show a web page with
+ * the invite code and a download link when it isn't.
+ */
+export const WEB_URL = 'https://cheffy.me';

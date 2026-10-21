@@ -18,7 +18,10 @@
         "NSPhotoLibraryUsageDescription": "Cheffy uses your photo library so you can add photos of what you made to your posts and profile.",
         "NSCameraUsageDescription": "Cheffy uses the camera so you can photograph what you made.",
         "NSPhotoLibraryAddUsageDescription": "Cheffy saves photos you take in the app to your library."
-      }
+      },
+      "associatedDomains": [
+        "applinks:cheffy.me"
+      ]
     },
     "android": {
       "package": "com.audreyshin.cheffy",

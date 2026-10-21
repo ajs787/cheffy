@@ -697,3 +697,33 @@ settings have not taken effect yet.
   thicker. The radius subtracts the stroke, so nothing clips. Progress (rating / 10), color
   interpolation, rounded caps and the centered number are unchanged. Reviewed at 0.0, 3.5,
   6.5, 9.2 and 10.0 at all three sizes in the simulator.
+
+## cheffy.me website and links (built, not deployed or committed)
+
+- `web/` is a static site for Cloudflare Pages, laid out like beliapp.com in Cheffy's colors
+  and fonts:
+  - home: hero with phone, "Welcome to Cheffy" with Log / Share / Cook together, using real
+    app screenshots;
+  - invite page `/invite/CODE`;
+  - open-in-app page `/user/*` and `/post/*`;
+  - email-link fallback `/auth/callback`;
+  - privacy and terms pages;
+  - `.well-known/apple-app-site-association`;
+  - `_redirects` and `_headers`.
+  Preview locally with `python3 scripts/serve-web.py web 8788`.
+- The download link is set in one place: `DOWNLOAD_URL` in `web/site.js`. Until it's set,
+  buttons say "Coming soon".
+- App:
+  - `associatedDomains: applinks:cheffy.me`;
+  - shared links and invites use `https://cheffy.me/...`;
+  - email links use `https://cheffy.me/auth/callback`, except in Expo Go, which keeps its
+    exp:// link.
+- **To finish:**
+  1. Replace `TEAMID` in the AASA file with the Apple Team ID.
+  2. Deploy `web/` to Cloudflare Pages and attach cheffy.me.
+  3. Supabase: set Site URL to `https://cheffy.me` and allow `https://cheffy.me/**` and
+     `exp://**`.
+  4. Make a new EAS build: Universal Links only work in builds that include the domain.
+  5. Optional: Cloudflare Email Routing for hello@cheffy.me.
+- Deleted @audfrog (2026-10-21), at the owner's request: login, profile, 1 post, 1 comment,
+  1 like and 5 storage files.
