@@ -20,7 +20,12 @@ export function TopRatedPreview({ userId, onSeeAll }: { userId: string; onSeeAll
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={onSeeAll} style={styles.heading} accessibilityRole="button" accessibilityLabel="See all rankings">
+      <Pressable
+        onPress={onSeeAll}
+        style={styles.heading}
+        accessibilityRole="button"
+        accessibilityLabel="See all rankings"
+      >
         <AppText variant="overline" color="textSecondary">
           Top rated
         </AppText>
@@ -42,7 +47,12 @@ export function TopRatedPreview({ userId, onSeeAll }: { userId: string; onSeeAll
             accessibilityLabel={`Number ${item.rank}, ${item.title}, rated ${item.rating}`}
           >
             <View>
-              <FoodImage uri={item.thumbUrl} cacheKey={item.thumbPath ?? undefined} style={styles.thumb} radius="md" />
+              <FoodImage
+                uri={item.thumbUrl}
+                cacheKey={item.thumbPath ?? undefined}
+                style={styles.thumb}
+                radius="md"
+              />
               <View style={styles.ring}>
                 <RatingRing value={item.rating} size="sm" />
               </View>

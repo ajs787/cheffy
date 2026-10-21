@@ -7,7 +7,10 @@ export const usernameSchema = z
   .min(3, 'At least 3 characters.')
   .max(24, '24 characters max.')
   .regex(/^[a-z0-9_.]+$/, 'Letters, numbers, dots and underscores only.')
-  .refine((v) => !v.startsWith('.') && !v.endsWith('.') && !v.includes('..'), 'Dots can’t start, end or repeat.');
+  .refine(
+    (v) => !v.startsWith('.') && !v.endsWith('.') && !v.includes('..'),
+    'Dots can’t start, end or repeat.',
+  );
 
 export const profileSchema = z.object({
   username: usernameSchema,

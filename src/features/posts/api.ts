@@ -9,7 +9,9 @@ export const PAGE_SIZE = 18;
 
 /** One post with full-size images. Null when deleted or not visible to the viewer. */
 export async function fetchPost(postId: string): Promise<Post | null> {
-  const row = await fetchMaybe<PostRow>(supabase.from('posts').select(POST_SELECT).eq('id', postId).maybeSingle());
+  const row = await fetchMaybe<PostRow>(
+    supabase.from('posts').select(POST_SELECT).eq('id', postId).maybeSingle(),
+  );
   const post = row ? mapPost(row) : null;
   if (!post) return null;
   const [withUrls] = await attachImageUrls([post], 'full');
@@ -58,7 +60,9 @@ export async function fetchDrafts(userId: string): Promise<Post[]> {
 
 /** Deletes the post (cascades to images, likes, comments…) then its files. */
 export async function deletePost(post: Pick<Post, 'id' | 'images'>): Promise<void> {
-  const deleted = await fetchRows<{ id: string }>(supabase.from('posts').delete().eq('id', post.id).select('id'));
+  const deleted = await fetchRows<{ id: string }>(
+    supabase.from('posts').delete().eq('id', post.id).select('id'),
+  );
   if (deleted.length === 0) throw new Error('post not found');
   const paths = post.images.flatMap((image) => [image.storagePath, image.thumbPath]);
   await removeFiles(BUCKETS.postImages, paths).catch(() => undefined);

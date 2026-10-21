@@ -1,4 +1,12 @@
-import { formatCookTime, formatCount, initials, paragraphs, pluralize, readingMinutes, slugifyTag } from './format';
+import {
+  formatCookTime,
+  formatCount,
+  initials,
+  paragraphs,
+  pluralize,
+  readingMinutes,
+  slugifyTag,
+} from './format';
 
 describe('format', () => {
   it('formats counts compactly', () => {
@@ -37,6 +45,10 @@ describe('format', () => {
   });
 
   it('splits paragraphs on blank lines', () => {
-    expect(paragraphs('One.\n\n  Two\nstill two.\n\n\nThree.')).toEqual(['One.', 'Two\nstill two.', 'Three.']);
+    expect(paragraphs('One.\n\n  Two\nstill two.\n\n\nThree.')).toEqual([
+      'One.',
+      'Two\nstill two.',
+      'Three.',
+    ]);
   });
 });

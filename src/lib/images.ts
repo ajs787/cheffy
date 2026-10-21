@@ -33,7 +33,31 @@ export async function preparePostImage(
   return { full, thumb };
 }
 
-export async function prepareAvatar(uri: string): Promise<PreparedImage> {
-  // Picker already crops avatars square; just bound the size.
-  return resizeJpeg(uri, Number.MAX_SAFE_INTEGER, AVATAR_WIDTH, 0.8);
+/** The largest centered square inside a width × height image (pure). */
+export function centerSquare(width: number, height: number) {
+  const size = Math.min(width, height);
+  return {
+    originX: Math.round((width - size) / 2),
+    originY: Math.round((height - size) / 2),
+    width: size,
+    height: size,
+  };
+}
+
+/**
+ * A profile photo as two files: a centered square for the circle, and the
+ * original framing (long side ≤ 1440) for viewing it enlarged.
+ */
+export async function prepareAvatar(
+  uri: string,
+): Promise<{ square: PreparedImage; original: PreparedImage }> {
+  const source = await ImageManipulator.manipulate(uri).renderAsync();
+  const { width, height } = source;
+  const original = await resizeJpeg(uri, Math.max(width, height), FULL_IMAGE_WIDTH, 0.82);
+
+  const context = ImageManipulator.manipulate(uri).crop(centerSquare(width, height));
+  if (Math.min(width, height) > AVATAR_WIDTH) context.resize({ width: AVATAR_WIDTH });
+  const rendered = await context.renderAsync();
+  const saved = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+  return { square: { uri: saved.uri, width: saved.width, height: saved.height }, original };
 }

@@ -1,4 +1,11 @@
-import { formatCalendarDate, formatEntryDate, formatRelativeTime, parseLocalDate, toLocalISODate } from './dates';
+import {
+  formatCalendarDate,
+  formatEntryDate,
+  formatMemberSince,
+  formatRelativeTime,
+  parseLocalDate,
+  toLocalISODate,
+} from './dates';
 
 const now = new Date(2026, 9, 18, 12, 0, 0);
 
@@ -24,5 +31,12 @@ describe('dates', () => {
   it('formats diary-entry dates', () => {
     expect(formatEntryDate('2026-09-14', now)).toBe('Mon · 14 Sep');
     expect(formatEntryDate('2025-10-19', now)).toBe('Sun · 19 Oct 2025');
+  });
+});
+
+describe('formatMemberSince', () => {
+  it('formats the creation date as month/day/year', () => {
+    expect(formatMemberSince('2026-10-19T15:30:00')).toBe('10/19/2026');
+    expect(formatMemberSince('not a date')).toBe('');
   });
 });

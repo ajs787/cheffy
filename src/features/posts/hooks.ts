@@ -1,4 +1,10 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 import { useRequiredUserId, useUserId } from '@/features/auth/store';
 import { removePostFromCaches, restorePostCaches, snapshotPostCaches } from '@/lib/query/cache';
@@ -17,7 +23,9 @@ function findCachedPost(qc: QueryClient, postId: string): Post | undefined {
       : data && typeof data === 'object' && 'pages' in data
         ? (data as { pages: { items: Post[] }[] }).pages.flatMap((p) => p.items)
         : [data];
-    const match = candidates.find((p): p is Post => !!p && typeof p === 'object' && (p as Post).id === postId);
+    const match = candidates.find(
+      (p): p is Post => !!p && typeof p === 'object' && (p as Post).id === postId,
+    );
     if (match) return match;
   }
   return undefined;
@@ -57,8 +65,11 @@ export function useSavePost() {
   const userId = useRequiredUserId();
   return useMutation({
     mutationFn: (args: Omit<SavePostArgs, 'userId'>) => savePost({ ...args, userId }),
-    onSuccess: async (postId) => {
+    onSuccess: async (postId, { values }) => {
       qc.removeQueries({ queryKey: queryKeys.post(postId), exact: true });
+      // New custom labels become choices for next time.
+      if (values.customLabels.length > 0) void qc.invalidateQueries({ queryKey: queryKeys.taxonomy });
+      void qc.invalidateQueries({ queryKey: ['classification-usage'] });
       await invalidateAfterPostChange(qc, userId);
     },
   });

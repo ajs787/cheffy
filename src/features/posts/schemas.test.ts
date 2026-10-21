@@ -10,6 +10,7 @@ const cat = (id: string, kind: Category['kind'], slug: string, parentId: string 
   name: slug,
   parentId,
   sortOrder: 0,
+  isCustom: false,
 });
 
 const taxonomy = buildTaxonomy([
@@ -47,14 +48,16 @@ describe('post form validation', () => {
 
   it('validates recipe links', () => {
     expect(postFormSchema.safeParse({ ...base(), recipeUrl: 'javascript:alert(1)' }).success).toBe(false);
-    expect(postFormSchema.safeParse({ ...base(), recipeUrl: 'https://cooking.example/x' }).success).toBe(true);
+    expect(postFormSchema.safeParse({ ...base(), recipeUrl: 'https://cooking.example/x' }).success).toBe(
+      true,
+    );
     expect(postFormSchema.safeParse({ ...base(), recipeUrl: '' }).success).toBe(true);
   });
 
   it('caps tags and photos', () => {
-    expect(postFormSchema.safeParse({ ...base(), tags: Array.from({ length: 11 }, (_, i) => `t${i}`) }).success).toBe(
-      false,
-    );
+    expect(
+      postFormSchema.safeParse({ ...base(), tags: Array.from({ length: 11 }, (_, i) => `t${i}`) }).success,
+    ).toBe(false);
   });
 });
 
@@ -77,7 +80,14 @@ describe('toSavePayload', () => {
 
   it('keeps drink fields for drinks', () => {
     const { p_post, p_tags, p_categories } = toSavePayload(
-      { ...base(), rating: 9.2, subcategoryIds: ['matcha'], temperature: 'iced', milk: ' Oat ', tags: ['Iced'] },
+      {
+        ...base(),
+        rating: 9.2,
+        subcategoryIds: ['matcha'],
+        temperature: 'iced',
+        milk: ' Oat ',
+        tags: ['Iced'],
+      },
       'post-1',
       'published',
       taxonomy,

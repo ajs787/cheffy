@@ -1,6 +1,18 @@
-import { mapProfileSummary, PROFILE_SUMMARY_SELECT, type ProfileSummaryRow } from '@/features/profile/mappers';
+import {
+  mapProfileSummary,
+  PROFILE_SUMMARY_SELECT,
+  type ProfileSummaryRow,
+} from '@/features/profile/mappers';
 import { signPostImagePaths } from '@/lib/supabase/storage';
-import type { CategoryKind, CategoryRef, Post, PostImage, PostStatus, Temperature, Visibility } from '@/types/models';
+import type {
+  CategoryKind,
+  CategoryRef,
+  Post,
+  PostImage,
+  PostStatus,
+  Temperature,
+  Visibility,
+} from '@/types/models';
 
 const CATEGORY_FIELDS = 'id, slug, name';
 
@@ -32,10 +44,12 @@ type OrderLimitBuilder<T> = {
 };
 
 /** Newest three likers per post. */
-export function withRecentLikers<T extends OrderLimitBuilder<T> & { limit: (n: number, o: { referencedTable: string }) => T }>(
-  query: T,
-): T {
-  return query.order('created_at', { ascending: false, referencedTable: 'likers' }).limit(3, { referencedTable: 'likers' });
+export function withRecentLikers<
+  T extends OrderLimitBuilder<T> & { limit: (n: number, o: { referencedTable: string }) => T },
+>(query: T): T {
+  return query
+    .order('created_at', { ascending: false, referencedTable: 'likers' })
+    .limit(3, { referencedTable: 'likers' });
 }
 
 export interface PostRow {
@@ -65,7 +79,14 @@ export interface PostRow {
   primary: CategoryRef | null;
   meal_type: CategoryRef | null;
   classifications?: { position: number; category: (CategoryRef & { kind: CategoryKind }) | null }[];
-  images: { id: string; storage_path: string; thumb_path: string; width: number; height: number; position: number }[];
+  images: {
+    id: string;
+    storage_path: string;
+    thumb_path: string;
+    width: number;
+    height: number;
+    position: number;
+  }[];
   post_tags: { tag: { id: string; slug: string; name: string } | null }[];
   viewer_has_liked: boolean;
   viewer_has_saved: boolean;
@@ -76,7 +97,11 @@ export interface PostRow {
 export function groupClassifications(
   rows: PostRow['classifications'],
 ): Pick<Post, 'subcategories' | 'cuisines' | 'dishTypes'> {
-  const groups: Pick<Post, 'subcategories' | 'cuisines' | 'dishTypes'> = { subcategories: [], cuisines: [], dishTypes: [] };
+  const groups: Pick<Post, 'subcategories' | 'cuisines' | 'dishTypes'> = {
+    subcategories: [],
+    cuisines: [],
+    dishTypes: [],
+  };
   const key = { subcategory: 'subcategories', cuisine: 'cuisines', dish_type: 'dishTypes' } as const;
   for (const { category } of [...(rows ?? [])].sort((a, b) => a.position - b.position)) {
     if (!category) continue;
@@ -144,7 +169,11 @@ export function mapPosts(rows: PostRow[]): Post[] {
 export type ImageSigningMode = 'full' | 'card' | 'thumb';
 
 /** Which files a screen needs for image `index` of a post. */
-function wantedPaths(image: PostImage, index: number, mode: ImageSigningMode): { full: boolean; thumb: boolean } {
+function wantedPaths(
+  image: PostImage,
+  index: number,
+  mode: ImageSigningMode,
+): { full: boolean; thumb: boolean } {
   switch (mode) {
     case 'full': // post detail carousel: every full image, cover thumb as placeholder
       return { full: true, thumb: index === 0 };

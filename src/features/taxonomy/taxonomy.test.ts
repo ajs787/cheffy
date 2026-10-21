@@ -1,11 +1,20 @@
 import type { Category } from '@/types/models';
 
-import { buildTaxonomy, detailFieldsFor, quickPickFor } from './taxonomy';
+import {
+  buildTaxonomy,
+  canAddCustom,
+  commonFirst,
+  detailFieldsFor,
+  normalizeLabel,
+  quickPickFor,
+  searchOptions,
+} from './taxonomy';
 
 const c = (over: Partial<Category> & Pick<Category, 'id' | 'kind' | 'slug'>): Category => ({
   parentId: null,
   name: over.slug,
   sortOrder: 0,
+  isCustom: false,
   ...over,
 });
 
@@ -51,5 +60,41 @@ describe('taxonomy', () => {
     expect(detailFieldsFor('drinks')).toMatchObject({ drink: true, cookTime: false });
     expect(detailFieldsFor('baking')).toMatchObject({ drink: false, cookTime: true, dishType: false });
     expect(detailFieldsFor('cooking')).toMatchObject({ dishType: true });
+  });
+});
+
+describe('picker helpers', () => {
+  const opts: Category[] = [
+    c({ id: 'tr', kind: 'cuisine', slug: 'turkish', name: 'Turkish', sortOrder: 50 }),
+    c({ id: 'it', kind: 'cuisine', slug: 'italian', name: 'Italian', sortOrder: 4 }),
+    c({ id: 'kr', kind: 'cuisine', slug: 'korean', name: 'Korean', sortOrder: 1 }),
+    c({ id: 'ot', kind: 'cuisine', slug: 'other', name: 'Other', sortOrder: 99 }),
+    c({ id: 'uy', kind: 'cuisine', slug: 'uyghur', name: 'Uyghur', sortOrder: 500, isCustom: true }),
+  ];
+
+  it('puts the most used first, then the curated order, without Other', () => {
+    expect(commonFirst(opts, { tr: 5, it: 2 }, 3).map((o) => o.id)).toEqual(['tr', 'it', 'kr']);
+  });
+
+  it('searches names and custom labels, prefix matches first', () => {
+    expect(searchOptions(opts, 'tur').map((o) => o.id)).toEqual(['tr']);
+    expect(searchOptions(opts, 'an').map((o) => o.id)).toEqual(['it', 'kr']);
+    expect(searchOptions(opts, 'uyg').map((o) => o.id)).toEqual(['uy']);
+    expect(searchOptions(opts, '').map((o) => o.name)).toEqual(['Italian', 'Korean', 'Turkish', 'Uyghur']);
+  });
+
+  it('only offers to add a genuinely new label', () => {
+    expect(normalizeLabel('  Café   Créole ')).toBe('cafe-creole');
+    expect(canAddCustom(opts, 'TURKISH ')).toBe(false);
+    expect(canAddCustom(opts, 'Georgian fusion')).toBe(true);
+    expect(canAddCustom(opts, 'x')).toBe(false);
+    expect(canAddCustom(opts, 'other')).toBe(false);
+  });
+
+  it('keeps custom labels out of default lists', () => {
+    const t = buildTaxonomy([...opts]);
+    expect(t.cuisines.map((o) => o.id)).not.toContain('uy');
+    expect(t.custom.map((o) => o.id)).toEqual(['uy']);
+    expect(t.byId.uy?.name).toBe('Uyghur');
   });
 });

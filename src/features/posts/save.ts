@@ -118,6 +118,7 @@ export async function savePost({
       p_images: images,
       p_tags: payload.p_tags,
       p_categories: payload.p_categories,
+      p_custom: payload.p_custom.length ? payload.p_custom : null,
     }),
   );
 

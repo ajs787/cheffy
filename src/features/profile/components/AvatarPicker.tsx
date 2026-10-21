@@ -19,8 +19,8 @@ export function AvatarPicker({ uri, name, onPick, onRemove }: AvatarPickerProps)
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
+        // No forced square crop: the original framing is kept for viewing,
+        // and the circle uses a centered square made on upload.
         quality: 0.9,
       });
       const asset = result.assets?.[0];

@@ -65,14 +65,18 @@ export function avatarForViewer(profile: {
   id: string;
   displayName: string;
   avatarUrl: string | null;
+  avatarOriginalUrl?: string | null;
 }): ViewerImage | null {
   if (!profile.avatarUrl) return null;
+  // The original framing when we have it (fit to screen, aspect preserved);
+  // photos from before V3 only exist as the square.
+  const original = profile.avatarOriginalUrl ?? null;
   return {
     key: `avatar-${profile.id}`,
-    uri: profile.avatarUrl,
+    uri: original ?? profile.avatarUrl,
     thumbUri: profile.avatarUrl,
-    width: 1,
-    height: 1,
+    width: original ? undefined : 1,
+    height: original ? undefined : 1,
     label: `${profile.displayName}’s profile photo`,
   };
 }

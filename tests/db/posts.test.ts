@@ -248,7 +248,7 @@ describe('classifications', () => {
     const cakes = await db.categoryId('subcategory', 'cakes', 'baking');
     const cheesecakes = await db.categoryId('subcategory', 'cheesecakes', 'baking');
     const id = await db.createPost(alice.id, { primary_category_id: baking }, { categories: [cakes, cheesecakes] });
-    expect(await names(id)).toEqual(['Cakes', 'Cheesecakes']);
+    expect(await names(id)).toEqual(['Cakes', 'Cheesecake']);
 
     await db.query(alice.id, 'select public.save_post($1::jsonb, $2::jsonb, $3::text[], $4::uuid[])', [
       JSON.stringify({ id, title: 'Basque cheesecake', primary_category_id: baking, rating: 9 }),
@@ -256,7 +256,7 @@ describe('classifications', () => {
       [],
       [cheesecakes],
     ]);
-    expect(await names(id)).toEqual(['Cheesecakes']);
+    expect(await names(id)).toEqual(['Cheesecake']);
     const [row] = await db.admin<{ subcategory_id: string }>('select subcategory_id from public.posts where id = $1', [id]);
     expect(row.subcategory_id).toBe(cheesecakes);
   });

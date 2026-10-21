@@ -1,4 +1,12 @@
-import { formatRating, parseRatingInput, ratingFill, ratingRingColor, ratingTier, roundRating, stepRating } from './rating';
+import {
+  formatRating,
+  parseRatingInput,
+  ratingFill,
+  ratingRingColor,
+  ratingTier,
+  roundRating,
+  stepRating,
+} from './rating';
 
 describe('rating utils', () => {
   it('rounds and clamps to one decimal', () => {

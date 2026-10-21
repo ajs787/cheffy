@@ -289,6 +289,39 @@ banner and badge live, confirming a request from Activity, the push
 explanation sheet, the iOS prompt, push delivery on a locked phone, tapping a
 push into the right post, and preferences switching kinds off.
 
+## V3 — Milestone 1: classifications & profile fixes (2026-10-21)
+
+Migration `20261021000006_classifications_v3.sql` (applied live).
+
+- **Searchable classification picker.** Cuisines (and dish types) show the
+  six most-used choices as chips (from real usage counts) plus "All
+  cuisines…", which opens a searchable page sheet: Common, then A–Z, multi-
+  select, and "Add “…”" for anything missing. ~70 more cuisines (Turkish,
+  Middle Eastern, African, Asian, European, Latin American, Caribbean…).
+- **Baking:** Pizza, Bread, Cookies, Brownies, Cakes, Cheesecake, Muffins,
+  Pastries, Pies, Tarts, Rolls, Bagels, Biscuits (Donuts kept for existing
+  posts), Other…. Classifications stay non-exclusive (Pizza + Italian).
+- **Custom labels.** Saved through `save_post(p_custom)`; the database
+  normalizes (slugify) and reuses an existing built-in or custom label, so
+  "Turkish"/" turkish " never duplicate. Custom labels are searchable and
+  display everywhere; they don't clutter default lists.
+- **Profile photo.** Slightly larger (86 pt). Uploads no longer force a
+  square crop: we store the circle crop and the original framing (long side
+  1440). Tapping opens the original, aspect preserved, pinch-to-zoom.
+  Older photos only exist as the 512 px square (that's the best fallback;
+  the original was never uploaded).
+- **Member since 10/20/2026** from the account's real `created_at`, as a
+  subtle caption.
+- Fixed while verifying: the picker's search field dropped keystrokes
+  (now uncontrolled with a deferred filter); "Add" sits below real matches.
+
+Verified: typecheck, lint, 253 tests (9 new DB tests for taxonomy and custom
+labels incl. normalization, reuse, subtype parents, validation, no direct
+inserts; unit tests for picker helpers, crop math and the date). In the
+simulator: chips and sheet, search "turk" → Turkish, selection, baking list,
+profile photo size and date. Not verified: uploading a new non-square photo
+(needs your photo library) — check on a phone.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

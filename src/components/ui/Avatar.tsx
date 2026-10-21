@@ -6,7 +6,7 @@ import { initials } from '@/utils/format';
 
 import { AppText } from './AppText';
 
-const SIZES = { xs: 24, sm: 32, md: 40, lg: 72, xl: 96 } as const;
+const SIZES = { xs: 24, sm: 32, md: 40, lg: 72, profile: 86, xl: 96 } as const;
 
 export interface AvatarProps {
   uri: string | null | undefined;

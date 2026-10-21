@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { ListPlus } from 'lucide-react-native';
-import { Controller, useWatch, type Control } from 'react-hook-form';
+import { Controller, useController, useWatch, type Control } from 'react-hook-form';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { ControlledInput } from '@/components/shared/ControlledInput';
@@ -11,6 +11,7 @@ import type { Taxonomy } from '@/types/models';
 import { formatCalendarDate, parseLocalDate, toLocalISODate } from '@/utils/dates';
 
 import type { PostFormValues } from '../schemas';
+import { ClassificationField } from './ClassificationField';
 import { OptionChips } from './OptionChips';
 
 export interface DetailsSectionProps {
@@ -31,6 +32,7 @@ export function DetailsSection({
   initiallyOpen = false,
 }: DetailsSectionProps) {
   const primaryId = useWatch({ control, name: 'primaryCategoryId' });
+  const custom = useController({ control, name: 'customLabels' });
   const primarySlug = taxonomy.byId[primaryId]?.slug;
   const fields = detailFieldsFor(primarySlug);
 
@@ -160,12 +162,14 @@ export function DetailsSection({
             control={control}
             name="dishTypeIds"
             render={({ field }) => (
-              <OptionChips
-                multiple
-                label="Dish type"
-                options={taxonomy.dishTypes.map((c) => ({ id: c.id, label: c.name }))}
+              <ClassificationField
+                label="Dish types"
+                kind="dish_type"
+                taxonomy={taxonomy}
                 value={field.value}
                 onChange={field.onChange}
+                customLabels={custom.field.value}
+                onCustomLabelsChange={custom.field.onChange}
               />
             )}
           />
@@ -176,12 +180,14 @@ export function DetailsSection({
             control={control}
             name="cuisineIds"
             render={({ field }) => (
-              <OptionChips
-                multiple
-                label="Cuisine"
-                options={taxonomy.cuisines.map((c) => ({ id: c.id, label: c.name }))}
+              <ClassificationField
+                label="Cuisines"
+                kind="cuisine"
+                taxonomy={taxonomy}
                 value={field.value}
                 onChange={field.onChange}
+                customLabels={custom.field.value}
+                onCustomLabelsChange={custom.field.onChange}
               />
             )}
           />

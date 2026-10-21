@@ -52,7 +52,8 @@ export function PostDetails({ post }: { post: Post }) {
   if (post.cuisines.length > 0 && post.subcategories.length > 0) {
     facts.push([post.cuisines.length > 1 ? 'Cuisines' : 'Cuisine', names(post.cuisines)]);
   }
-  if (post.dishTypes.length > 0) facts.push([post.dishTypes.length > 1 ? 'Dishes' : 'Dish', names(post.dishTypes)]);
+  if (post.dishTypes.length > 0)
+    facts.push([post.dishTypes.length > 1 ? 'Dishes' : 'Dish', names(post.dishTypes)]);
 
   return (
     <View style={styles.container}>

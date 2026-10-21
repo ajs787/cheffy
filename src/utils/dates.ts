@@ -15,7 +15,8 @@ export function toLocalISODate(date: Date): string {
 }
 
 export function formatCalendarDate(value: string | Date, now: Date = new Date()): string {
-  const date = typeof value === 'string' ? (value.length === 10 ? parseLocalDate(value) : new Date(value)) : value;
+  const date =
+    typeof value === 'string' ? (value.length === 10 ? parseLocalDate(value) : new Date(value)) : value;
   const base = `${MONTHS[date.getMonth()]} ${date.getDate()}`;
   return date.getFullYear() === now.getFullYear() ? base : `${base}, ${date.getFullYear()}`;
 }
@@ -41,4 +42,16 @@ export function formatEntryDate(madeOn: string, now: Date = new Date()): string 
   const date = parseLocalDate(madeOn);
   const base = `${WEEKDAYS[date.getDay()]} · ${date.getDate()} ${MONTHS[date.getMonth()]}`;
   return date.getFullYear() === now.getFullYear() ? base : `${base} ${date.getFullYear()}`;
+}
+
+const memberSinceFormat = new Intl.DateTimeFormat('en-US', {
+  month: 'numeric',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+/** "10/19/2026": the account's creation date, month/day/year. */
+export function formatMemberSince(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? '' : memberSinceFormat.format(date);
 }

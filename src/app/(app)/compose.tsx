@@ -28,7 +28,7 @@ import { CategorySelector } from '@/features/posts/components/CategorySelector';
 import { ComposeFooter } from '@/features/posts/components/ComposeFooter';
 import { DetailsSection } from '@/features/posts/components/DetailsSection';
 import { FormSection } from '@/features/posts/components/FormSection';
-import { OptionChips } from '@/features/posts/components/OptionChips';
+import { ClassificationField } from '@/features/posts/components/ClassificationField';
 import { PhotoStrip } from '@/features/posts/components/PhotoStrip';
 import { StoryField } from '@/features/posts/components/StoryField';
 import { useRevealOnFocus } from '@/hooks/useRevealOnFocus';
@@ -115,6 +115,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
   const { control, formState, setValue, setError, getValues, reset, clearErrors } = form;
 
   const primaryId = useWatch({ control, name: 'primaryCategoryId' });
+  const customLabels = useWatch({ control, name: 'customLabels' });
   const saving = savePost.isPending;
   const dirty = formState.isDirty;
   const editingPublished = post?.status === 'published';
@@ -258,6 +259,12 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
                     onChange={(id) => {
                       field.onChange(id);
                       setValue('subcategoryIds', [], { shouldDirty: true });
+                      // Custom subtypes belong to the old category.
+                      setValue(
+                        'customLabels',
+                        getValues('customLabels').filter((c) => c.kind !== 'subcategory'),
+                        { shouldDirty: true },
+                      );
                     }}
                   />
                 </View>
@@ -272,12 +279,16 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
               control={control}
               name={pick.kind === 'subcategory' ? 'subcategoryIds' : 'cuisineIds'}
               render={({ field }) => (
-                <OptionChips
-                  multiple
-                  label={pick.label}
-                  options={pick.options.map((c) => ({ id: c.id, label: c.name }))}
+                <ClassificationField
+                  label={pick.kind === 'subcategory' ? pick.label : 'Cuisines'}
+                  kind={pick.kind}
+                  parentId={primaryId}
+                  taxonomy={taxonomy.data!}
                   value={field.value}
                   onChange={field.onChange}
+                  customLabels={customLabels}
+                  onCustomLabelsChange={(labels) => setValue('customLabels', labels, { shouldDirty: true })}
+                  display={pick.kind === 'subcategory' ? 'all' : 'common'}
                 />
               )}
             />

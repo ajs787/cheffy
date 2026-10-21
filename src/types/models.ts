@@ -18,6 +18,9 @@ export interface ProfileSummary {
 export interface Profile extends ProfileSummary {
   bio: string;
   avatarPath: string | null;
+  /** Full-framing photo (uploads since V3); null for older photos. */
+  avatarOriginalPath: string | null;
+  avatarOriginalUrl: string | null;
   createdAt: string;
   /** Private accounts approve followers; only followers see their content. */
   isPrivate: boolean;
@@ -52,6 +55,8 @@ export interface Category {
   slug: string;
   name: string;
   sortOrder: number;
+  /** Added by someone through "Other / Add custom". */
+  isCustom: boolean;
 }
 
 export type CategoryRef = Pick<Category, 'id' | 'slug' | 'name'>;
@@ -64,6 +69,8 @@ export interface Taxonomy {
   cuisines: Category[];
   mealTypes: Category[];
   dishTypes: Category[];
+  /** Custom labels by kind (and subtype parent): searchable, not listed by default. */
+  custom: Category[];
 }
 
 export interface Tag {

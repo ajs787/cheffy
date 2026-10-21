@@ -21,12 +21,20 @@ export type ComposeImage =
       uri: string | null;
     };
 
-const optionalText = (max: number, label: string) => z.string().max(max, `${label} is too long (max ${max}).`);
+const optionalText = (max: number, label: string) =>
+  z.string().max(max, `${label} is too long (max ${max}).`);
 
 const nullableId = z.string().nullable();
 
 export const MAX_CLASSIFICATIONS = 12;
 const ids = z.array(z.string());
+
+export type CustomKind = 'cuisine' | 'subcategory' | 'dish_type';
+const customLabel = z.object({
+  kind: z.enum(['cuisine', 'subcategory', 'dish_type']),
+  label: z.string().trim().min(2).max(30),
+});
+export type CustomLabel = z.infer<typeof customLabel>;
 
 export const postFormSchema = z.object({
   title: z.string().trim().min(1, 'Name what you made.').max(80, 'Keep the name under 80 characters.'),
@@ -35,6 +43,8 @@ export const postFormSchema = z.object({
   cuisineIds: ids,
   mealTypeId: nullableId,
   dishTypeIds: ids,
+  /** New labels typed under "Other / Add custom" (created on save). */
+  customLabels: z.array(customLabel).max(6, 'Up to 6 custom labels.'),
   rating: z.number().min(0).max(10).nullable(),
   review: optionalText(2000, 'Review'),
   story: optionalText(10000, 'Story'),
@@ -65,7 +75,10 @@ export const publishSchema = postFormSchema.refine((v) => v.rating !== null, {
   message: 'Give it a rating.',
 });
 
-export function emptyPostForm(defaults?: { visibility?: Visibility; primaryCategoryId?: string }): PostFormValues {
+export function emptyPostForm(defaults?: {
+  visibility?: Visibility;
+  primaryCategoryId?: string;
+}): PostFormValues {
   return {
     title: '',
     primaryCategoryId: defaults?.primaryCategoryId ?? '',
@@ -73,6 +86,7 @@ export function emptyPostForm(defaults?: { visibility?: Visibility; primaryCateg
     cuisineIds: [],
     mealTypeId: null,
     dishTypeIds: [],
+    customLabels: [],
     rating: null,
     review: '',
     story: '',
@@ -100,6 +114,7 @@ export function postToForm(post: Post): PostFormValues {
     cuisineIds: post.cuisines.map((c) => c.id),
     mealTypeId: post.mealType?.id ?? null,
     dishTypeIds: post.dishTypes.map((c) => c.id),
+    customLabels: [],
     rating: post.rating,
     review: post.review,
     story: post.story,
@@ -146,6 +161,8 @@ export interface SavePostPayload {
   p_tags: string[];
   /** Subcategories, then cuisines, then dish types, each in picked order. */
   p_categories: string[];
+  /** New labels for the database to find or create. */
+  p_custom: CustomLabel[];
 }
 
 /**
@@ -166,7 +183,10 @@ export function toSavePayload(
     (id) => taxonomy.byId[id]?.parentId === values.primaryCategoryId,
   );
   const dishTypes = primary?.slug === 'cooking' ? values.dishTypeIds : [];
-  const categories = [...new Set([...subcategories, ...values.cuisineIds, ...dishTypes])].slice(0, MAX_CLASSIFICATIONS);
+  const categories = [...new Set([...subcategories, ...values.cuisineIds, ...dishTypes])].slice(
+    0,
+    MAX_CLASSIFICATIONS,
+  );
   const trimmed = (v: string) => v.trim();
 
   return {
@@ -193,5 +213,8 @@ export function toSavePayload(
     },
     p_tags: normalizeTags(values.tags),
     p_categories: categories,
+    p_custom: values.customLabels.filter(
+      (c) => c.kind === 'cuisine' || (c.kind === 'dish_type' ? primary?.slug === 'cooking' : true),
+    ),
   };
 }

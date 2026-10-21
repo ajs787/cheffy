@@ -113,7 +113,11 @@ export class TestDb {
   }
 
   /** Convenience: one query as a user, returning rows. */
-  async query<T = Record<string, unknown>>(userId: string, sql: string, params: unknown[] = []): Promise<T[]> {
+  async query<T = Record<string, unknown>>(
+    userId: string,
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<T[]> {
     return this.asUser(userId, async (tx) => (await tx.query<T>(sql, params)).rows);
   }
 
@@ -144,7 +148,12 @@ export class TestDb {
   async createPost(
     userId: string,
     overrides: Record<string, unknown> = {},
-    options: { images?: number; tags?: string[]; categories?: string[] } = {},
+    options: {
+      images?: number;
+      tags?: string[];
+      categories?: string[];
+      custom?: { kind: string; label: string }[];
+    } = {},
   ): Promise<string> {
     const id = randomUUID();
     const post = {
@@ -166,12 +175,17 @@ export class TestDb {
         height: 1800,
       };
     });
-    await this.query(userId, 'select public.save_post($1::jsonb, $2::jsonb, $3::text[], $4::uuid[])', [
-      JSON.stringify(post),
-      JSON.stringify(images),
-      options.tags ?? [],
-      options.categories ?? null,
-    ]);
+    await this.query(
+      userId,
+      'select public.save_post($1::jsonb, $2::jsonb, $3::text[], $4::uuid[], $5::jsonb)',
+      [
+        JSON.stringify(post),
+        JSON.stringify(images),
+        options.tags ?? [],
+        options.categories ?? null,
+        options.custom ? JSON.stringify(options.custom) : null,
+      ],
+    );
     return id;
   }
 

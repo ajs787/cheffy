@@ -8,6 +8,7 @@ import { shareProfile } from '@/lib/share';
 import { avatarForViewer, openImageViewer } from '@/stores/imageViewer';
 import { colors, fonts, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import { followStateOf, type ProfileStats, type ProfileWithViewer } from '@/types/models';
+import { formatMemberSince } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
 import { TopRatedPreview } from './TopRatedPreview';
@@ -53,7 +54,6 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   const made = (stats?.byPrimary ?? []).filter((p) => p.count > 0);
   const photo = avatarForViewer(profile);
-  const since = new Date(profile.createdAt).getFullYear();
   const openConnections = (type: 'followers' | 'following') =>
     router.push({ pathname: '/user/[id]/connections', params: { id: profile.id, type } });
 
@@ -68,7 +68,7 @@ export function ProfileHeader({
           accessibilityLabel={photo ? photo.label : `${profile.displayName}, no profile photo`}
           accessibilityHint={photo ? 'Opens the photo full screen' : undefined}
         >
-          <Avatar uri={profile.avatarUrl} name={profile.displayName} size="lg" />
+          <Avatar uri={profile.avatarUrl} name={profile.displayName} size="profile" />
         </Pressable>
         <View style={styles.stats}>
           <Stat value={stats?.posts ?? 0} label={stats?.posts === 1 ? 'creation' : 'creations'} />
@@ -99,8 +99,8 @@ export function ProfileHeader({
             />
           ) : null}
         </View>
-        <AppText variant="overline" color="accent">
-          Membre depuis {since}
+        <AppText variant="caption" color="textSecondary">
+          Member since {formatMemberSince(profile.createdAt)}
         </AppText>
         {profile.bio ? <AppText variant="callout">{profile.bio}</AppText> : null}
       </View>
