@@ -7,13 +7,16 @@ import { StyleSheet } from 'react-native';
 import { AuthScaffold } from '@/components/shared/AuthScaffold';
 import { ControlledInput } from '@/components/shared/ControlledInput';
 import { AppButton, AppText } from '@/components/ui';
-import { signIn } from '@/features/auth/api';
+import { isEmailNotConfirmed, signIn } from '@/features/auth/api';
+import { ResendConfirmation } from '@/features/auth/components/ResendConfirmation';
 import { signInSchema, type SignInValues } from '@/features/auth/schemas';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 
 export default function SignInScreen() {
   const [formError, setFormError] = useState<string | null>(null);
+  // Set when the account exists but its email isn't confirmed yet.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const { control, handleSubmit, formState } = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: { email: '', password: '' },
@@ -21,12 +24,14 @@ export default function SignInScreen() {
 
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setFormError(null);
+    setUnconfirmedEmail(null);
     try {
       await signIn(email, password);
       haptics.success();
     } catch (error) {
       haptics.error();
       setFormError(toUserMessage(error));
+      if (isEmailNotConfirmed(error)) setUnconfirmedEmail(email.trim());
     }
   });
 
@@ -81,6 +86,7 @@ export default function SignInScreen() {
           {formError}
         </AppText>
       ) : null}
+      {unconfirmedEmail ? <ResendConfirmation email={unconfirmedEmail} /> : null}
       <AppButton label="Sign in" size="lg" fullWidth loading={formState.isSubmitting} onPress={onSubmit} />
     </AuthScaffold>
   );

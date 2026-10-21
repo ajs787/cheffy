@@ -9,6 +9,7 @@ import { AuthScaffold } from '@/components/shared/AuthScaffold';
 import { ControlledInput } from '@/components/shared/ControlledInput';
 import { AppButton, AppText, EmptyState } from '@/components/ui';
 import { signUp } from '@/features/auth/api';
+import { ResendConfirmation } from '@/features/auth/components/ResendConfirmation';
 import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
@@ -27,7 +28,7 @@ export default function SignUpScreen() {
     try {
       const { needsConfirmation } = await signUp(email, password);
       haptics.success();
-      if (needsConfirmation) setConfirmEmail(email);
+      if (needsConfirmation) setConfirmEmail(email.trim());
       // Otherwise the session starts and the root guard moves on to onboarding.
     } catch (error) {
       haptics.error();
@@ -41,10 +42,12 @@ export default function SignUpScreen() {
         <EmptyState
           icon={Mail}
           title="Confirm your email"
-          message={`We sent a link to ${confirmEmail}. Open it on this phone to finish creating your account.`}
-          actionLabel="Back to sign in"
-          onAction={() => router.replace('/sign-in')}
+          message={`We sent a link to ${confirmEmail}. Open it on this phone to finish creating your account. It can take a minute, and sometimes lands in spam.`}
         />
+        <View style={styles.confirmActions}>
+          <ResendConfirmation email={confirmEmail} justSent />
+          <AppButton label="Back to sign in" variant="ghost" size="md" onPress={() => router.replace('/sign-in')} />
+        </View>
       </AuthScaffold>
     );
   }
@@ -140,5 +143,6 @@ const styles = StyleSheet.create({
   },
   checkboxOn: { backgroundColor: colors.accentStrong, borderColor: colors.accentStrong },
   termsText: { flex: 1 },
+  confirmActions: { gap: spacing.sm },
   termsError: { marginTop: spacing.xs, marginLeft: 34 },
 });

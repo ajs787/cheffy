@@ -18,6 +18,22 @@ export async function signUp(email: string, password: string): Promise<{ needsCo
   return { needsConfirmation: !data.session };
 }
 
+/** Sends the sign-up confirmation email again (Supabase also rate-limits this). */
+export async function resendConfirmation(email: string): Promise<void> {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: authCallbackUrl() },
+  });
+  if (error) throw error;
+}
+
+/** Supabase's sign-in error for an account whose email isn't confirmed yet. */
+export function isEmailNotConfirmed(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  return e?.code === 'email_not_confirmed' || /email not confirmed/i.test(e?.message ?? '');
+}
+
 export async function signIn(email: string, password: string): Promise<void> {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
