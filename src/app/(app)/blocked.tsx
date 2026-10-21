@@ -42,7 +42,11 @@ export default function BlockedScreen() {
             </View>
           )}
           ListEmptyComponent={
-            <EmptyState icon={ShieldCheck} title="No blocked accounts" message="People you block will appear here." />
+            <EmptyState
+              icon={ShieldCheck}
+              title="No blocked accounts"
+              message="People you block will appear here."
+            />
           }
         />
       )}
@@ -52,6 +56,12 @@ export default function BlockedScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: spacing.sm,
+  },
   text: { flex: 1 },
 });

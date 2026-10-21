@@ -85,7 +85,13 @@ export async function fetchRankingFilters(userId: string): Promise<RankingFilter
     name: string;
     post_count: number;
   }>(supabase.rpc('ranking_filters', { p_user_id: userId }));
-  return rows.map((r) => ({ kind: r.kind, id: r.id, slug: r.slug, name: r.name, postCount: Number(r.post_count) }));
+  return rows.map((r) => ({
+    kind: r.kind,
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    postCount: Number(r.post_count),
+  }));
 }
 
 export interface RatingSummary {
@@ -96,7 +102,9 @@ export interface RatingSummary {
 }
 
 /** Summarises ratings (pure, for testing). */
-export function summarizeRatings(rows: readonly { rating: number; primary_category_id: string }[]): RatingSummary {
+export function summarizeRatings(
+  rows: readonly { rating: number; primary_category_id: string }[],
+): RatingSummary {
   if (rows.length === 0) return { count: 0, average: null, topPrimaryId: null };
   const total = rows.reduce((sum, r) => sum + Number(r.rating), 0);
   const counts = new Map<string, number>();

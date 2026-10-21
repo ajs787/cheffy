@@ -46,7 +46,13 @@ export default function BrowseScreen() {
       <AppHeader title={params.title ?? 'Browse'} />
       <View style={styles.sorts}>
         {SORTS.map((s) => (
-          <Chip key={s.value} label={s.label} size="sm" selected={sort === s.value} onPress={() => setSort(s.value)} />
+          <Chip
+            key={s.value}
+            label={s.label}
+            size="sm"
+            selected={sort === s.value}
+            onPress={() => setSort(s.value)}
+          />
         ))}
       </View>
       {query.isPending ? (
@@ -58,7 +64,11 @@ export default function BrowseScreen() {
           key={sort}
           posts={posts}
           empty={
-            <EmptyState icon={Compass} title="Nothing here yet" message="When people share posts like this, they’ll show up here." />
+            <EmptyState
+              icon={Compass}
+              title="Nothing here yet"
+              message="When people share posts like this, they’ll show up here."
+            />
           }
           loadingMore={query.isFetchingNextPage}
           onEndReached={() => {
@@ -74,5 +84,10 @@ export default function BrowseScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  sorts: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: SCREEN_GUTTER, paddingBottom: spacing.md },
+  sorts: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingBottom: spacing.md,
+  },
 });

@@ -54,7 +54,9 @@ export default function FollowRequestsScreen() {
             />
           )
         }
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />
+        }
         contentContainerStyle={styles.list}
       />
     </View>

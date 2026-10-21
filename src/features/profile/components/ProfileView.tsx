@@ -35,14 +35,16 @@ export interface ProfileViewProps {
   isOwn: boolean;
   /** The Profile tab itself (no Back button); false when pushed onto a stack. */
   isTabRoot?: boolean;
+  /** Open on a specific tab (e.g. a friend's rankings). */
+  initialTab?: Tab;
 }
 
 /** A cooking portfolio. Used for your own Profile tab and for other people. */
-export function ProfileView({ userId, isOwn, isTabRoot = false }: ProfileViewProps) {
+export function ProfileView({ userId, isOwn, isTabRoot = false, initialTab }: ProfileViewProps) {
   const profile = useProfile(userId);
   const stats = useProfileStats(userId);
   const unblock = useUnblockUser();
-  const [tab, setTab] = useState<Tab>('diary');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'diary');
   const [menuOpen, setMenuOpen] = useState(false);
 
   const settingsButton = (

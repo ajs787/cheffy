@@ -126,7 +126,9 @@ export default function HomeScreen() {
             if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
           }}
           onEndReachedThreshold={0.6}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />
+          }
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -138,7 +140,13 @@ export default function HomeScreen() {
 function FindFriendsBanner() {
   const open = () => router.push({ pathname: '/search', params: { tab: 'people' } });
   return (
-    <PressableScale onPress={open} activeScale={0.98} accessibilityRole="button" accessibilityLabel="Find friends to follow" style={styles.banner}>
+    <PressableScale
+      onPress={open}
+      activeScale={0.98}
+      accessibilityRole="button"
+      accessibilityLabel="Find friends to follow"
+      style={styles.banner}
+    >
       <UserPlus size={20} color={colors.accent} />
       <View style={styles.bannerText}>
         <AppText variant="bodyStrong">Find your friends</AppText>

@@ -25,7 +25,11 @@ export default function EditCollectionScreen() {
 
   useEffect(() => {
     if (existing.data) {
-      reset({ name: existing.data.name, description: existing.data.description, visibility: existing.data.visibility });
+      reset({
+        name: existing.data.name,
+        description: existing.data.description,
+        visibility: existing.data.visibility,
+      });
     }
   }, [existing.data, reset]);
 
@@ -51,7 +55,14 @@ export default function EditCollectionScreen() {
       <AppHeader title={id ? 'Edit collection' : 'New collection'} leading="close" bordered />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <ControlledInput control={control} name="name" label="Name" placeholder="My Best Bakes" maxLength={60} autoFocus={!id} />
+          <ControlledInput
+            control={control}
+            name="name"
+            label="Name"
+            placeholder="My Best Bakes"
+            maxLength={60}
+            autoFocus={!id}
+          />
           <ControlledInput
             control={control}
             name="description"
@@ -68,8 +79,16 @@ export default function EditCollectionScreen() {
               <View style={styles.visibility}>
                 <AppText variant="calloutStrong">Who can see it</AppText>
                 <View style={styles.chips}>
-                  <Chip label="Public" selected={field.value === 'public'} onPress={() => field.onChange('public')} />
-                  <Chip label="Only me" selected={field.value === 'private'} onPress={() => field.onChange('private')} />
+                  <Chip
+                    label="Public"
+                    selected={field.value === 'public'}
+                    onPress={() => field.onChange('public')}
+                  />
+                  <Chip
+                    label="Only me"
+                    selected={field.value === 'private'}
+                    onPress={() => field.onChange('private')}
+                  />
                 </View>
                 <AppText variant="caption" color="textSecondary">
                   Private posts inside a public collection stay hidden from people who can’t see them.
@@ -82,7 +101,13 @@ export default function EditCollectionScreen() {
               {formError}
             </AppText>
           ) : null}
-          <AppButton label={id ? 'Save' : 'Create collection'} size="lg" fullWidth loading={formState.isSubmitting} onPress={onSubmit} />
+          <AppButton
+            label={id ? 'Save' : 'Create collection'}
+            size="lg"
+            fullWidth
+            loading={formState.isSubmitting}
+            onPress={onSubmit}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

@@ -4,7 +4,15 @@ import { NotebookPen } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { CategoryLine } from '@/components/shared/CategoryLine';
-import { AppHeader, AppText, EmptyState, ErrorState, FoodImage, PressableScale, RowSkeleton } from '@/components/ui';
+import {
+  AppHeader,
+  AppText,
+  EmptyState,
+  ErrorState,
+  FoodImage,
+  PressableScale,
+  RowSkeleton,
+} from '@/components/ui';
 import { useDrafts } from '@/features/posts/hooks';
 import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 import { formatRelativeTime } from '@/utils/dates';
@@ -49,7 +57,11 @@ export default function DraftsScreen() {
             </PressableScale>
           )}
           ListEmptyComponent={
-            <EmptyState icon={NotebookPen} title="No drafts" message="Use Save draft while logging to finish a post later." />
+            <EmptyState
+              icon={NotebookPen}
+              title="No drafts"
+              message="Use Save draft while logging to finish a post later."
+            />
           }
         />
       )}
@@ -59,7 +71,13 @@ export default function DraftsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: spacing.sm,
+  },
   thumb: { width: 56, height: 56 },
   text: { flex: 1, gap: 2 },
 });

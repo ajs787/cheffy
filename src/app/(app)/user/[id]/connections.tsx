@@ -6,7 +6,15 @@ import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { ListFooter } from '@/components/shared/ListFooter';
 import { UserRow } from '@/components/shared/UserRow';
-import { AppButton, AppHeader, ConfirmationDialog, EmptyState, ErrorState, RowSkeleton, SegmentedControl } from '@/components/ui';
+import {
+  AppButton,
+  AppHeader,
+  ConfirmationDialog,
+  EmptyState,
+  ErrorState,
+  RowSkeleton,
+  SegmentedControl,
+} from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { useProfile } from '@/features/profile/hooks';
 import { useConnections, useRemoveFollower } from '@/features/social/hooks';
@@ -68,7 +76,9 @@ export default function ConnectionsScreen() {
         onEndReached={() => {
           if (connections.hasNextPage && !connections.isFetchingNextPage) void connections.fetchNextPage();
         }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />
+        }
         contentContainerStyle={styles.list}
       />
       <ConfirmationDialog

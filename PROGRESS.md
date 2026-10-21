@@ -403,6 +403,40 @@ Needs two accounts: send an invitation, accept/decline on the other phone,
 each adding their own rating, the shared post on both profiles and in both
 rankings, leaving.
 
+## V3 — Milestone 4: ranking experience (2026-10-21)
+
+Migration `20261021000008_ranking_experience.sql` (applied live).
+
+- **Placement celebrations.** After publishing a new entry,
+  `ranking_placement` returns its real rank within its primary category in
+  the person's rankings and the creation directly below it if that one was
+  there first. The app celebrates a new #1 ("Your new #1 drink!" +
+  "Strawberry Matcha just passed Pistachio Latte.") or a top-five finish,
+  only with at least 3 entries in that category — never for first entries.
+  A brief spring-in sheet; Reduce Motion skips the motion.
+- **Head-to-head.** Optional "Which did you enjoy more?" against the
+  closest-rated earlier creation in the same category (within 1 point,
+  same rating first), never the same pair twice (`ranking_comparisons`,
+  unique per pair; preferred / other / "About the same"; Skip). Ratings are
+  never changed. Comparisons only order creations with the *same* rating;
+  if someone prefers the lower-rated one, the app says so and offers
+  "Adjust rating" instead of reordering against their numbers.
+- **Friends' rankings.** Rankings → Mine | Friends: each followed person's
+  top 3 per category (All/Cooking/Baking/Drinks) by their own ratings,
+  "Rankings ›" opens their profile on the Rankings tab. "You both love …"
+  on a friend's profile lists classifications you both rated 8+. Everything
+  runs as the viewer, so RLS hides private accounts and posts.
+- The notification offer after a first post waits if a ranking moment shows.
+
+Verified: typecheck, lint, 286 tests (8 DB tests: placement rank/total/
+passed, category scoping, no false "passed", comparisons reorder only equal
+ratings and never change ratings, candidate choice and no repeats, own-
+creations-only and privacy, friends' tops with visibility, shared
+favorites; unit tests for the celebration rules and conflict detection).
+Simulator: Mine/Friends switch, Friends' Rankings with live data, opening a
+friend's Rankings tab. Not verified live: the post-publish sheet (needs a
+real new entry — try it on your phone).
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

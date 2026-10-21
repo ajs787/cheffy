@@ -28,7 +28,9 @@ export default function CollectionScreen() {
   const deleteCollection = useDeleteCollection();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const { refreshing, onRefresh } = usePullToRefresh(() => Promise.all([collection.refetch(), posts.refetch()]));
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([collection.refetch(), posts.refetch()]),
+  );
 
   const c = collection.data;
   const own = c?.ownerId === me;
@@ -36,13 +38,23 @@ export default function CollectionScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader right={own ? <IconButton icon={Ellipsis} label="Collection options" onPress={() => setMenuOpen(true)} /> : null} />
+      <AppHeader
+        right={
+          own ? (
+            <IconButton icon={Ellipsis} label="Collection options" onPress={() => setMenuOpen(true)} />
+          ) : null
+        }
+      />
       {collection.isPending ? (
         <GridSkeleton count={4} columns={2} />
       ) : collection.isError ? (
         <ErrorState error={collection.error} onRetry={() => void collection.refetch()} />
       ) : !c ? (
-        <EmptyState icon={FolderOpen} title="Collection not available" message="It may be private or deleted." />
+        <EmptyState
+          icon={FolderOpen}
+          title="Collection not available"
+          message="It may be private or deleted."
+        />
       ) : (
         <PostGrid
           posts={items}
@@ -57,7 +69,9 @@ export default function CollectionScreen() {
                 </AppText>
               ) : null}
               <View style={styles.meta}>
-                {c.visibility === 'private' ? <Lock size={12} color={colors.textSecondary} strokeWidth={strokes.bold} /> : null}
+                {c.visibility === 'private' ? (
+                  <Lock size={12} color={colors.textSecondary} strokeWidth={strokes.bold} />
+                ) : null}
                 <AppText variant="caption" color="textSecondary">
                   {c.visibility === 'private' ? 'Private · ' : ''}
                   {pluralize(c.itemCount, 'item')}
@@ -96,7 +110,13 @@ export default function CollectionScreen() {
             icon: Pencil,
             onPress: () => router.push({ pathname: '/collection/edit', params: { id } }),
           },
-          { key: 'delete', label: 'Delete collection', icon: Trash2, destructive: true, onPress: () => setConfirmDelete(true) },
+          {
+            key: 'delete',
+            label: 'Delete collection',
+            icon: Trash2,
+            destructive: true,
+            onPress: () => setConfirmDelete(true),
+          },
         ]}
       />
       <ConfirmationDialog

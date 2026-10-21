@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { NotificationBannerHost } from '@/features/activity/components/NotificationBannerHost';
 import { PushHost } from '@/features/activity/components/PushHost';
+import { RankingMomentHost } from '@/features/rankings/components/RankingMomentHost';
 import { colors } from '@/theme';
 
 export const unstable_settings = {
@@ -22,6 +23,7 @@ export default function AppLayout() {
       {/* Live activity banners (signed-in only). */}
       <NotificationBannerHost />
       <PushHost />
+      <RankingMomentHost />
     </View>
   );
 }

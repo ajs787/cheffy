@@ -75,7 +75,10 @@ export default function DiscoverScreen() {
       />
       {(trending.data ?? []).slice(0, 4).map((item) => {
         const title = item.kind === 'tag' ? `#${item.name}` : item.name;
-        const params = item.kind === 'tag' ? { sort: 'recent' as const, tagId: item.id } : { sort: 'recent' as const, categoryId: item.id };
+        const params =
+          item.kind === 'tag'
+            ? { sort: 'recent' as const, tagId: item.id }
+            : { sort: 'recent' as const, categoryId: item.id };
         return (
           <DiscoverRow
             key={`${item.kind}:${item.id}`}
@@ -89,7 +92,9 @@ export default function DiscoverScreen() {
         );
       })}
       <SuggestedCooks />
-      {posts.length > 0 ? <SectionHeader title="Just posted" subtitle="The latest from the community" /> : null}
+      {posts.length > 0 ? (
+        <SectionHeader title="Just posted" subtitle="The latest from the community" />
+      ) : null}
     </View>
   );
 

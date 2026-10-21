@@ -52,6 +52,7 @@ import { quickPickFor } from '@/features/taxonomy/taxonomy';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { usePreferencesStore } from '@/stores/preferences';
+import { showRankingMoment } from '@/features/rankings/showRankingMoment';
 import { usePushPromptStore } from '@/stores/pushPrompt';
 import { toast } from '@/stores/toast';
 import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
@@ -174,8 +175,13 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
       );
       reset(parsed.data);
       router.back();
-      // A good moment to offer notifications (only ever offered once).
-      if (status === 'published') usePushPromptStore.getState().offerOnce();
+      if (status === 'published' && !editingPublished) {
+        // Where it landed in their rankings (and an optional comparison);
+        // otherwise a good moment to offer notifications (offered once).
+        void showRankingMoment(postId, parsed.data.title, parsed.data.rating ?? 0).then((shown) => {
+          if (!shown) usePushPromptStore.getState().offerOnce();
+        });
+      }
     } catch (error) {
       haptics.error();
       toast.error(toUserMessage(error, 'Couldn’t save. Your entry is still here — try again.'));

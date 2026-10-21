@@ -12,8 +12,15 @@ import { RankingSortButton } from './RankingSortButton';
  * person has actually used. `inlineSort` adds the count + sort row (profiles);
  * the Rankings tab puts sort in its header instead.
  */
-export function RankingFilters({ controller, inlineSort = true }: { controller: RankingsController; inlineSort?: boolean }) {
-  const { taxonomy, primaryId, setPrimaryId, secondary, setSecondary, secondaryOptions, total, rankings } = controller;
+export function RankingFilters({
+  controller,
+  inlineSort = true,
+}: {
+  controller: RankingsController;
+  inlineSort?: boolean;
+}) {
+  const { taxonomy, primaryId, setPrimaryId, secondary, setSecondary, secondaryOptions, total, rankings } =
+    controller;
 
   return (
     <View style={styles.container}>

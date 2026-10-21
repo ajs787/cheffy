@@ -17,7 +17,11 @@ export function RankingSummary({ userId }: { userId: string }) {
   const top = data.topPrimaryId ? taxonomy.data?.byId[data.topPrimaryId]?.name : undefined;
 
   return (
-    <View style={styles.row} accessible accessibilityLabel={`${data.count} creations, average ${formatRating(data.average)}${top ? `, most made ${top}` : ''}`}>
+    <View
+      style={styles.row}
+      accessible
+      accessibilityLabel={`${data.count} creations, average ${formatRating(data.average)}${top ? `, most made ${top}` : ''}`}
+    >
       <View style={styles.cell}>
         <AppText variant="title2">{formatCount(data.count)}</AppText>
         <AppText variant="overline" color="textSecondary">
@@ -53,6 +57,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: HAIRLINE,
     borderColor: colors.rule,
   },
-  cell: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: spacing.md, paddingHorizontal: spacing.xs },
+  cell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
   rule: { borderLeftWidth: HAIRLINE, borderLeftColor: colors.rule },
 });

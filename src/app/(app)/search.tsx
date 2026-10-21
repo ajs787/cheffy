@@ -7,11 +7,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PostGrid } from '@/components/shared/PostGrid';
 import { UserRow } from '@/components/shared/UserRow';
-import { AppText, EmptyState, ErrorState, GridSkeleton, PressableScale, RowSkeleton, SegmentedControl } from '@/components/ui';
+import {
+  AppText,
+  EmptyState,
+  ErrorState,
+  GridSkeleton,
+  PressableScale,
+  RowSkeleton,
+  SegmentedControl,
+} from '@/components/ui';
 import { usePostSearch, useTagSearch } from '@/features/discover/hooks';
 import { useSuggestedCooks, useUserSearch } from '@/features/social/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { colors, fonts, HIT_TARGET, iconSizes, MAX_FONT_SCALE, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
+import {
+  colors,
+  fonts,
+  HIT_TARGET,
+  iconSizes,
+  MAX_FONT_SCALE,
+  radii,
+  SCREEN_GUTTER,
+  spacing,
+  strokes,
+} from '@/theme';
 
 type Tab = 'creations' | 'people' | 'tags';
 
@@ -37,7 +55,9 @@ export default function SearchScreen() {
             autoFocus
             value={query}
             onChangeText={setQuery}
-            placeholder={tab === 'people' ? 'Name or @username' : tab === 'tags' ? 'Tag' : 'Dish, drink, cuisine, tag'}
+            placeholder={
+              tab === 'people' ? 'Name or @username' : tab === 'tags' ? 'Tag' : 'Dish, drink, cuisine, tag'
+            }
             placeholderTextColor={colors.textTertiary}
             returnKeyType="search"
             autoCapitalize="none"
@@ -49,7 +69,12 @@ export default function SearchScreen() {
             testID="search-input"
           />
           {query.length > 0 ? (
-            <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search">
+            <Pressable
+              onPress={() => setQuery('')}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
               <X size={iconSizes.sm} color={colors.textSecondary} strokeWidth={strokes.bold} />
             </Pressable>
           ) : null}
@@ -61,7 +86,13 @@ export default function SearchScreen() {
         </Pressable>
       </View>
       <SegmentedControl options={TABS} value={tab} onChange={setTab} />
-      {tab === 'creations' ? <CreationResults q={q} /> : tab === 'people' ? <PeopleResults q={q} /> : <TagResults q={q} />}
+      {tab === 'creations' ? (
+        <CreationResults q={q} />
+      ) : tab === 'people' ? (
+        <PeopleResults q={q} />
+      ) : (
+        <TagResults q={q} />
+      )}
     </View>
   );
 }
@@ -126,7 +157,11 @@ function PeopleResults({ q }: { q: string }) {
           icon={Users}
           compact
           title={showingSuggestions ? 'Find your friends' : `No one matches “${q}”`}
-          message={showingSuggestions ? 'Search by name or username to follow people.' : 'Check the spelling, or try their username.'}
+          message={
+            showingSuggestions
+              ? 'Search by name or username to follow people.'
+              : 'Check the spelling, or try their username.'
+          }
         />
       }
       contentContainerStyle={styles.listContent}
@@ -136,7 +171,15 @@ function PeopleResults({ q }: { q: string }) {
 
 function TagResults({ q }: { q: string }) {
   const tags = useTagSearch(q);
-  if (q.length < 1) return <EmptyState icon={Hash} compact title="Browse by tag" message="Try “iced”, “comfort food” or “brown butter”." />;
+  if (q.length < 1)
+    return (
+      <EmptyState
+        icon={Hash}
+        compact
+        title="Browse by tag"
+        message="Try “iced”, “comfort food” or “brown butter”."
+      />
+    );
   if (tags.isPending) return <RowSkeleton count={4} />;
   if (tags.isError) return <ErrorState error={tags.error} onRetry={() => void tags.refetch()} />;
 
@@ -147,7 +190,9 @@ function TagResults({ q }: { q: string }) {
       keyboardShouldPersistTaps="handled"
       renderItem={({ item }) => (
         <PressableScale
-          onPress={() => router.push({ pathname: '/browse', params: { tagId: item.id, title: `#${item.name}` } })}
+          onPress={() =>
+            router.push({ pathname: '/browse', params: { tagId: item.id, title: `#${item.name}` } })
+          }
           activeScale={0.98}
           accessibilityRole="link"
           style={styles.tagRow}
@@ -166,7 +211,13 @@ function TagResults({ q }: { q: string }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: SCREEN_GUTTER, paddingRight: spacing.sm },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingLeft: SCREEN_GUTTER,
+    paddingRight: spacing.sm,
+  },
   inputWrap: {
     flex: 1,
     flexDirection: 'row',
@@ -184,7 +235,13 @@ const styles = StyleSheet.create({
   gridTop: { height: spacing.lg },
   listContent: { paddingTop: spacing.sm },
   listLabel: { paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
-  tagRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
+  tagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: spacing.sm,
+  },
   tagIcon: {
     width: 36,
     height: 36,

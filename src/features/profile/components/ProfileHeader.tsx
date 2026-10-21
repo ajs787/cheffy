@@ -11,6 +11,8 @@ import { followStateOf, type ProfileStats, type ProfileWithViewer } from '@/type
 import { formatMemberSince } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
+import { SharedFavorites } from '@/features/rankings/components/SharedFavorites';
+
 import { TopRatedPreview } from './TopRatedPreview';
 
 function Stat({ value, label, onPress }: { value: number; label: string; onPress?: () => void }) {
@@ -160,6 +162,8 @@ export function ProfileHeader({
           ))}
         </View>
       ) : null}
+
+      {!isOwn && showPreview ? <SharedFavorites friendId={profile.id} /> : null}
 
       {showPreview && onOpenRankings ? (
         <TopRatedPreview userId={profile.id} onSeeAll={onOpenRankings} />
