@@ -56,7 +56,14 @@
           "color": "#6B2737",
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Cheffy shows your contacts so you can text friends an invite. Your contacts stay on your phone and are never uploaded."
+        }
+      ],
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,

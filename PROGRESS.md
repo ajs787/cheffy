@@ -235,9 +235,84 @@ Known limits:
 - Invite links use `cheffy://`, which opens the app only once installed.
   Tappable links from Instagram need a web domain with universal links; set
   `APP_DOWNLOAD_URL` (public TestFlight link) to include a download link.
-- Contact discovery isn't built: it needs `expo-contacts` (a new native
-  build) and a privacy decision on matching (Cheffy doesn't store phone
-  numbers or expose emails).
+- Contact discovery (matching contacts to Cheffy accounts) isn't built; it
+  needs a privacy decision. Contact *inviting* was added afterwards — see
+  "V2 — Invite from contacts" below.
+
+## V2 — Invite from contacts (2026-10-20)
+
+Optional add-on to the share-sheet invite. Invite friends now has a
+**Find from contacts** button (`src/app/(app)/invite-contacts.tsx`):
+
+1. **Explain first.** A short screen says contacts stay on the phone, iPhone
+   can share only selected contacts, and nothing sends until you do. Contacts
+   permission is requested only when the person taps Continue. If access was
+   already granted, the explanation is skipped.
+2. **Permission.** iOS 18 offers "Select contacts" or "Share all". With
+   limited access the list shows a "You're sharing selected contacts" banner
+   and a **Choose more** button (`Contact.presentAccessPicker()`).
+   Denied → "Contacts access is off" with Open Settings and the share-sheet
+   fallback; returning from Settings re-checks access.
+3. **List.** Name plus whether they have a phone and/or email, searchable.
+   Contacts with neither are hidden.
+4. **Invite.** Tapping Invite opens a prefilled text (`expo-sms`) to the
+   contact's first number using `inviteMessage`. With no phone number or no
+   SMS (iPad, simulator) it falls back to the share sheet.
+
+**Data minimization.** We read only full name, phones and emails, then keep
+`{ id, name, firstPhone, hasEmail }` in component state for as long as the
+screen is open. Nothing is cached, persisted, logged or sent to Supabase.
+Email addresses are never kept, only whether one exists.
+
+**New native modules: a new dev build is required.** `expo-contacts` and
+`expo-sms` are new, and the TestFlight development build doesn't include
+them. Until it's rebuilt, opening "Find from contacts" on testers' phones will
+fail. You run the rebuild because it needs your Apple sign-in:
+
+```bash
+npx eas-cli@latest build -p ios --profile development-device --auto-submit
+```
+
+`app.json` adds the `expo-contacts` config plugin, which sets
+`NSContactsUsageDescription`: "Cheffy shows your contacts so you can text
+friends an invite. Your contacts stay on your phone and are never uploaded."
+`expo-sms` needs no config. Both modules ship in Expo Go, so the simulator
+and Expo Go keep working without a build.
+
+**Library bug worked around.** In expo-contacts 58.0.8,
+`ContactsSortOrder.UserDefault` sends `'userDefault'`, but iOS native expects
+`'useDefault'` and throws. We pass no `sortOrder` and sort by name in JS
+(`src/features/invite/deviceContacts.ts`).
+
+Verified: typecheck, lint, all tests (6 new tests for contact mapping, access
+states and search in `src/features/invite/contacts.test.ts`). In the iPhone 16
+simulator (iOS 18.5, Expo Go): explanation → permission prompt → "Select
+Contacts" (limited) → list → Invite → share sheet with the prefilled invite →
+"Invited". Choose more → added a contact → list refreshed. Don't Allow →
+"Contacts access is off" screen.
+
+Not verified: the SMS composer (the simulator has no SMS, so the share-sheet
+fallback ran), Cheffy's own permission wording (Expo Go shows its own text;
+check it in the new dev build), the re-check after returning from Settings,
+full "Share all" access with a large address book, and Android.
+
+### Decision needed: matching contacts to Cheffy accounts
+
+Not built on purpose. Cheffy stores no phone numbers, and emails live only in
+`auth.users`, which clients can't read. Any "friends already on Cheffy" from
+contacts needs one of these:
+
+| Option | How it works | Privacy | Cost |
+| --- | --- | --- | --- |
+| **A. No matching** (current) | Invite only; find people by username search | Best: nothing leaves the phone | None |
+| **B. Opt-in hashed phone matching** | Users choose to add a verified phone number (SMS OTP via Supabase Auth). A `security definer` RPC takes a batch of normalized (E.164), salted SHA-256 hashes of the caller's contacts and returns only accounts that opted in to "Let people who have my number find me". Hashes aren't stored and calls are rate-limited | Good if opt-in on both sides. Phone hashes are brute-forceable (the number space is small), so treat them as personal data, not anonymous | Phone verification (SMS provider cost), a new `profile_phone_hashes` table, the RPC, rate limits, and a privacy-policy update |
+| **C. Email matching** | Same RPC, but over hashed emails, matched against `auth.users` through a `security definer` function | Same caveats, and it exposes that an email has an account (enumeration) unless it's opt-in and rate-limited | No SMS cost; most contacts lack emails, so fewer matches |
+| **D. Invite-code attribution** | Each invite link carries a code. When a friend signs up through it, both are suggested to follow each other | No contact data at all | Needs a web domain or universal links so the code survives install |
+
+Recommendation: stay on A now. If discovery is wanted, prefer D (no contact
+data). Choose B only with explicit opt-in on both sides, and update the
+privacy policy and App Store privacy labels ("Contacts — used for app
+functionality, not linked to identity") before it ships.
 
 ## V2 — Milestone 4: profile redesign & notifications (2026-10-21)
 
@@ -508,7 +583,8 @@ unlocking, Made Together after a real collaboration, the recap at 10.
 - **Encrypted session.** AES key in Keychain, ciphertext in AsyncStorage.
 - **Light-only for v1.** The warm paper palette is the brand. Tokens allow dark mode later.
 - **Expo Go-compatible.** No custom native modules, so two phones can test via
-  Expo Go before any Apple account exists.
+  Expo Go before any Apple account exists. (`expo-contacts` and `expo-sms`
+  ship in Expo Go, but the TestFlight dev build must be rebuilt to include them.)
 - **Typed rows at the query boundary** (`fetchRows<T>`) instead of hand-writing a
   full generated `Database` type. Generate real types once the project is linked.
 
