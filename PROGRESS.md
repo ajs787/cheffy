@@ -322,6 +322,41 @@ simulator: chips and sheet, search "turk" → Turkish, selection, baking list,
 profile photo size and date. Not verified: uploading a new non-square photo
 (needs your photo library) — check on a phone.
 
+## V3 — Real-time notifications fix (2026-10-21)
+
+**Root cause.** The Realtime publication, RLS and auth were fine (the live
+DB has `notifications` in `supabase_realtime`; the channel reached
+SUBSCRIBED). The bug was the subscription lifecycle: realtime-js
+`channel(topic)` returns the *existing* channel for a topic and
+`removeChannel` is async, so re-subscribing with the same topic (remount,
+sign-out/in, fast refresh) got the old already-joined channel and `.on()`
+threw "cannot add postgres_changes callbacks … after subscribe()". Inside the
+effect that error silently stopped live updates until the app restarted.
+Separately, nothing refetched events missed while the socket was suspended
+(background) or offline.
+
+**Fix** (`features/activity/notificationsChannel.ts`):
+- unique topic per subscription; clean teardown;
+- passes the current session token to Realtime before joining;
+- on every join (initial and each reconnect) resyncs the unread count and
+  inbox, so missed events come back after offline/background;
+- refreshes when the app returns to the foreground;
+- retries with exponential backoff after CHANNEL_ERROR / TIMED_OUT;
+- banners only for events that arrive live, deduped by id.
+
+Verified: unit tests for unique topics, resync on join/rejoin, retry after
+error, clean stop; in the simulator, the channel joins on launch and
+re-joins after a remount (the failing path) without error.
+Not verified: a live event from a second account (needs the friend's phone).
+
+**In-app vs push.** Realtime only delivers while Cheffy is open and
+foregrounded; iOS suspends the socket in the background. Background/closed
+delivery is push: a database trigger sends each notification through Expo's
+push service (`pg_net`) to registered device tokens. That requires the
+TestFlight build containing `expo-notifications` and an APNs key configured
+by EAS (answer yes when the build offers to set up push), plus the user
+allowing notifications.
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,
