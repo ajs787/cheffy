@@ -7,7 +7,15 @@
     "development": {
       "distribution": "internal",
       "environment": "development",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      }
+    },
+    "development-device": {
+      "developmentClient": true,
+      "distribution": "store",
+      "environment": "development",
+      "autoIncrement": true
     },
     "preview": {
       "distribution": "internal",
@@ -20,6 +28,9 @@
   },
   "submit": {
     "production": {
+      "ios": {}
+    },
+    "development-device": {
       "ios": {}
     }
   }
