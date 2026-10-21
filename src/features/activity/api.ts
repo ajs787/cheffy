@@ -14,7 +14,15 @@ export interface ActivityPost {
 export type ActivityItem =
   | { kind: 'like'; key: string; at: string; actor: ProfileSummary; post: ActivityPost }
   | { kind: 'comment'; key: string; at: string; actor: ProfileSummary; post: ActivityPost; body: string }
-  | { kind: 'follow'; key: string; at: string; actor: ProfileSummary; viewerIsFollowing: boolean };
+  | {
+      kind: 'follow';
+      key: string;
+      at: string;
+      actor: ProfileSummary;
+      viewerIsFollowing: boolean;
+      viewerHasRequested: boolean;
+      actorIsPrivate: boolean;
+    };
 
 interface PostEmbed {
   id: string;
@@ -56,11 +64,13 @@ export async function fetchActivity(me: string): Promise<ActivityItem[]> {
     fetchRows<{
       created_at: string;
       follower_id: string;
-      profile: (ProfileSummaryRow & { viewer_is_following: boolean }) | null;
+      profile:
+        | (ProfileSummaryRow & { viewer_is_following: boolean; viewer_has_requested?: boolean; is_private?: boolean })
+        | null;
     }>(
       supabase
         .from('follows')
-        .select(`created_at, follower_id, profile:profiles!follows_follower_id_fkey(${PROFILE_SUMMARY_SELECT}, viewer_is_following)`)
+        .select(`created_at, follower_id, profile:profiles!follows_follower_id_fkey(${PROFILE_SUMMARY_SELECT}, is_private, viewer_is_following, viewer_has_requested)`)
         .eq('following_id', me)
         .order('created_at', { ascending: false })
         .limit(PER_KIND),
@@ -94,6 +104,8 @@ export async function fetchActivity(me: string): Promise<ActivityItem[]> {
         at: follow.created_at,
         actor: mapProfileSummary(follow.profile),
         viewerIsFollowing: follow.profile.viewer_is_following,
+        viewerHasRequested: follow.profile.viewer_has_requested ?? false,
+        actorIsPrivate: follow.profile.is_private ?? false,
       });
     }
   }

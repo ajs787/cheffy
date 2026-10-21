@@ -146,7 +146,10 @@ function FindFriendsBanner() {
           Follow people to fill this feed with what they’re making.
         </AppText>
       </View>
-      <AppButton label="Search" size="sm" variant="secondary" onPress={open} />
+      <View style={styles.bannerActions}>
+        <AppButton label="Search" size="sm" variant="secondary" onPress={open} />
+        <AppButton label="Invite" size="sm" variant="ghost" onPress={() => router.push('/invite')} />
+      </View>
     </PressableScale>
   );
 }
@@ -166,4 +169,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tint,
   },
   bannerText: { flex: 1, gap: 2 },
+  bannerActions: { alignItems: 'stretch', gap: spacing.xxs },
 });

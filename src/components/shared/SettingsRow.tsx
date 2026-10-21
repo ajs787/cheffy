@@ -1,4 +1,5 @@
 import { ChevronRight, type LucideIcon } from 'lucide-react-native';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, PressableScale } from '@/components/ui';
@@ -10,12 +11,15 @@ export function SettingsRow({
   value,
   onPress,
   destructive = false,
+  trailing,
 }: {
   icon: LucideIcon;
   label: string;
   value?: string;
   onPress?: () => void;
   destructive?: boolean;
+  /** A control in place of the chevron, e.g. a Switch. */
+  trailing?: ReactNode;
 }) {
   const color = destructive ? colors.danger : colors.text;
   return (
@@ -36,7 +40,8 @@ export function SettingsRow({
           {value}
         </AppText>
       ) : null}
-      {onPress && !destructive ? (
+      {trailing}
+      {onPress && !destructive && !trailing ? (
         <ChevronRight size={iconSizes.sm} color={colors.textTertiary} strokeWidth={strokes.bold} />
       ) : null}
     </PressableScale>

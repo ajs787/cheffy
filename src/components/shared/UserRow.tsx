@@ -1,15 +1,24 @@
 import { router } from 'expo-router';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Avatar, PressableScale } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { SCREEN_GUTTER, spacing } from '@/theme';
-import type { UserListItem } from '@/types/models';
+import { followStateOf, type UserListItem } from '@/types/models';
 
 import { FollowButton } from './FollowButton';
 
-function UserRowBase({ user, showFollow = true }: { user: UserListItem; showFollow?: boolean }) {
+function UserRowBase({
+  user,
+  showFollow = true,
+  trailing,
+}: {
+  user: UserListItem;
+  showFollow?: boolean;
+  /** Replaces the Follow button (e.g. Remove, Confirm/Delete). */
+  trailing?: ReactNode;
+}) {
   const me = useUserId();
   return (
     <PressableScale
@@ -28,9 +37,10 @@ function UserRowBase({ user, showFollow = true }: { user: UserListItem; showFoll
           @{user.username}
         </AppText>
       </View>
-      {showFollow && user.id !== me ? (
-        <FollowButton userId={user.id} following={user.viewerIsFollowing} />
-      ) : null}
+      {trailing ??
+        (showFollow && user.id !== me ? (
+          <FollowButton userId={user.id} state={followStateOf(user)} isPrivate={user.isPrivate} />
+        ) : null)}
     </PressableScale>
   );
 }

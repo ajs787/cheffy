@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuthStore, useUserId } from '@/features/auth/store';
 import { queryKeys } from '@/lib/query/keys';
+import type { Profile } from '@/types/models';
 
 import {
   createProfile,
@@ -9,6 +10,7 @@ import {
   fetchMyProfile,
   fetchProfile,
   fetchProfileStats,
+  setAccountPrivacy,
   updateProfile,
   type ProfileInput,
 } from './api';
@@ -62,6 +64,34 @@ export function useUpdateProfile() {
       // Names and avatars are embedded in posts and lists.
       void qc.invalidateQueries({ queryKey: queryKeys.posts });
       void qc.invalidateQueries({ queryKey: [...queryKeys.profile(profile.id), 'viewer'] });
+    },
+  });
+}
+
+/** Public ↔ private. Optimistic; going public also approves pending requests (server-side). */
+export function useSetAccountPrivacy() {
+  const qc = useQueryClient();
+  const userId = useUserId();
+  return useMutation({
+    mutationFn: (isPrivate: boolean) => {
+      if (!userId) throw new Error('Not signed in');
+      return setAccountPrivacy(userId, isPrivate);
+    },
+    onMutate: async (isPrivate) => {
+      const key = queryKeys.profile(userId ?? 'anonymous');
+      await qc.cancelQueries({ queryKey: key, exact: true });
+      const previous = qc.getQueryData<Profile | null>(key);
+      if (previous) qc.setQueryData(key, { ...previous, isPrivate });
+      return { previous, key };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) qc.setQueryData(context.key, context.previous);
+    },
+    onSuccess: (profile) => {
+      qc.setQueryData(queryKeys.profile(profile.id), profile);
+      void qc.invalidateQueries({ queryKey: [...queryKeys.profile(profile.id), 'viewer'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.followRequests });
+      void qc.invalidateQueries({ queryKey: queryKeys.profileStats(profile.id) });
     },
   });
 }

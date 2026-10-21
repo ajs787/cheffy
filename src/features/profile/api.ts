@@ -34,8 +34,17 @@ export async function fetchProfile(userId: string): Promise<ProfileWithViewer | 
 }
 
 export async function fetchProfileStats(userId: string): Promise<ProfileStats> {
-  const row = unwrap(await supabase.rpc('profile_stats', { p_user_id: userId })) as ProfileStatsRow;
-  return mapProfileStats(row);
+  const row = unwrap(await supabase.rpc('profile_stats', { p_user_id: userId })) as ProfileStatsRow | null;
+  // Null when this person has blocked the viewer.
+  return row ? mapProfileStats(row) : { followers: 0, following: 0, posts: 0, byPrimary: [] };
+}
+
+/** Switches the account between public and private. */
+export async function setAccountPrivacy(userId: string, isPrivate: boolean): Promise<Profile> {
+  const row = unwrap(
+    await supabase.from('profiles').update({ is_private: isPrivate }).eq('id', userId).select(PROFILE_SELECT).single(),
+  ) as ProfileRow;
+  return mapProfile(row);
 }
 
 export async function isUsernameAvailable(username: string): Promise<boolean> {

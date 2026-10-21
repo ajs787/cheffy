@@ -4,7 +4,7 @@ import { hasUnread } from './api';
 jest.mock('@/lib/supabase/client', () => ({ supabase: {} }));
 
 const actor = { id: 'u', username: 'u', displayName: 'U', avatarUrl: null };
-const item = (at: string): ActivityItem => ({ kind: 'follow', key: at, at, actor, viewerIsFollowing: false });
+const item = (at: string): ActivityItem => ({ kind: 'follow', key: at, at, actor, viewerIsFollowing: false, viewerHasRequested: false, actorIsPrivate: false });
 
 describe('hasUnread', () => {
   it('is unread when the newest item is after the last visit', () => {

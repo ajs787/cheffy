@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { FlatList, StyleSheet, View } from 'react-native';
 
+import { followStateOf } from '@/types/models';
 import { FollowButton } from '@/components/shared/FollowButton';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { AppText, Avatar, PressableScale } from '@/components/ui';
@@ -38,7 +39,7 @@ export function SuggestedCooks() {
                 @{item.username}
               </AppText>
             </View>
-            <FollowButton userId={item.id} following={item.viewerIsFollowing} />
+            <FollowButton userId={item.id} state={followStateOf(item)} isPrivate={item.isPrivate} />
           </PressableScale>
         )}
       />

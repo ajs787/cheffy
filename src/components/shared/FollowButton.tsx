@@ -1,23 +1,41 @@
 import { AppButton } from '@/components/ui';
-import { useToggleFollow } from '@/features/social/hooks';
+import { useFollowAction } from '@/features/social/hooks';
+import type { FollowState } from '@/types/models';
 
+const LABELS: Record<FollowState, string> = { none: 'Follow', requested: 'Requested', following: 'Following' };
+
+/**
+ * Follow / Requested / Following. Private accounts get a request; tapping
+ * "Requested" cancels it, tapping "Following" unfollows.
+ */
 export function FollowButton({
   userId,
-  following,
+  state,
+  isPrivate,
   size = 'sm',
 }: {
   userId: string;
-  following: boolean;
+  state: FollowState;
+  isPrivate: boolean;
   size?: 'sm' | 'md';
 }) {
-  const toggle = useToggleFollow();
+  const follow = useFollowAction();
+  const action = state === 'none' ? 'follow' : state === 'following' ? 'unfollow' : 'cancel';
   return (
     <AppButton
-      label={following ? 'Following' : 'Follow'}
-      variant={following ? 'secondary' : 'primary'}
+      label={LABELS[state]}
+      variant={state === 'none' ? 'primary' : 'secondary'}
       size={size}
-      onPress={() => toggle.mutate({ userId, follow: !following })}
-      accessibilityHint={following ? 'Unfollow' : undefined}
+      onPress={() => follow.mutate({ userId, action, isPrivate })}
+      accessibilityHint={
+        state === 'following'
+          ? 'Unfollow'
+          : state === 'requested'
+            ? 'Cancel your follow request'
+            : isPrivate
+              ? 'Sends a follow request'
+              : undefined
+      }
       testID={`follow-${userId}`}
     />
   );

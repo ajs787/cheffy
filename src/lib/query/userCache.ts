@@ -1,6 +1,6 @@
 import type { InfiniteData, QueryClient, QueryKey } from '@tanstack/react-query';
 
-import type { UserListItem } from '@/types/models';
+import type { FollowState, UserListItem } from '@/types/models';
 
 type UserCacheShape = UserListItem[] | InfiniteData<UserListItem[]> | undefined;
 
@@ -16,15 +16,19 @@ function mapUsers(data: UserCacheShape, fn: (user: UserListItem) => UserListItem
 
 export type UserCacheSnapshot = [QueryKey, UserCacheShape][];
 
-/** Optimistically flips "following" for one user in every cached list; returns a snapshot for rollback. */
-export function setFollowingInUserCaches(qc: QueryClient, userId: string, following: boolean): UserCacheSnapshot {
+/** Optimistically sets the follow state for one user in every cached list; returns a snapshot for rollback. */
+export function setFollowStateInUserCaches(qc: QueryClient, userId: string, state: FollowState): UserCacheSnapshot {
   const snapshot: UserCacheSnapshot = [];
   for (const root of USER_LIST_ROOTS) {
     for (const [key, data] of qc.getQueriesData<UserCacheShape>({ queryKey: root })) {
       snapshot.push([key, data]);
       qc.setQueryData(
         key,
-        mapUsers(data, (user) => (user.id === userId ? { ...user, viewerIsFollowing: following } : user)),
+        mapUsers(data, (user) =>
+          user.id === userId
+            ? { ...user, viewerIsFollowing: state === 'following', viewerHasRequested: state === 'requested' }
+            : user,
+        ),
       );
     }
   }

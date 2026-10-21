@@ -5,7 +5,7 @@ import { FollowButton } from '@/components/shared/FollowButton';
 import { AppButton, AppText, categoryColorFor } from '@/components/ui';
 import { shareProfile } from '@/lib/share';
 import { colors, HAIRLINE, SCREEN_GUTTER, spacing } from '@/theme';
-import type { ProfileStats, ProfileWithViewer } from '@/types/models';
+import { followStateOf, type ProfileStats, type ProfileWithViewer } from '@/types/models';
 import { formatCount } from '@/utils/format';
 
 import { MembershipCard } from './MembershipCard';
@@ -112,7 +112,7 @@ export function ProfileHeader({
           </>
         ) : (
           <View style={styles.flex}>
-            <FollowButton userId={profile.id} following={profile.viewerIsFollowing} size="sm" />
+            <FollowButton userId={profile.id} state={followStateOf(profile)} isPrivate={profile.isPrivate} size="sm" />
           </View>
         )}
       </View>

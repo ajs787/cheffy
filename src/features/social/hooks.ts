@@ -3,11 +3,9 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-  type InfiniteData,
 } from '@tanstack/react-query';
 
 import { useRequiredUserId } from '@/features/auth/store';
-import { useMyProfile } from '@/features/profile/hooks';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import {
@@ -18,22 +16,23 @@ import {
 } from '@/lib/query/cache';
 import { invalidateAfterGraphChange } from '@/lib/query/invalidate';
 import { queryKeys } from '@/lib/query/keys';
-import { restoreUserCaches, setFollowingInUserCaches } from '@/lib/query/userCache';
+import { restoreUserCaches, setFollowStateInUserCaches } from '@/lib/query/userCache';
 import { toast } from '@/stores/toast';
-import type { Comment, Post, ProfileWithViewer, ReportReason, ReportTarget } from '@/types/models';
+import type { FollowState, Post, ProfileWithViewer, ReportReason, ReportTarget } from '@/types/models';
 
 import {
-  addComment,
+  acceptFollowRequest,
   blockUser,
-  COMMENTS_PAGE,
+  cancelFollowRequest,
+  declineFollowRequest,
   CONNECTIONS_PAGE,
-  deleteComment,
   fetchBlockedUsers,
-  fetchComments,
   fetchConnections,
+  fetchFollowRequests,
   fetchSuggestedCooks,
   followUser,
   likePost,
+  removeFollower,
   reportContent,
   savePostForLater,
   searchUsers,
@@ -97,24 +96,54 @@ export function useToggleSave() {
 // ---------------------------------------------------------------------------
 // Follows
 // ---------------------------------------------------------------------------
-export function useToggleFollow() {
+export type FollowAction = 'follow' | 'unfollow' | 'cancel';
+
+/** What a follow action leads to, before the server answers. */
+export function optimisticFollowState(action: FollowAction, isPrivate: boolean): FollowState {
+  if (action === 'follow') return isPrivate ? 'requested' : 'following';
+  return 'none';
+}
+
+/**
+ * Follow (or request to, for private accounts), unfollow, or cancel a
+ * request. Optimistic everywhere the person appears; the server's answer
+ * ('following' vs 'requested') wins.
+ */
+export function useFollowAction() {
   const qc = useQueryClient();
   const me = useRequiredUserId();
+
+  const apply = (userId: string, state: FollowState) => {
+    const key = [...queryKeys.profile(userId), 'viewer'];
+    const previous = qc.getQueryData<ProfileWithViewer | null>(key);
+    if (previous) {
+      qc.setQueryData(key, {
+        ...previous,
+        viewerIsFollowing: state === 'following',
+        viewerHasRequested: state === 'requested',
+      });
+    }
+    return { key, previous, userLists: setFollowStateInUserCaches(qc, userId, state) };
+  };
+
   return useMutation({
-    mutationFn: ({ userId, follow }: { userId: string; follow: boolean }) =>
-      follow ? followUser(me, userId) : unfollowUser(me, userId),
-    onMutate: async ({ userId, follow }) => {
-      const key = [...queryKeys.profile(userId), 'viewer'];
-      await qc.cancelQueries({ queryKey: key });
-      const previous = qc.getQueryData<ProfileWithViewer | null>(key);
-      if (previous) qc.setQueryData(key, { ...previous, viewerIsFollowing: follow });
+    mutationFn: async ({ userId, action }: { userId: string; action: FollowAction; isPrivate: boolean }) => {
+      if (action === 'follow') return followUser(userId);
+      if (action === 'unfollow') await unfollowUser(me, userId);
+      else await cancelFollowRequest(me, userId);
+      return 'none' as const;
+    },
+    onMutate: async ({ userId, action, isPrivate }) => {
       await Promise.all([
+        qc.cancelQueries({ queryKey: queryKeys.profile(userId) }),
         qc.cancelQueries({ queryKey: ['users'] }),
         qc.cancelQueries({ queryKey: ['connections'] }),
       ]);
-      const userLists = setFollowingInUserCaches(qc, userId, follow);
       haptics.light();
-      return { previous, key, userLists };
+      return apply(userId, optimisticFollowState(action, isPrivate));
+    },
+    onSuccess: (state, { userId }) => {
+      apply(userId, state);
     },
     onError: (error, _vars, context) => {
       if (context?.previous) qc.setQueryData(context.key, context.previous);
@@ -123,6 +152,57 @@ export function useToggleFollow() {
     },
     onSettled: (_data, _error, { userId }) => {
       void invalidateAfterGraphChange(qc, userId);
+      void qc.invalidateQueries({ queryKey: queryKeys.profileStats(me) });
+    },
+  });
+}
+
+/** People waiting for the viewer to approve them (private accounts). */
+export function useFollowRequests() {
+  const me = useRequiredUserId();
+  return useQuery({ queryKey: queryKeys.followRequests, queryFn: () => fetchFollowRequests(me) });
+}
+
+/** Accept or decline a request; the row disappears from the list right away. */
+export function useRespondToFollowRequest() {
+  const qc = useQueryClient();
+  const me = useRequiredUserId();
+  return useMutation({
+    mutationFn: ({ userId, accept }: { userId: string; accept: boolean }) =>
+      accept ? acceptFollowRequest(userId) : declineFollowRequest(me, userId),
+    onMutate: async ({ userId }) => {
+      await qc.cancelQueries({ queryKey: queryKeys.followRequests });
+      const previous = qc.getQueryData<{ user: { id: string } }[]>(queryKeys.followRequests);
+      qc.setQueryData(queryKeys.followRequests, previous?.filter((r) => r.user.id !== userId));
+      haptics.light();
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) qc.setQueryData(queryKeys.followRequests, context.previous);
+      toast.error(toUserMessage(error, 'Couldn’t update that request.'));
+    },
+    onSettled: (_data, _error, { userId }) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.followRequests });
+      void invalidateAfterGraphChange(qc, userId);
+      void qc.invalidateQueries({ queryKey: queryKeys.profileStats(me) });
+    },
+  });
+}
+
+/** Removes someone from your followers (they lose access to private content). */
+export function useRemoveFollower() {
+  const qc = useQueryClient();
+  const me = useRequiredUserId();
+  return useMutation({
+    mutationFn: (userId: string) => removeFollower(me, userId),
+    onSuccess: () => {
+      haptics.light();
+      toast.success('Removed from your followers');
+    },
+    onError: (error) => toast.error(toUserMessage(error, 'Couldn’t remove that follower.')),
+    onSettled: (_data, _error, userId) => {
+      void invalidateAfterGraphChange(qc, userId);
+      void qc.invalidateQueries({ queryKey: queryKeys.connections(me, 'followers') });
       void qc.invalidateQueries({ queryKey: queryKeys.profileStats(me) });
     },
   });
@@ -155,92 +235,6 @@ export function useSuggestedCooks() {
 // ---------------------------------------------------------------------------
 // Comments
 // ---------------------------------------------------------------------------
-export function useComments(postId: string | undefined) {
-  return useInfiniteQuery({
-    queryKey: queryKeys.comments(postId ?? ''),
-    queryFn: ({ pageParam }) => fetchComments(postId!, pageParam),
-    initialPageParam: null as { createdAt: string; id: string } | null,
-    getNextPageParam: (last) => {
-      const tail = last[last.length - 1];
-      return last.length === COMMENTS_PAGE && tail ? { createdAt: tail.createdAt, id: tail.id } : undefined;
-    },
-    enabled: !!postId,
-  });
-}
-
-type CommentPages = InfiniteData<Comment[], { createdAt: string; id: string } | null>;
-
-export function useAddComment(postId: string) {
-  const qc = useQueryClient();
-  const me = useRequiredUserId();
-  const { data: profile } = useMyProfile();
-  const key = queryKeys.comments(postId);
-
-  return useMutation({
-    mutationFn: (body: string) => addComment(me, postId, body),
-    onMutate: async (body) => {
-      await qc.cancelQueries({ queryKey: key });
-      const previous = qc.getQueryData<CommentPages>(key);
-      const optimistic: Comment = {
-        id: `pending-${Date.now()}`,
-        postId,
-        body: body.trim(),
-        createdAt: new Date().toISOString(),
-        author: {
-          id: me,
-          username: profile?.username ?? '',
-          displayName: profile?.displayName ?? '',
-          avatarUrl: profile?.avatarUrl ?? null,
-        },
-      };
-      qc.setQueryData<CommentPages>(key, (data) =>
-        data
-          ? { ...data, pages: data.pages.map((page, i) => (i === data.pages.length - 1 ? [...page, optimistic] : page)) }
-          : { pages: [[optimistic]], pageParams: [null] },
-      );
-      updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: p.commentCount + 1 }));
-      return { previous, optimisticId: optimistic.id };
-    },
-    onSuccess: (comment, _body, context) => {
-      qc.setQueryData<CommentPages>(key, (data) =>
-        data
-          ? {
-              ...data,
-              pages: data.pages.map((page) => page.map((c) => (c.id === context?.optimisticId ? comment : c))),
-            }
-          : data,
-      );
-    },
-    onError: (error, _body, context) => {
-      qc.setQueryData(key, context?.previous);
-      updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: Math.max(0, p.commentCount - 1) }));
-      toast.error(toUserMessage(error, 'Couldn’t post your comment.'));
-    },
-  });
-}
-
-export function useDeleteComment(postId: string) {
-  const qc = useQueryClient();
-  const key = queryKeys.comments(postId);
-  return useMutation({
-    mutationFn: (commentId: string) => deleteComment(commentId),
-    onMutate: async (commentId) => {
-      await qc.cancelQueries({ queryKey: key });
-      const previous = qc.getQueryData<CommentPages>(key);
-      qc.setQueryData<CommentPages>(key, (data) =>
-        data ? { ...data, pages: data.pages.map((page) => page.filter((c) => c.id !== commentId)) } : data,
-      );
-      updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: Math.max(0, p.commentCount - 1) }));
-      return { previous };
-    },
-    onError: (error, _id, context) => {
-      qc.setQueryData(key, context?.previous);
-      updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: p.commentCount + 1 }));
-      toast.error(toUserMessage(error, 'Couldn’t delete the comment.'));
-    },
-  });
-}
-
 // ---------------------------------------------------------------------------
 // Safety
 // ---------------------------------------------------------------------------

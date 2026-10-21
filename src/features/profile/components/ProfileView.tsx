@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { Ban, Ellipsis, Settings, UserX } from 'lucide-react-native';
+import { Ban, Ellipsis, Lock, Settings, UserX } from 'lucide-react-native';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   AppHeader,
@@ -119,6 +119,37 @@ export function ProfileView({ userId, isOwn, isTabRoot = false }: ProfileViewPro
           actionLabel="Unblock"
           onAction={() => unblock.mutate(p.id)}
         />
+        {menu}
+      </View>
+    );
+  }
+
+  // Private and not approved: the profile, but none of its content.
+  if (p.isPrivate && !isOwn && !p.viewerIsFollowing) {
+    return (
+      <View style={styles.screen}>
+        {topBar}
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={profile.isRefetching}
+              onRefresh={() => void Promise.all([profile.refetch(), stats.refetch()])}
+              tintColor={colors.textTertiary}
+            />
+          }
+        >
+          <ProfileHeader profile={p} stats={stats.data} isOwn={false} />
+          <EmptyState
+            compact
+            icon={Lock}
+            title="This account is private"
+            message={
+              p.viewerHasRequested
+                ? 'Your request is waiting for approval.'
+                : 'Follow to see their creations, rankings and collections.'
+            }
+          />
+        </ScrollView>
         {menu}
       </View>
     );

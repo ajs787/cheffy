@@ -19,11 +19,23 @@ export interface Profile extends ProfileSummary {
   bio: string;
   avatarPath: string | null;
   createdAt: string;
+  /** Private accounts approve followers; only followers see their content. */
+  isPrivate: boolean;
 }
 
 export interface ProfileWithViewer extends Profile {
   viewerIsFollowing: boolean;
+  /** The viewer has a pending follow request to this account. */
+  viewerHasRequested: boolean;
   viewerHasBlocked: boolean;
+}
+
+/** Where the viewer stands with someone: drives the Follow button. */
+export type FollowState = 'none' | 'requested' | 'following';
+
+export function followStateOf(user: { viewerIsFollowing: boolean; viewerHasRequested?: boolean }): FollowState {
+  if (user.viewerIsFollowing) return 'following';
+  return user.viewerHasRequested ? 'requested' : 'none';
 }
 
 export interface ProfileStats {
@@ -116,6 +128,13 @@ export interface Comment {
   body: string;
   createdAt: string;
   author: ProfileSummary;
+  /** Set on replies: the top-level comment they belong to. */
+  parentId: string | null;
+  /** Who a reply answers, shown as "@name". */
+  replyTo: ProfileSummary | null;
+  likeCount: number;
+  replyCount: number;
+  viewerHasLiked: boolean;
 }
 
 export type RankingSort = 'highest' | 'lowest' | 'recent' | 'oldest';
@@ -180,4 +199,6 @@ export type ReportTarget =
 
 export interface UserListItem extends ProfileSummary {
   viewerIsFollowing: boolean;
+  viewerHasRequested: boolean;
+  isPrivate: boolean;
 }

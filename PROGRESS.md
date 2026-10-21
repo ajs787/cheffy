@@ -191,6 +191,54 @@ enlarged profile photo. Unit tests cover ring fill and colour blending.
 Needs checking on a device: gesture feel with real fingers (especially
 pinch + pan together), haptics, and VoiceOver on the viewer.
 
+## V2 — Milestone 3: social features (2026-10-20)
+
+Migrations `20261021000002_private_accounts.sql` and
+`20261021000003_comment_threads.sql`, both applied to the live project.
+
+- **Private accounts.** `profiles.is_private` + `follow_requests`.
+  `can_view_post()` now hides a private account's posts (even public ones)
+  from anyone but approved followers, so Discover, search, rankings, direct
+  links, post images and collections all follow it. `follow_user()` follows
+  or requests atomically; direct follows of private accounts are rejected;
+  `accept_follow_request()` approves; going public auto-approves pending
+  requests; blocking clears requests both ways; counts stay visible (what a
+  follower would see). App: Settings toggle with explanation, Follow /
+  Requested / Following button everywhere, locked private profiles, Follow
+  requests screen (Confirm/Delete) and an Activity row when requests wait,
+  Remove on your own followers list.
+- **Comment likes.** `comment_likes` + trigger-kept `like_count`, visible and
+  likeable exactly when the comment is; optimistic heart + count.
+- **Replies.** `parent_id` / `reply_to_user_id`, one visible level (replying
+  to a reply joins the thread), trigger-kept `reply_count`; "View N replies",
+  paginated, "Replying to @name" composer, delete your own replies. Comment
+  insert grants narrowed so counters can't be forged.
+- **Invite friends.** Share-sheet invite (Messages, Instagram DMs, WhatsApp,
+  Mail, Copy) from Settings and Home's "Find your friends" banner; no contact
+  upload, no Instagram scraping.
+
+Verified: typecheck, lint, 219 tests (16 new privacy and 8 new comment DB
+tests: hiding from Discover/search/rankings/storage/collections, request,
+cancel, decline, accept, remove follower, public↔private switching, blocks,
+reply nesting/counts, like uniqueness and forgery). In the simulator against
+live data: Settings privacy section, liking/unliking a comment (persisted
+across refresh), reply mode, Invite screen and share sheet.
+
+Not verified (needs two accounts/devices): requesting, approving and
+declining between real accounts, the locked profile as seen by a
+non-follower, posting a reply and seeing the thread on the other phone.
+
+Known limits:
+- Photo links already handed out stay valid until they expire (2 h) and
+  images already downloaded can't be recalled; new requests are denied
+  immediately after access is revoked.
+- Invite links use `cheffy://`, which opens the app only once installed.
+  Tappable links from Instagram need a web domain with universal links; set
+  `APP_DOWNLOAD_URL` (public TestFlight link) to include a download link.
+- Contact discovery isn't built: it needs `expo-contacts` (a new native
+  build) and a privacy decision on matching (Cheffy doesn't store phone
+  numbers or expose emails).
+
 ## Not verified yet
 
 1. Live, not yet exercised: follow/unfollow, search, collections, saved,

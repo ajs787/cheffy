@@ -1,8 +1,8 @@
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
-import { Ban, Bookmark, FileText, LogOut, Mail, NotebookPen, Trash2, UserPen } from 'lucide-react-native';
+import { Ban, Bookmark, FileText, Lock, LogOut, Mail, NotebookPen, Send, Trash2, UserCheck, UserPen } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SettingsGroup, SettingsRow } from '@/components/shared/SettingsRow';
@@ -10,7 +10,8 @@ import { AppHeader, AppText, ConfirmationDialog, Divider } from '@/components/ui
 import { SUPPORT_EMAIL } from '@/constants/app';
 import { signOut } from '@/features/auth/api';
 import { useSession } from '@/features/auth/store';
-import { useDeleteAccount } from '@/features/profile/hooks';
+import { useDeleteAccount, useMyProfile, useSetAccountPrivacy } from '@/features/profile/hooks';
+import { useFollowRequests } from '@/features/social/hooks';
 import { toUserMessage } from '@/lib/errors';
 import { toast } from '@/stores/toast';
 import { colors, spacing } from '@/theme';
@@ -19,6 +20,11 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
   const deleteAccount = useDeleteAccount();
+  const profile = useMyProfile();
+  const setPrivacy = useSetAccountPrivacy();
+  const requests = useFollowRequests();
+  const isPrivate = profile.data?.isPrivate ?? false;
+  const pending = requests.data?.length ?? 0;
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
 
@@ -26,7 +32,46 @@ export default function SettingsScreen() {
     <View style={styles.screen}>
       <AppHeader title="Settings" />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}>
+        <SettingsGroup title="Privacy">
+          <SettingsRow
+            icon={Lock}
+            label="Private account"
+            trailing={
+              <Switch
+                value={isPrivate}
+                disabled={!profile.data || setPrivacy.isPending}
+                onValueChange={(value) =>
+                  setPrivacy.mutate(value, {
+                    onSuccess: () => toast.success(value ? 'Your account is private' : 'Your account is public'),
+                    onError: (error) => toast.error(toUserMessage(error, 'Couldn’t change your privacy.')),
+                  })
+                }
+                trackColor={{ true: colors.accent, false: colors.border }}
+                accessibilityLabel="Private account"
+              />
+            }
+          />
+          {isPrivate || pending > 0 ? (
+            <>
+              <Divider inset={spacing.lg} />
+              <SettingsRow
+                icon={UserCheck}
+                label="Follow requests"
+                value={pending > 0 ? String(pending) : undefined}
+                onPress={() => router.push('/follow-requests')}
+              />
+            </>
+          ) : null}
+        </SettingsGroup>
+        <AppText variant="caption" color="textSecondary" style={styles.note}>
+          {isPrivate
+            ? 'Only people you approve can see your creations, rankings and collections. Anyone can still find your name and photo.'
+            : 'Anyone can follow you and see your public creations. Turn this on to approve followers first.'}
+        </AppText>
+
         <SettingsGroup title="Account">
+          <SettingsRow icon={Send} label="Invite friends" onPress={() => router.push('/invite')} />
+          <Divider inset={spacing.lg} />
           <SettingsRow icon={UserPen} label="Edit profile" onPress={() => router.push('/edit-profile')} />
           <Divider inset={spacing.lg} />
           <SettingsRow icon={NotebookPen} label="Drafts" onPress={() => router.push('/drafts')} />
@@ -105,6 +150,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  note: { paddingHorizontal: spacing.xl, marginTop: -spacing.sm, marginBottom: spacing.sm },
   screen: { flex: 1, backgroundColor: colors.background },
   content: { gap: spacing.xxl, paddingTop: spacing.md },
 });

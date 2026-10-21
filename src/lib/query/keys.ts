@@ -28,6 +28,7 @@ export const queryKeys = {
   connections: (id: string, type: 'followers' | 'following') => ['connections', id, type] as const,
   userSearch: (q: string) => ['users', 'search', q] as const,
   suggestedCooks: ['users', 'suggested'] as const,
+  followRequests: ['follow-requests'] as const,
   blocked: ['users', 'blocked'] as const,
 
   posts: ['posts'] as const,
@@ -46,6 +47,7 @@ export const queryKeys = {
   rankingFilters: (userId: string) => ['ranking-filters', userId] as const,
 
   comments: (postId: string) => ['comments', postId] as const,
+  replies: (parentId: string) => ['comments', 'replies', parentId] as const,
 
   collections: (userId: string) => ['collections', userId] as const,
   collection: (id: string) => ['collection', id] as const,

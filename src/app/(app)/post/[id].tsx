@@ -1,17 +1,36 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ellipsis, EyeOff } from 'lucide-react-native';
-import { useRef, useState, type ComponentRef } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState, type ComponentRef } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { CommentRow } from '@/components/shared/CommentRow';
-import { ActionSheet, AppHeader, AppText, EmptyState, ErrorState, IconButton, PostCardSkeleton, type SheetAction } from '@/components/ui';
+import {
+  ActionSheet,
+  AppHeader,
+  AppText,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  PostCardSkeleton,
+  type SheetAction,
+} from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { PostDetailHeader } from '@/features/posts/components/PostDetailHeader';
 import { usePostMenu } from '@/features/posts/components/usePostMenu';
 import { usePost } from '@/features/posts/hooks';
-import { CommentComposer } from '@/features/social/components/CommentComposer';
+import type { ReplyTarget } from '@/features/comments/api';
+import { CommentComposer } from '@/features/comments/components/CommentComposer';
+import { CommentThread } from '@/features/comments/components/CommentThread';
+import { useComments, useDeleteComment, useToggleCommentLike } from '@/features/comments/hooks';
 import { ReportSheet } from '@/features/social/components/ReportSheet';
-import { useComments, useDeleteComment } from '@/features/social/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 import type { Comment, ReportTarget } from '@/types/models';
@@ -26,6 +45,29 @@ export default function PostScreen() {
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
   const [commentMenu, setCommentMenu] = useState<Comment | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const toggleLike = useToggleCommentLike();
+  const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
+  // Threads the viewer has opened (or just replied in).
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggleExpanded = useCallback(
+    (commentId: string) =>
+      setExpanded((current) => {
+        const next = new Set(current);
+        if (next.has(commentId)) next.delete(commentId);
+        else next.add(commentId);
+        return next;
+      }),
+    [],
+  );
+  const startReply = useCallback((comment: Comment) => {
+    // Replies always join the top-level comment's thread.
+    setReplyTo({ parentId: comment.parentId ?? comment.id, user: comment.author });
+    inputRef.current?.focus();
+  }, []);
+  const onToggleLike = useCallback(
+    (comment: Comment) => toggleLike.mutate({ comment, like: !comment.viewerHasLiked }),
+    [toggleLike],
+  );
   const { refreshing, onRefresh } = usePullToRefresh(() => Promise.all([post.refetch(), comments.refetch()]));
 
   if (post.isPending) {
@@ -68,7 +110,14 @@ export default function PostScreen() {
   const commentActions: SheetAction[] = !commentMenu
     ? []
     : canModerate(commentMenu)
-      ? [{ key: 'delete', label: 'Delete comment', destructive: true, onPress: () => deleteComment.mutate(commentMenu.id) }]
+      ? [
+          {
+            key: 'delete',
+            label: commentMenu.parentId ? 'Delete reply' : 'Delete comment',
+            destructive: true,
+            onPress: () => deleteComment.mutate(commentMenu),
+          },
+        ]
       : [
           {
             key: 'report',
@@ -85,7 +134,16 @@ export default function PostScreen() {
         <FlatList
           data={published ? (comments.data?.pages.flat() ?? []) : []}
           keyExtractor={(comment) => comment.id}
-          renderItem={({ item }) => <CommentRow comment={item} onLongPress={setCommentMenu} />}
+          renderItem={({ item }) => (
+            <CommentThread
+              comment={item}
+              expanded={expanded.has(item.id)}
+              onToggleExpanded={toggleExpanded}
+              onLongPress={setCommentMenu}
+              onReply={startReply}
+              onToggleLike={onToggleLike}
+            />
+          )}
           ListHeaderComponent={<PostDetailHeader post={p} onCommentPress={() => inputRef.current?.focus()} />}
           ListEmptyComponent={
             published && !comments.isPending ? (
@@ -102,12 +160,26 @@ export default function PostScreen() {
           onEndReached={() => {
             if (comments.hasNextPage && !comments.isFetchingNextPage) void comments.fetchNextPage();
           }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />
+          }
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           contentContainerStyle={styles.listContent}
         />
-        {published ? <CommentComposer postId={p.id} inputRef={inputRef} autoFocus={focus === 'comment'} /> : null}
+        {published ? (
+          <CommentComposer
+            postId={p.id}
+            inputRef={inputRef}
+            autoFocus={focus === 'comment'}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
+            onSent={(reply) => {
+              setReplyTo(null);
+              if (reply) setExpanded((current) => new Set(current).add(reply.parentId));
+            }}
+          />
+        ) : null}
       </KeyboardAvoidingView>
 
       <ActionSheet visible={!!commentMenu} onClose={() => setCommentMenu(null)} actions={commentActions} />

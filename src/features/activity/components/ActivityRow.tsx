@@ -51,7 +51,13 @@ function ActivityRowBase({ item }: { item: ActivityItem }) {
         ) : null}
       </View>
       {item.kind === 'follow' ? (
-        item.viewerIsFollowing ? null : <FollowButton userId={item.actor.id} following={false} />
+        item.viewerIsFollowing ? null : (
+          <FollowButton
+            userId={item.actor.id}
+            state={item.viewerHasRequested ? 'requested' : 'none'}
+            isPrivate={item.actorIsPrivate}
+          />
+        )
       ) : (
         <FoodImage uri={item.post.thumbUrl} cacheKey={item.post.thumbPath ?? undefined} style={styles.thumb} radius="sm" />
       )}

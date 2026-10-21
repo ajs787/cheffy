@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import { Share } from 'react-native';
 
+import { APP_DOWNLOAD_URL } from '@/constants/app';
 import { formatRating } from '@/utils/rating';
 
 export function postLink(postId: string): string {
@@ -20,4 +21,27 @@ export async function sharePost(post: { id: string; title: string; rating: numbe
 export async function shareProfile(profile: { id: string; username: string }): Promise<void> {
   const url = profileLink(profile.id);
   await Share.share({ message: `@${profile.username} on Cheffy\n${url}`, url });
+}
+
+/**
+ * A personal invite: who to follow, where to get the app (when configured),
+ * and a link that opens the inviter's profile once Cheffy is installed.
+ */
+export function inviteMessage(
+  inviter: { id: string; username: string },
+  options: { downloadUrl?: string | null; profileUrl?: string } = {},
+): string {
+  const downloadUrl = options.downloadUrl === undefined ? APP_DOWNLOAD_URL : options.downloadUrl;
+  const lines = [
+    `I'm keeping a diary of what I cook, bake and pour on Cheffy. Come cook with me — I'm @${inviter.username}.`,
+    downloadUrl ? `Get the app: ${downloadUrl}` : null,
+    `Open my profile: ${options.profileUrl ?? profileLink(inviter.id)}`,
+  ];
+  return lines.filter(Boolean).join('\n\n');
+}
+
+/** Opens the system share sheet (Messages, Instagram, WhatsApp, Mail, Copy…). */
+export async function shareInvite(inviter: { id: string; username: string }): Promise<boolean> {
+  const result = await Share.share({ message: inviteMessage(inviter) });
+  return result.action === Share.sharedAction;
 }
