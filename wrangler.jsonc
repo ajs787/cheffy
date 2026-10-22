@@ -1,0 +1,11 @@
+// Cloudflare Worker that serves the cheffy.me website from web/ (static files
+// only, no server code). _redirects and _headers in web/ apply as on Pages.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cheffy",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./web",
+    "html_handling": "auto-trailing-slash"
+  }
+}
