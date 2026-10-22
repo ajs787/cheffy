@@ -37,6 +37,9 @@ Blocking items before submission: **A1, A2, A3, A5, A8, A9** (below).
 | A1 moderation workflow | `moderators` table, `moderation_queue()` and `moderate()` (remove, restore, dismiss, suspend, unsuspend), an action log, and a moderators-only Settings → Moderation screen. Optional webhook alert (Discord/Slack) on each new report (`20261022000003`) | Live (pushed 2026-10-22); @chefshin is the moderator. Settings → Moderation checked in the simulator (empty queue). **A filled queue is unverified on a device** (no real reports yet). The webhook alert isn't configured |
 | A2 suspension | Bans the login (`auth.users.banned_until`), takes down posts and comments, blocks new posts and comments; reversible | Live and DB-tested |
 | A3 filtering | Whole-word slur filter (sees through common character swaps) on posts, comments, profiles, collections and tags; 3 separate reporters automatically hide a post or comment until review | Live and DB-tested (live check: "n1gg3r" blocked, "retard the dough" allowed). Image screening isn't done (documented risk) |
+| A14 account deletion | The `delete-account` Edge Function removes every photo on the server, then deletes the auth user (cascades). The app calls it; the service-role key stays on Supabase | Deployed 2026-10-22. Refuses no-token, publishable-key-only, forged-token and GET requests (401/405). **A real deletion hasn't been run yet**: needs a throwaway account (checklist §7). Builds 5 and earlier still use the older phone-side path |
+| A7 production build | Production EAS environment holds the public URL and publishable key; build 6 started with the `production` profile | **In progress**: waiting for the Apple sign-in prompt |
+| A8 demo account | Steps and Review Notes in APP_STORE_SUBMISSION_CHECKLIST.md §3 and §6 | **(You)**: must be created in the app; I can't create accounts in production |
 
 ## Detailed findings
 
