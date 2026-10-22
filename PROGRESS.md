@@ -727,3 +727,13 @@ settings have not taken effect yet.
   5. Optional: Cloudflare Email Routing for hello@cheffy.me.
 - Deleted @audfrog (2026-10-21), at the owner's request: login, profile, 1 post, 1 comment,
   1 like and 5 storage files.
+
+## Verified on a physical iPhone (2026-10-22, build 5)
+
+- **Email verification works end to end.** Signing up sends the email; tapping the link opens
+  Cheffy directly via https://cheffy.me/auth/callback and shows "You're verified". The
+  root cause was the Supabase Site URL being `http://localhost:3000`. It's now
+  `https://cheffy.me`, with `https://cheffy.me/**` and `exp://**` allowed.
+- **Universal Links work:** `https://cheffy.me/invite/CODE` opens the app.
+- cheffy.me is deployed as a Cloudflare Worker serving `web/` (wrangler.jsonc). Pushes to
+  `main` redeploy it.
