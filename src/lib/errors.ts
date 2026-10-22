@@ -27,6 +27,8 @@ const AUTH_MESSAGES: [RegExp, string][] = [
   [/email not confirmed/i, 'Check your inbox to confirm your email, then sign in.'],
   [/user already registered/i, 'An account with that email already exists. Try signing in.'],
   [/password should be at least/i, 'Passwords need at least 8 characters.'],
+  [/isn.t allowed on Cheffy/i, 'That includes words that aren’t allowed on Cheffy.'],
+  [/removed by Cheffy/i, 'This post was removed by Cheffy’s moderators and can’t be republished.'],
   [/rate limit|too many requests/i, 'Too many attempts. Please wait a minute and try again.'],
   [/same password/i, 'Choose a password different from your current one.'],
   [/weak password|pwned/i, 'That password is too easy to guess. Try a longer one.'],

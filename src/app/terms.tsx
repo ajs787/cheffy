@@ -2,7 +2,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader, AppText } from '@/components/ui';
-import { SUPPORT_EMAIL, TERMS_VERSION } from '@/constants/app';
+import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_VERSION } from '@/constants/app';
+import { emailSupport, openWebPage } from '@/lib/links';
 import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 
 const SECTIONS: { title: string; body: string[] }[] = [
@@ -56,7 +57,31 @@ export default function TermsScreen() {
           </View>
         ))}
         <AppText variant="caption" color="textTertiary">
-          {SUPPORT_EMAIL ? `Questions? Contact ${SUPPORT_EMAIL}. ` : ''}Version {TERMS_VERSION}.
+          Read our{' '}
+          <AppText
+            variant="caption"
+            color="accent"
+            onPress={() => void openWebPage(PRIVACY_URL)}
+            accessibilityRole="link"
+          >
+            Privacy Policy
+          </AppText>
+          .{' '}
+          {SUPPORT_EMAIL ? (
+            <>
+              Questions?{' '}
+              <AppText
+                variant="caption"
+                color="accent"
+                onPress={() => void emailSupport()}
+                accessibilityRole="link"
+              >
+                {SUPPORT_EMAIL}
+              </AppText>
+              .{' '}
+            </>
+          ) : null}
+          Version {TERMS_VERSION}.
         </AppText>
       </ScrollView>
     </View>

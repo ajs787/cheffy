@@ -11,7 +11,9 @@ import { AppButton, AppText, EmptyState } from '@/components/ui';
 import { signUp } from '@/features/auth/api';
 import { ResendConfirmation } from '@/features/auth/components/ResendConfirmation';
 import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
+import { PRIVACY_URL } from '@/constants/app';
 import { toUserMessage } from '@/lib/errors';
+import { openWebPage } from '@/lib/links';
 import { haptics } from '@/lib/haptics';
 import { colors, radii, spacing, strokes } from '@/theme';
 
@@ -46,7 +48,12 @@ export default function SignUpScreen() {
         />
         <View style={styles.confirmActions}>
           <ResendConfirmation email={confirmEmail} justSent />
-          <AppButton label="Back to sign in" variant="ghost" size="md" onPress={() => router.replace('/sign-in')} />
+          <AppButton
+            label="Back to sign in"
+            variant="ghost"
+            size="md"
+            onPress={() => router.replace('/sign-in')}
+          />
         </View>
       </AuthScaffold>
     );
@@ -97,17 +104,23 @@ export default function SignUpScreen() {
               style={styles.terms}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: !!field.value }}
-              accessibilityLabel="I agree to the Terms of Use and Community Guidelines"
+              accessibilityLabel="I agree to the Terms of Use, Community Guidelines and Privacy Policy"
             >
               <View style={[styles.checkbox, field.value && styles.checkboxOn]}>
-                {field.value ? <Check size={14} color={colors.textInverse} strokeWidth={strokes.bold + 0.5} /> : null}
+                {field.value ? (
+                  <Check size={14} color={colors.textInverse} strokeWidth={strokes.bold + 0.5} />
+                ) : null}
               </View>
               <AppText variant="callout" color="textSecondary" style={styles.termsText}>
                 I agree to the{' '}
                 <AppText variant="calloutStrong" color="text" onPress={() => router.push('/terms')}>
                   Terms of Use and Community Guidelines
                 </AppText>
-                , including zero tolerance for abusive content.
+                , including zero tolerance for abusive content, and the{' '}
+                <AppText variant="calloutStrong" color="text" onPress={() => void openWebPage(PRIVACY_URL)}>
+                  Privacy Policy
+                </AppText>
+                .
               </AppText>
             </Pressable>
             {fieldState.error ? (
@@ -123,7 +136,13 @@ export default function SignUpScreen() {
           {formError}
         </AppText>
       ) : null}
-      <AppButton label="Create account" size="lg" fullWidth loading={formState.isSubmitting} onPress={onSubmit} />
+      <AppButton
+        label="Create account"
+        size="lg"
+        fullWidth
+        loading={formState.isSubmitting}
+        onPress={onSubmit}
+      />
     </AuthScaffold>
   );
 }

@@ -4,7 +4,8 @@
  */
 
 export type Visibility = 'public' | 'followers' | 'private';
-export type PostStatus = 'draft' | 'published';
+/** 'removed' = taken down by moderation; only its author still sees it. */
+export type PostStatus = 'draft' | 'published' | 'removed';
 export type Temperature = 'hot' | 'iced';
 export type CategoryKind = 'primary' | 'subcategory' | 'cuisine' | 'meal_type' | 'dish_type';
 
@@ -113,6 +114,8 @@ export interface Post {
   story: string;
   visibility: Visibility;
   status: PostStatus;
+  /** Why moderators removed it (shown to the author only). */
+  removedReason: string | null;
   madeOn: string;
   wouldMakeAgain: boolean | null;
   recipeUrl: string | null;

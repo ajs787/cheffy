@@ -28,7 +28,9 @@ const SUPABASE_STUBS = `
     id uuid primary key,
     email text not null unique,
     created_at timestamptz not null default now(),
-    email_confirmed_at timestamptz default now()
+    email_confirmed_at timestamptz default now(),
+    raw_user_meta_data jsonb not null default '{}'::jsonb,
+    banned_until timestamptz
   );
 
   create function auth.uid() returns uuid

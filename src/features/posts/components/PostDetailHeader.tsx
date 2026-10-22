@@ -48,7 +48,14 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
       ) : null}
 
       <View style={styles.body}>
-        {!published ? (
+        {post.status === 'removed' ? (
+          <View style={styles.draftBanner} accessibilityRole="alert">
+            <AppText variant="callout" style={styles.flex}>
+              <AppText variant="calloutStrong">Removed by Cheffy’s moderators. </AppText>
+              {post.removedReason ?? 'It broke the Community Guidelines.'} Only you can see it.
+            </AppText>
+          </View>
+        ) : !published ? (
           <View style={styles.draftBanner}>
             <AppText variant="calloutStrong" style={styles.flex}>
               This is a draft — only you can see it.

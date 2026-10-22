@@ -5,12 +5,15 @@ import {
   Bookmark,
   FileText,
   Flame,
+  LifeBuoy,
   Lock,
   LogOut,
   Mail,
   NotebookPen,
   Palette,
   Send,
+  Shield,
+  ShieldCheck,
   Trash2,
   UserCheck,
   UserPen,
@@ -21,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SettingsGroup, SettingsRow } from '@/components/shared/SettingsRow';
 import { AppHeader, AppText, ConfirmationDialog, Divider } from '@/components/ui';
-import { SUPPORT_EMAIL } from '@/constants/app';
+import { PRIVACY_URL, SUPPORT_EMAIL } from '@/constants/app';
 import { NotificationSettings } from '@/features/activity/components/NotificationSettings';
 import { signOut } from '@/features/auth/api';
 import { useSession } from '@/features/auth/store';
@@ -31,8 +34,10 @@ import {
   useSetAccountPrivacy,
   useSetMostHatedOptIn,
 } from '@/features/profile/hooks';
+import { useIsModerator, useModerationQueue } from '@/features/moderation/hooks';
 import { useFollowRequests } from '@/features/social/hooks';
 import { toUserMessage } from '@/lib/errors';
+import { emailSupport, openWebPage } from '@/lib/links';
 import { toast } from '@/stores/toast';
 import { colors, spacing } from '@/theme';
 
@@ -45,6 +50,8 @@ export default function SettingsScreen() {
   const setMostHated = useSetMostHatedOptIn();
   const allowMostHated = profile.data?.allowMostHated ?? true;
   const requests = useFollowRequests();
+  const isModerator = useIsModerator().data === true;
+  const openReports = useModerationQueue(isModerator).data?.length ?? 0;
   const isPrivate = profile.data?.isPrivate ?? false;
   const pending = requests.data?.length ?? 0;
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -138,16 +145,34 @@ export default function SettingsScreen() {
           <SettingsRow icon={Mail} label="Email" value={session?.user.email ?? ''} />
         </SettingsGroup>
 
+        {isModerator ? (
+          <SettingsGroup title="Review">
+            <SettingsRow
+              icon={ShieldCheck}
+              label="Moderation"
+              value={openReports > 0 ? `${openReports} open` : 'All clear'}
+              onPress={() => router.push('/moderation')}
+            />
+          </SettingsGroup>
+        ) : null}
+
         <SettingsGroup title="About">
           <SettingsRow
             icon={FileText}
             label="Terms & Community Guidelines"
             onPress={() => router.push('/terms')}
           />
+          <Divider inset={spacing.lg} />
+          <SettingsRow icon={Shield} label="Privacy policy" onPress={() => void openWebPage(PRIVACY_URL)} />
           {SUPPORT_EMAIL ? (
             <>
               <Divider inset={spacing.lg} />
-              <SettingsRow icon={Mail} label="Contact support" value={SUPPORT_EMAIL} />
+              <SettingsRow
+                icon={LifeBuoy}
+                label="Contact support"
+                value={SUPPORT_EMAIL}
+                onPress={() => void emailSupport()}
+              />
             </>
           ) : null}
         </SettingsGroup>

@@ -1,7 +1,7 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Linking from 'expo-linking';
 
-import { WEB_URL } from '@/constants/app';
+import { TERMS_VERSION, WEB_URL } from '@/constants/app';
 
 import { supabase } from '@/lib/supabase/client';
 import { unregisterPush } from '@/lib/push';
@@ -25,7 +25,8 @@ export async function signUp(email: string, password: string): Promise<{ needsCo
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: authCallbackUrl() },
+    // The Terms checkbox is required; the database records this version.
+    options: { emailRedirectTo: authCallbackUrl(), data: { terms_version: TERMS_VERSION } },
   });
   if (error) throw error;
   return { needsConfirmation: !data.session };
