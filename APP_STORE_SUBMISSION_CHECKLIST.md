@@ -138,8 +138,8 @@ content to try every feature. **Don't share your personal account.**
 - ☐ Block a user, check their content disappears, then unblock.
 - ☐ Push notification arrives with the app closed (needs a second account).
 - ☐ Settings → Privacy policy opens the page; Contact support opens Mail.
-- ☐ **Delete account on a throwaway account**, then confirm in Supabase that its user, rows
-  and files are gone. This is the only full test of the server-side deletion.
+- ☑ **Delete account on a throwaway account**, then confirm in Supabase that its user, rows
+  and files are gone. Verified 2026-10-22 on build 6.
 - ☐ Invite link `https://cheffy.me/invite/CODE` opens the app.
 
 ## 8. Submit
