@@ -1,5 +1,5 @@
-# Path-based pages served by one HTML file each (status 200 = rewrite, URL kept).
-/invite/*  /invite/index.html  200
-/user/*    /open/index.html    200
-/post/*    /open/index.html    200
-/auth/callback  /auth/callback/index.html  200
+# Rewrites (200 keeps the visitor's URL). Targets are clean URLs, not
+# index.html, so Cloudflare's html handling can't loop.
+/invite/*  /invite  200
+/user/*    /open    200
+/post/*    /open    200
