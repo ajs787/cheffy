@@ -126,9 +126,8 @@ export function useSetMostHatedOptIn() {
 export function useDeleteAccount() {
   return useMutation({
     mutationFn: async () => {
-      const userId = useAuthStore.getState().session?.user.id;
-      if (!userId) throw new Error('Not signed in');
-      await deleteAccount(userId);
+      if (!useAuthStore.getState().session) throw new Error('Not signed in');
+      await deleteAccount();
     },
   });
 }

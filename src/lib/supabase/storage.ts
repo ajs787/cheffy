@@ -93,25 +93,3 @@ export async function removeFiles(bucket: Bucket, paths: readonly string[]): Pro
   if (error) throw error;
 }
 
-/** Lists every file under `folder` (one level of sub-folders deep). */
-export async function listFolderFiles(bucket: Bucket, folder: string): Promise<string[]> {
-  const files: string[] = [];
-  const walk = async (prefix: string, depth: number) => {
-    for (let offset = 0; ; offset += 100) {
-      const { data, error } = await supabase.storage.from(bucket).list(prefix, { limit: 100, offset });
-      if (error) throw error;
-      for (const item of data) {
-        const fullPath = `${prefix}/${item.name}`;
-        // Folders come back without an id.
-        if (item.id === null && depth < 2) {
-          await walk(fullPath, depth + 1);
-        } else if (item.id !== null) {
-          files.push(fullPath);
-        }
-      }
-      if (data.length < 100) break;
-    }
-  };
-  await walk(folder, 0);
-  return files;
-}

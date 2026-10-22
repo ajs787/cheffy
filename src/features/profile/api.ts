@@ -3,7 +3,7 @@ import * as Crypto from 'expo-crypto';
 import { unwrap } from '@/lib/errors';
 import { prepareAvatar } from '@/lib/images';
 import { supabase } from '@/lib/supabase/client';
-import { BUCKETS, listFolderFiles, removeFiles, uploadImageFile } from '@/lib/supabase/storage';
+import { BUCKETS, removeFiles, uploadImageFile } from '@/lib/supabase/storage';
 import type { Profile, ProfileStats, ProfileWithViewer } from '@/types/models';
 
 import {
@@ -145,18 +145,15 @@ export async function updateProfile(userId: string, current: Profile, input: Pro
 }
 
 /**
- * Deletes the account: Storage files first (they can only be removed through
- * the Storage API), then the auth user, which cascades to all their data.
+ * Deletes the account on the server (Edge Function `delete-account`): every
+ * photo in Storage, then the auth user, which cascades to all their data.
+ * Doing it server-side means a crash or lost connection can't leave photos
+ * behind. Throws (and keeps the account) if any step fails.
  */
-export async function deleteAccount(userId: string): Promise<void> {
-  const [postFiles, avatarFiles] = await Promise.all([
-    listFolderFiles(BUCKETS.postImages, userId),
-    listFolderFiles(BUCKETS.avatars, userId),
-  ]);
-  for (let i = 0; i < postFiles.length; i += 100) {
-    await removeFiles(BUCKETS.postImages, postFiles.slice(i, i + 100));
-  }
-  await removeFiles(BUCKETS.avatars, avatarFiles);
-  unwrap(await supabase.rpc('delete_account'));
+export async function deleteAccount(): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ deleted?: boolean }>('delete-account', {
+    method: 'POST',
+  });
+  if (error || !data?.deleted) throw error ?? new Error('Account deletion failed');
   await supabase.auth.signOut({ scope: 'local' });
 }
