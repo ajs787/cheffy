@@ -27,7 +27,25 @@ export function ImageViewerHost() {
   const images = useImageViewerStore((s) => s.images);
   const index = useImageViewerStore((s) => s.index);
   const close = useImageViewerStore((s) => s.close);
+  return <ImageViewerModal visible={visible} images={images} index={index} onClose={close} />;
+}
 
+/**
+ * The full-screen viewer as a component. Screens that are themselves modals
+ * (the entry form) mount their own so iOS presents it from the top-most
+ * screen rather than from the root, which is already presenting.
+ */
+export function ImageViewerModal({
+  visible,
+  images,
+  index,
+  onClose: close,
+}: {
+  visible: boolean;
+  images: ViewerImage[];
+  index: number;
+  onClose: () => void;
+}) {
   return (
     <Modal
       visible={visible}

@@ -7,7 +7,7 @@ import { AppHeader, AppText, Avatar, ErrorState, RowSkeleton } from '@/component
 import { useMyProfile } from '@/features/profile/hooks';
 import type { ProfileFrame, ProfileTheme } from '@/features/unlocks/api';
 import { useSetProfileStyle, useUnlocks } from '@/features/unlocks/hooks';
-import { UNLOCKS } from '@/features/unlocks/rules';
+import { unlockInfo } from '@/features/unlocks/rules';
 import { colors, HAIRLINE, iconSizes, profileThemes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 
 /**
@@ -43,7 +43,7 @@ export default function PersonalizeScreen() {
             />
             <Option
               label="Saffron"
-              hint={UNLOCKS[0]!.progress(state) ?? 'Warm gold'}
+              hint={unlockInfo('theme_saffron').progress(state) ?? 'Warm gold'}
               locked={!has('theme_saffron')}
               selected={p.theme === 'saffron'}
               swatch={profileThemes.saffron.accent}
@@ -61,7 +61,7 @@ export default function PersonalizeScreen() {
             </Option>
             <Option
               label="Host’s frame"
-              hint={UNLOCKS[1]!.progress(state) ?? 'For bringing friends to the table'}
+              hint={unlockInfo('frame_host').progress(state) ?? 'For bringing friends to the table'}
               locked={!has('frame_host')}
               selected={p.frame === 'host'}
               onPress={() => apply(p.theme, 'host')}
@@ -79,16 +79,6 @@ export default function PersonalizeScreen() {
             ) : null}
           </Section>
 
-          <Section title="Distinctions">
-            <Option
-              label="Made Together"
-              hint={UNLOCKS[2]!.progress(state) ?? 'Shown on your profile'}
-              locked={!has('made_together')}
-              selected={has('made_together')}
-              static
-            />
-          </Section>
-
           <Section title="Look back">
             <Pressable
               disabled={!has('recap')}
@@ -99,7 +89,7 @@ export default function PersonalizeScreen() {
               <View style={styles.flex}>
                 <AppText variant="bodyStrong">Your cooking recap</AppText>
                 <AppText variant="caption" color="textSecondary">
-                  {UNLOCKS[3]!.progress(state) ?? 'What you’ve made, from your own entries'}
+                  {unlockInfo('recap').progress(state) ?? 'What you’ve made, from your own entries'}
                 </AppText>
               </View>
               {has('recap') ? (

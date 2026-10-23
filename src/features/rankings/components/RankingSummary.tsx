@@ -4,7 +4,7 @@ import { AppText } from '@/components/ui';
 import { useTaxonomy } from '@/features/taxonomy/hooks';
 import { colors, HAIRLINE, SCREEN_GUTTER, spacing } from '@/theme';
 import { formatCount } from '@/utils/format';
-import { formatRating, ratingColor } from '@/utils/rating';
+import { formatRating, ratingTextColor } from '@/utils/rating';
 
 import { useRatingSummary } from '../hooks';
 
@@ -29,7 +29,7 @@ export function RankingSummary({ userId }: { userId: string }) {
         </AppText>
       </View>
       <View style={[styles.cell, styles.rule]}>
-        <AppText variant="title2" style={{ color: ratingColor(data.average) }}>
+        <AppText variant="title2" style={{ color: ratingTextColor(data.average) }}>
           {formatRating(data.average)}
         </AppText>
         <AppText variant="overline" color="textSecondary">

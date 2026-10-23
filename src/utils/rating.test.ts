@@ -2,8 +2,12 @@ import {
   formatRating,
   parseRatingInput,
   ratingFill,
-  ratingRingColor,
-  ratingTier,
+  contrastRatio,
+  RATING_COLOR_STOPS,
+  RATING_COLOR_VALUES,
+  ratingColor,
+  ratingTextColor,
+  UNRATED_COLOR,
   roundRating,
   stepRating,
 } from './rating';
@@ -47,13 +51,6 @@ describe('rating utils', () => {
   it.each(['', '.', 'abc', '10.5', '101', '-1', '1.2.3'])('rejects %s', (input) => {
     expect(parseRatingInput(input)).toBeNull();
   });
-
-  it('assigns tiers', () => {
-    expect(ratingTier(9.4)).toBe('great');
-    expect(ratingTier(8)).toBe('great');
-    expect(ratingTier(7.9)).toBe('good');
-    expect(ratingTier(5.9)).toBe('low');
-  });
 });
 
 describe('rating ring', () => {
@@ -66,13 +63,33 @@ describe('rating ring', () => {
     expect(ratingFill(null)).toBe(0);
   });
 
-  it('runs from muted red to deep green and blends between stops', () => {
-    expect(ratingRingColor(0)).toBe('#a3473f');
-    expect(ratingRingColor(1)).toBe('#a3473f');
-    expect(ratingRingColor(10)).toBe('#22663d');
-    expect(ratingRingColor(5)).toBe('#e08a35');
-    // Halfway between orange (5) and golden (6.5).
-    expect(ratingRingColor(5.75)).toBe('#dd9a32');
-    expect(ratingRingColor(null)).toBe('#a3473f');
+  it('runs from red at 0 to bright green at 10 through the anchors', () => {
+    expect(ratingColor(0)).toBe('#e5484d');
+    expect(ratingColor(5)).toBe('#e9c746');
+    expect(ratingColor(6.5)).toBe('#a9c94d');
+    expect(ratingColor(8)).toBe('#53b96b');
+    expect(ratingColor(10)).toBe('#20c967');
+    expect(ratingColor(null)).toBe(UNRATED_COLOR);
+  });
+
+  it('blends between anchors without leaving the segment', () => {
+    for (const v of [2.5, 9.2]) expect(ratingColor(v)).toMatch(/^#[0-9a-f]{6}$/);
+    // 9.2 sits between 8.0 and 10.0: greener than 8, not yet as bright as 10.
+    const g = (hex: string) => parseInt(hex.slice(3, 5), 16);
+    expect(g(ratingColor(9.2))).toBeGreaterThan(g(ratingColor(8)));
+    expect(ratingColor(9.2)).not.toBe(ratingColor(10));
+  });
+
+  it('keeps rating numbers readable on ivory', () => {
+    for (const v of [0, 2.5, 5, 6.5, 8, 9.2, 10]) {
+      expect(contrastRatio(ratingTextColor(v), '#F7F1E8')).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(ratingTextColor(v, 3), '#F7F1E8')).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('provides dense stops for animation', () => {
+    expect(RATING_COLOR_STOPS[0]).toBe(0);
+    expect(RATING_COLOR_STOPS.at(-1)).toBe(10);
+    expect(RATING_COLOR_VALUES).toHaveLength(RATING_COLOR_STOPS.length);
   });
 });

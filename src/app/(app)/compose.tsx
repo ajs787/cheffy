@@ -124,7 +124,10 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
   const dirty = formState.isDirty;
   const editingPublished = post?.status === 'published';
 
+  // Blocks a second tap synchronously, before `saving` re-renders.
+  const submitting = useRef(false);
   const submit = async (status: 'draft' | 'published') => {
+    if (submitting.current) return;
     clearErrors();
     const current = getValues();
     const values = pendingTag.current.trim()
@@ -147,6 +150,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
     }
     if (!taxonomy.data) return;
 
+    submitting.current = true;
     try {
       await savePost.mutateAsync({
         postId,
@@ -186,6 +190,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
       haptics.error();
       toast.error(toUserMessage(error, 'Couldn’t save. Your entry is still here — try again.'));
     } finally {
+      submitting.current = false;
       setProgress(null);
     }
   };
@@ -415,6 +420,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
 
         <ComposeFooter
           label={editingPublished ? 'Save changes' : 'Post'}
+          loadingLabel={editingPublished ? 'Saving…' : 'Posting…'}
           saving={saving}
           paused={savePost.isPaused}
           progress={progress}

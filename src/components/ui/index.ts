@@ -2,6 +2,7 @@ export * from './ActionSheet';
 export * from './AppButton';
 export * from './AppHeader';
 export * from './AppInput';
+export * from './PasswordInput';
 export * from './AppText';
 export * from './Avatar';
 export * from './BottomSheet';

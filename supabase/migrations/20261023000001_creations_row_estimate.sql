@@ -1,0 +1,11 @@
+-- Performance: creations_of() returned Postgres's default estimate of 1000
+-- rows, so queries joining it to posts chose a sequential scan of *every*
+-- post, running the visibility checks (row-level security and
+-- counts_toward_stats) on all of them. Profile stats and rankings therefore
+-- cost time proportional to the whole app's post count.
+--
+-- A realistic estimate makes the planner look posts up by id instead, so the
+-- cost follows one person's diary. Measured on live data (55 posts):
+--   profile_stats  65 ms -> 10 ms
+--   get_rankings   36 ms -> 19 ms
+alter function public.creations_of(uuid, boolean) rows 20;

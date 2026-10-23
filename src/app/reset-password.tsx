@@ -46,7 +46,7 @@ export default function ResetPasswordScreen() {
         name="password"
         label="New password"
         placeholder="At least 8 characters"
-        secureTextEntry
+        password
         autoComplete="new-password"
         textContentType="newPassword"
       />
@@ -54,7 +54,7 @@ export default function ResetPasswordScreen() {
         control={control}
         name="confirm"
         label="Confirm password"
-        secureTextEntry
+        password
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="done"
@@ -65,7 +65,13 @@ export default function ResetPasswordScreen() {
           {formError}
         </AppText>
       ) : null}
-      <AppButton label="Save password" size="lg" fullWidth loading={formState.isSubmitting} onPress={onSubmit} />
+      <AppButton
+        label="Save password"
+        size="lg"
+        fullWidth
+        loading={formState.isSubmitting}
+        onPress={onSubmit}
+      />
     </AuthScaffold>
   );
 }

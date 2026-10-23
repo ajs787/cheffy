@@ -41,8 +41,8 @@ export function DetailsSection({
       title="More details"
       summary={
         fields.drink
-          ? 'Date, hot or iced, milk, sweetener, notes'
-          : 'Date, meal, cook time, recipe, ingredients, notes'
+          ? 'Date, hot or iced, milk, sweetener, ingredients'
+          : 'Date, meal, cook time, recipe, ingredients'
       }
       icon={ListPlus}
       initiallyOpen={initiallyOpen}
@@ -237,28 +237,6 @@ export function DetailsSection({
             maxLength={2000}
           />
         </View>
-        <View style={styles.padded}>
-          <ControlledInput
-            control={control}
-            name="prepNotes"
-            label="How you made it"
-            placeholder="Steps, tweaks, what you’d tell a friend"
-            multiline
-            maxLength={2000}
-          />
-        </View>
-        {!fields.drink ? (
-          <View style={styles.padded}>
-            <ControlledInput
-              control={control}
-              name="nextTimeNotes"
-              label="Notes for next time"
-              placeholder="Less sugar, bake 2 min longer…"
-              multiline
-              maxLength={1000}
-            />
-          </View>
-        ) : null}
       </View>
     </Collapsible>
   );

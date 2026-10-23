@@ -15,6 +15,7 @@ import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
 import { CategoryLine } from './CategoryLine';
+import { MadeTogetherTag } from './MadeTogetherTag';
 import { LikeButton } from './LikeButton';
 import { PhotoMosaic } from './PhotoMosaic';
 
@@ -63,6 +64,7 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
               @{post.author.username}
               {post.publishedAt ? ` · ${formatRelativeTime(post.publishedAt)}` : ''}
             </AppText>
+            {post.coCreators.length > 0 ? <MadeTogetherTag /> : null}
           </View>
         </Pressable>
         <IconButton

@@ -1,6 +1,13 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { useState, type ComponentRef, type Ref } from 'react';
-import { StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { useState, type ComponentRef, type Ref, type ReactNode } from 'react';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputProps,
+  type ViewStyle,
+} from 'react-native';
 
 import { colors, fonts, iconSizes, MAX_FONT_SCALE, radii, spacing, strokes } from '@/theme';
 
@@ -18,6 +25,8 @@ export interface AppInputProps extends Omit<TextInputProps, 'style'> {
   inputStyle?: TextInputProps['style'];
   /** 'boxed' (default) or 'bare' for inline editorial fields. */
   appearance?: 'boxed' | 'bare';
+  /** Shown after the text, inside the field (e.g. a show-password button). */
+  trailing?: ReactNode;
 }
 
 export function AppInput({
@@ -33,6 +42,7 @@ export function AppInput({
   containerStyle,
   inputStyle,
   appearance = 'boxed',
+  trailing,
   onFocus,
   onBlur,
   ...rest
@@ -55,7 +65,12 @@ export function AppInput({
         ]}
       >
         {Icon ? (
-          <Icon size={iconSizes.md} color={colors.textTertiary} strokeWidth={strokes.regular} style={styles.icon} />
+          <Icon
+            size={iconSizes.md}
+            color={colors.textTertiary}
+            strokeWidth={strokes.regular}
+            style={styles.icon}
+          />
         ) : null}
         <TextInput
           ref={ref}
@@ -79,6 +94,7 @@ export function AppInput({
           style={[styles.input, multiline && styles.inputMultiline, inputStyle]}
           {...rest}
         />
+        {trailing}
       </View>
       {error || helper || (showCount && maxLength) ? (
         <View style={styles.footer}>

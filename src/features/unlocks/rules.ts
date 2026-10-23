@@ -10,7 +10,11 @@ export interface UnlockInfo {
 
 const of = (have: number, need: number, noun: string) => `${Math.min(have, need)} of ${need} ${noun}`;
 
-/** The four unlocks, in the order shown. */
+/**
+ * The unlocks people see and are told about, in order. ('made_together' is
+ * still recorded by the database but is no longer a profile distinction; it
+ * shows as a tag on the shared posts themselves.)
+ */
 export const UNLOCKS: UnlockInfo[] = [
   {
     id: 'theme_saffron',
@@ -23,13 +27,9 @@ export const UNLOCKS: UnlockInfo[] = [
     title: 'Host’s frame',
     description: 'A double ring around your photo, for bringing friends to the table.',
     progress: (s) =>
-      s.unlocked.includes('frame_host') ? null : of(s.referrals, REFERRAL_GOAL, 'friends joined with your code'),
-  },
-  {
-    id: 'made_together',
-    title: 'Made Together',
-    description: 'A quiet mark on your profile once you’ve co-created something.',
-    progress: (s) => (s.unlocked.includes('made_together') ? null : 'Co-post a creation with a friend'),
+      s.unlocked.includes('frame_host')
+        ? null
+        : of(s.referrals, REFERRAL_GOAL, 'friends joined with your code'),
   },
   {
     id: 'recap',
@@ -41,7 +41,14 @@ export const UNLOCKS: UnlockInfo[] = [
 
 /** Unlocks the person hasn't been told about yet (pure). */
 export function newlyUnlocked(current: readonly Unlock[], seen: readonly Unlock[]): Unlock[] {
-  return current.filter((u) => !seen.includes(u));
+  return current.filter((u) => !seen.includes(u) && UNLOCKS.some((info) => info.id === u));
+}
+
+/** Display info for one unlock. */
+export function unlockInfo(id: Unlock): UnlockInfo {
+  const info = UNLOCKS.find((u) => u.id === id);
+  if (!info) throw new Error(`Unknown unlock ${id}`);
+  return info;
 }
 
 export interface RecapView {

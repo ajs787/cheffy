@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText, FoodImage, PressableScale } from '@/components/ui';
 import { colors, fonts, radii, spacing } from '@/theme';
 import type { Post } from '@/types/models';
-import { formatRating, ratingColor } from '@/utils/rating';
+import { formatRating, ratingTextColor } from '@/utils/rating';
 
 export interface PostGridItemProps {
   post: Post;
@@ -55,7 +55,7 @@ function PostGridItemBase({ post, size, variant = 'flush' }: PostGridItemProps) 
         )}
         {post.rating !== null ? (
           <View style={styles.ratingPill}>
-            <AppText style={[styles.ratingText, { color: ratingColor(post.rating) }]}>
+            <AppText style={[styles.ratingText, { color: ratingTextColor(post.rating) }]}>
               {formatRating(post.rating)}
             </AppText>
           </View>

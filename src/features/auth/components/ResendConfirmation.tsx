@@ -8,6 +8,7 @@ import { spacing } from '@/theme';
 
 import { resendConfirmation } from '../api';
 import { cooldownLeft } from '../cooldown';
+import { parseRateLimit, rateLimitMessage } from '../rateLimit';
 
 /**
  * "Send it again" for the sign-up confirmation email, with a cooldown so
@@ -36,7 +37,13 @@ export function ResendConfirmation({ email, justSent = false }: { email: string;
       setStatus({ tone: 'ok', text: `Sent. Check ${email}, including spam.` });
     } catch (error) {
       haptics.error();
-      setStatus({ tone: 'error', text: toUserMessage(error, 'We couldn’t send the email. Try again soon.') });
+      const limit = parseRateLimit(error);
+      setStatus({
+        tone: 'error',
+        text: limit
+          ? rateLimitMessage(limit)
+          : toUserMessage(error, 'We couldn’t send the email. Try again soon.'),
+      });
     } finally {
       // Start the cooldown either way: a rate-limit error needs the wait too.
       setLastSent(Date.now());

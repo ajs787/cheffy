@@ -40,7 +40,8 @@ export function SettingsRow({
           {value}
         </AppText>
       ) : null}
-      {trailing}
+      {/* A full-height, centering box: iOS Switch otherwise sits at the row's top. */}
+      {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       {onPress && !destructive && !trailing ? (
         <ChevronRight size={iconSizes.sm} color={colors.textTertiary} strokeWidth={strokes.bold} />
       ) : null}
@@ -67,7 +68,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: spacing.lg,
   },
-  label: { flex: 1 },
+  label: { flex: 1, paddingVertical: spacing.sm },
+  trailing: { alignSelf: 'stretch', justifyContent: 'center' },
   group: { gap: spacing.sm },
   groupTitle: { paddingHorizontal: SCREEN_GUTTER },
   groupBody: {

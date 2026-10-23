@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import { fonts } from '@/theme';
-import { formatRating, ratingColor } from '@/utils/rating';
+import { formatRating, ratingTextColor } from '@/utils/rating';
 
 import { AppText } from './AppText';
 import { RatingRing, RING_SIZES } from './RatingRing';
@@ -14,7 +14,7 @@ export interface RatingDisplayProps {
 
 /** A rating: `badge` is the progress ring (RatingRing); `inline` is plain text. */
 export function RatingDisplay({ value, variant = 'badge', size = 'md' }: RatingDisplayProps) {
-  const color = ratingColor(value);
+  const color = ratingTextColor(value);
   const label = value === null ? 'Not rated' : `Rated ${formatRating(value)} out of 10`;
 
   if (variant === 'inline') {

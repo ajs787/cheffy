@@ -9,30 +9,28 @@ import { ControlledInput } from '@/components/shared/ControlledInput';
 import { AppButton, AppText } from '@/components/ui';
 import { isEmailNotConfirmed, signIn } from '@/features/auth/api';
 import { ResendConfirmation } from '@/features/auth/components/ResendConfirmation';
+import { useAuthSubmit } from '@/features/auth/useAuthSubmit';
 import { signInSchema, type SignInValues } from '@/features/auth/schemas';
-import { toUserMessage } from '@/lib/errors';
-import { haptics } from '@/lib/haptics';
 
 export default function SignInScreen() {
-  const [formError, setFormError] = useState<string | null>(null);
+  const auth = useAuthSubmit();
   // Set when the account exists but its email isn't confirmed yet.
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
-  const { control, handleSubmit, formState } = useForm<SignInValues>({
+  const { control, handleSubmit } = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = handleSubmit(async ({ email, password }) => {
-    setFormError(null);
     setUnconfirmedEmail(null);
-    try {
-      await signIn(email, password);
-      haptics.success();
-    } catch (error) {
-      haptics.error();
-      setFormError(toUserMessage(error));
-      if (isEmailNotConfirmed(error)) setUnconfirmedEmail(email.trim());
-    }
+    await auth.submit(async () => {
+      try {
+        await signIn(email, password);
+      } catch (error) {
+        if (isEmailNotConfirmed(error)) setUnconfirmedEmail(email.trim());
+        throw error;
+      }
+    });
   });
 
   return (
@@ -65,7 +63,7 @@ export default function SignInScreen() {
         name="password"
         label="Password"
         placeholder="Your password"
-        secureTextEntry
+        password
         autoComplete="current-password"
         textContentType="password"
         returnKeyType="go"
@@ -81,13 +79,21 @@ export default function SignInScreen() {
       >
         Forgot password?
       </AppText>
-      {formError ? (
+      {auth.error ? (
         <AppText variant="callout" color="danger" accessibilityLiveRegion="polite">
-          {formError}
+          {auth.error}
         </AppText>
       ) : null}
       {unconfirmedEmail ? <ResendConfirmation email={unconfirmedEmail} /> : null}
-      <AppButton label="Sign in" size="lg" fullWidth loading={formState.isSubmitting} onPress={onSubmit} />
+      <AppButton
+        label={auth.locked ? `Try again in ${auth.secondsLeft}s` : 'Sign in'}
+        size="lg"
+        fullWidth
+        loading={auth.busy}
+        loadingLabel="Signing in…"
+        disabled={auth.locked}
+        onPress={onSubmit}
+      />
     </AuthScaffold>
   );
 }

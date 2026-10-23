@@ -3,6 +3,7 @@ import { Bookmark, Lock, MessageCircle, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { CategoryLine } from '@/components/shared/CategoryLine';
+import { MadeTogetherTag } from '@/components/shared/MadeTogetherTag';
 import { ImageCarousel } from '@/components/shared/ImageCarousel';
 import { LikeButton } from '@/components/shared/LikeButton';
 import { AppButton, AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
@@ -96,6 +97,7 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
               @{post.author.username}
               {post.publishedAt ? ` · ${formatRelativeTime(post.publishedAt)}` : ''}
             </AppText>
+            {post.coCreators.length > 0 ? <MadeTogetherTag /> : null}
           </View>
           {post.visibility !== 'public' ? (
             <View style={styles.visibility}>

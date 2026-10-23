@@ -1,6 +1,6 @@
-import { useState, type ComponentRef, type RefObject } from 'react';
+import { useRef, useState, type ComponentRef, type RefObject } from 'react';
 import { X } from 'lucide-react-native';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Avatar } from '@/components/ui';
@@ -38,15 +38,32 @@ export function CommentComposer({
   const addComment = useAddComment(postId);
   // Uncontrolled: the native field owns the text so fast typing never drops keys.
   const [body, setBody] = useState('');
+  const sending = useRef(false);
+  const [pending, setPending] = useState(false);
   const trimmed = body.trim();
-  const canSend = trimmed.length > 0 && trimmed.length <= MAX_COMMENT;
+  const canSend = trimmed.length > 0 && trimmed.length <= MAX_COMMENT && !pending;
 
-  const send = () => {
-    if (!canSend) return;
-    addComment.mutate({ body, reply: replyTo });
-    inputRef.current?.clear();
-    setBody('');
-    onSent?.(replyTo);
+  // The comment shows in the thread right away (optimistic). The text stays
+  // in the field until the server confirms, so a failure loses nothing; on
+  // success the field clears, the keyboard closes and the composer collapses.
+  const send = async () => {
+    if (!canSend || sending.current) return;
+    sending.current = true;
+    setPending(true);
+    const reply = replyTo;
+    try {
+      await addComment.mutateAsync({ body, reply });
+      inputRef.current?.clear();
+      setBody('');
+      inputRef.current?.blur();
+      Keyboard.dismiss();
+      onSent?.(reply);
+    } catch {
+      // useAddComment rolls back and shows the error; keep the text to retry.
+    } finally {
+      sending.current = false;
+      setPending(false);
+    }
   };
 
   return (
@@ -85,17 +102,22 @@ export function CommentComposer({
           testID="comment-input"
         />
         <Pressable
-          onPress={send}
+          onPress={() => void send()}
           disabled={!canSend}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Post comment"
-          accessibilityState={{ disabled: !canSend }}
+          accessibilityLabel={pending ? 'Posting comment' : 'Post comment'}
+          accessibilityState={{ disabled: !canSend, busy: pending }}
           testID="comment-send"
+          style={styles.send}
         >
-          <AppText variant="calloutStrong" color={canSend ? 'accentStrong' : 'textTertiary'}>
-            Post
-          </AppText>
+          {pending ? (
+            <ActivityIndicator size="small" color={colors.textTertiary} />
+          ) : (
+            <AppText variant="calloutStrong" color={canSend ? 'accentStrong' : 'textTertiary'}>
+              Post
+            </AppText>
+          )}
         </Pressable>
       </View>
     </View>
@@ -125,6 +147,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SCREEN_GUTTER,
     paddingTop: spacing.sm,
   },
+  // Same width either way, so the field doesn't jump while sending.
+  send: { minWidth: 36, alignItems: 'flex-end' },
   input: {
     flex: 1,
     maxHeight: 110,

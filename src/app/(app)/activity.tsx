@@ -7,6 +7,7 @@ import { RefreshControl, StyleSheet, View } from 'react-native';
 import { AppHeader, AppText, EmptyState, ErrorState, PressableScale, RowSkeleton } from '@/components/ui';
 import type { ActivityItem } from '@/features/activity/api';
 import { ActivityRow } from '@/features/activity/components/ActivityRow';
+import { groupActivity } from '@/features/activity/groups';
 import { useActivity, useMarkActivityRead } from '@/features/activity/hooks';
 import { useFollowRequests } from '@/features/social/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -26,25 +27,12 @@ export default function ActivityScreen() {
     Promise.all([activity.refetch(), requests.refetch()]),
   );
 
-  const items = activity.data ?? [];
-  // Follow requests sit in their own row above; the rest split by read state.
-  const listed = items.filter((i) => i.type !== 'follow_request');
-  const fresh = listed.filter((i) => !i.read);
-  const earlier = listed.filter((i) => i.read);
-  const rows: Row[] = [
-    ...(fresh.length
-      ? [
-          { type: 'heading' as const, label: 'New' },
-          ...fresh.map((item) => ({ type: 'item' as const, item })),
-        ]
-      : []),
-    ...(earlier.length
-      ? [
-          { type: 'heading' as const, label: 'Earlier' },
-          ...earlier.map((item) => ({ type: 'item' as const, item })),
-        ]
-      : []),
-  ];
+  // Featured, then Today / Yesterday / Last 7 days / Earlier by local day.
+  // Unread items keep their highlight in whichever section they land.
+  const rows: Row[] = groupActivity(activity.data ?? []).flatMap((group) => [
+    { type: 'heading' as const, label: group.section },
+    ...group.items.map((item) => ({ type: 'item' as const, item })),
+  ]);
 
   return (
     <View style={styles.screen}>

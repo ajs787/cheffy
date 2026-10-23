@@ -737,3 +737,101 @@ settings have not taken effect yet.
 - **Universal Links work:** `https://cheffy.me/invite/CODE` opens the app.
 - cheffy.me is deployed as a Cloudflare Worker serving `web/` (wrangler.jsonc). Pushes to
   `main` redeploy it.
+
+## V7 — Bug fixes, performance and UX (2026-10-23, not yet committed or pushed live)
+
+**1. "Too many attempts" at sign-up.** Root cause: Supabase's built-in email sender, which
+allows about 2 emails per hour for the whole project. Every hour with sign-ups shows exactly 2
+confirmation emails, and the third person in an hour gets `email rate limit exceeded`. There
+were no resends or password resets, so retries didn't cause it.
+- App side, also fixed: the keyboard's Done key could start a second sign-up while one was in
+  flight. `useAuthSubmit` now allows one request at a time on sign-in, sign-up and forgot
+  password.
+- Rate-limit responses are told apart (email quota, per-address cooldown, request
+  throttling) and show an honest message. The button counts down using Supabase's own wait
+  time. Nothing retries automatically, and typed text is kept.
+- **Real fix (you):** custom SMTP in Supabase → Authentication → Emails, then raise
+  Authentication → Rate Limits → "emails sent per hour". **Not verified end to end.**
+
+**2. Lag.** Measured before changing anything:
+- Main queries take 11–35 ms warm.
+- Development builds served over the tunnel (everything before build 6) are much slower
+  than release builds.
+- **Found a real scaling bug:** profile stats and rankings ran their visibility checks on
+  every post in Cheffy, because of a bad row estimate on `creations_of`.
+  `20261023000001` fixes it. Measured on live data: profile_stats 65 → 10 ms,
+  get_rankings 36 → 19 ms. Cost now grows with one person's diary, not the whole app.
+- Likes were already optimistic with rollback.
+- Image sizes measured: profile photos in lists are 79 KB. Feed covers average 640 KB, so a
+  medium-size cover is a candidate follow-up.
+- Added: "Signing in…", "Creating account…", "Sending…", "Posting…" and "Saving…" labels.
+  The entry form ignores a second tap while saving.
+
+**3. Password visibility:** a reusable `PasswordInput` with an eye button, on sign-in, sign-up
+and both reset-password fields.
+
+**4. Comments and replies:** text stays until the server confirms. Then the field clears, the
+keyboard closes and the composer collapses. On failure the text is kept and an error shows. A
+spinner replaces "Post" while sending, and double sends are blocked.
+
+**5. Keyboard stickers: not implemented, on purpose.** React Native 0.88's TextInput has no
+image or rich-content input: no paste-image event and no iOS adaptive-image-glyph or sticker
+support. Doing it needs a native text view (custom Expo module) with
+`supportsAdaptiveImageGlyph`/paste handling, plus:
+- a comment-stickers storage bucket with RLS;
+- format and size validation;
+- moderation and reporting coverage;
+- a new build.
+Emoji are not a substitute.
+
+**6. Photo preview while composing:** tap a photo for the full-screen viewer (pinch, swipe,
+original aspect, best resolution, works for new and already-uploaded photos). Options moved to
+a "•••" button and long-press. The entry form mounts its own viewer so it presents correctly
+over the full-screen form. **Not yet tapped through in the simulator** (the system photo
+picker couldn't be driven reliably).
+
+**7. Made Together:** removed from the profile header, Personalize and unlock announcements
+(the data is kept). Now a small tag on posts with accepted co-creators (feed card and post
+page).
+
+**8. OG Chef** (`20261023000002`): 10 permanent slots, filled in `auth.users.created_at` order
+with user id as tie-break.
+- Eligible = confirmed email + finished profile. Clients can't write it, and a deleted
+  account's slot is never reused.
+- The backfill gives slots to the 9 eligible accounts that exist now; the next eligible
+  sign-up gets slot 10.
+- **Ambiguity:** the first-ever account (@audfrog) was deleted on 2026-10-21 before tags
+  existed, so it isn't counted. The unconfirmed jana.com sign-up is excluded.
+- Shown as a small oxblood "OG Chef" tag beside the name on profiles.
+
+**9. Rating colors:** one scale from #E5484D (0) to #20C967 (10) through the requested
+anchors, blended evenly in OKLab.
+- Rings, the slider track and the thumb use it.
+- Numbers use the same hue deepened to ≥4.5:1 contrast on ivory (≥3:1 for the big slider
+  number).
+- Rings animate through 21 precomputed stops. Tested at 0.0, 2.5, 5.0, 6.5, 8.0, 9.2 and
+  10.0.
+
+**10. Review sections:** "How you made it" and "Notes for next time" removed from the form.
+Old posts keep and still show their values, and editing an old post saves them back
+unchanged.
+
+**11. Settings switches:** each is wrapped in a full-height centering box (the iOS Switch
+otherwise sat at the row's top). Verified in the simulator.
+
+**12. "You both love":** now a heading plus a horizontally scrolling row of chips (one per
+shared favorite, both people's dish and rating). It bleeds to the screen edges, so the last
+chip scrolls fully into view.
+
+**13. Activity:** sections are Featured, Today, Yesterday, Last 7 days and Earlier.
+- Featured = collaboration invites, accepted collaborations and accepted follow requests
+  from the past 7 days, max 5, never repeated below.
+- Grouping uses the phone's local calendar days, newest first, and keeps read/unread
+  styling. It shows the latest 100 notifications.
+
+**Checks:** typecheck, lint, 347 tests (187 database). **Unverified on a device:**
+- sign-up under the email quota, and password toggles (the simulator is signed in; I can't
+  enter passwords);
+- comment collapse;
+- the photo preview over the composer;
+- the OG tag and the new rating colors on screen (both need the migrations pushed first).

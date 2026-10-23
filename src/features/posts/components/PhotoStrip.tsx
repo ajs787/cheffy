@@ -1,11 +1,13 @@
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowLeft, ArrowRight, Camera, ImagePlus, Star, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Camera, ImagePlus, MoreHorizontal, Star, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ActionSheet, AppText, FoodImage, PressableScale, type SheetAction } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
+import { ImageViewerModal } from '@/features/media/ImageViewerHost';
+import type { ViewerImage } from '@/stores/imageViewer';
 import { toast } from '@/stores/toast';
 import { colors, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 
@@ -33,6 +35,32 @@ function toComposeImages(assets: ImagePicker.ImagePickerAsset[]): ComposeImage[]
 export function PhotoStrip({ images, onChange }: PhotoStripProps) {
   const [sourceSheet, setSourceSheet] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+
+  // Full-screen preview of every selected photo, at the best resolution we
+  // have: the picked file itself, or the uploaded original (signed on demand).
+  const viewerImages: ViewerImage[] = images.map((image, i) =>
+    image.kind === 'local'
+      ? {
+          key: image.key,
+          uri: image.uri,
+          thumbUri: image.uri,
+          width: image.width,
+          height: image.height,
+          label: `Photo ${i + 1}`,
+        }
+      : {
+          key: image.key,
+          uri: image.uri,
+          thumbUri: null,
+          storagePath: image.storagePath,
+          cacheKey: image.storagePath,
+          width: image.width,
+          height: image.height,
+          label: `Photo ${i + 1}`,
+        },
+  );
+  const preview = (index: number) => setPreviewIndex(index);
   const remaining = MAX_IMAGES - images.length;
 
   const addFromLibrary = async () => {
@@ -149,9 +177,13 @@ export function PhotoStrip({ images, onChange }: PhotoStripProps) {
         {images.map((image, index) => (
           <PressableScale
             key={image.key}
-            onPress={() => setSelected(index)}
-            accessibilityRole="button"
-            accessibilityLabel={`Photo ${index + 1} of ${images.length}${index === 0 ? ', cover' : ''}. Tap for options`}
+            onPress={() => preview(index)}
+            onLongPress={() => setSelected(index)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`Photo ${index + 1} of ${images.length}${index === 0 ? ', cover' : ''}`}
+            accessibilityHint="Opens it full screen. Long press for options."
+            accessibilityActions={[{ name: 'longpress', label: 'Photo options' }]}
+            onAccessibilityAction={() => setSelected(index)}
             style={styles.tile}
           >
             <FoodImage
@@ -160,6 +192,16 @@ export function PhotoStrip({ images, onChange }: PhotoStripProps) {
               style={styles.tileImage}
               radius="md"
             />
+            {/* Options live on their own button so a tap always previews. */}
+            <Pressable
+              onPress={() => setSelected(index)}
+              hitSlop={6}
+              style={styles.optionsButton}
+              accessibilityRole="button"
+              accessibilityLabel={`Options for photo ${index + 1}`}
+            >
+              <MoreHorizontal size={16} color={colors.ivory} strokeWidth={strokes.bold} />
+            </Pressable>
             {index === 0 ? (
               <View style={styles.coverBadge}>
                 <AppText variant="caption" color="textInverse">
@@ -190,6 +232,12 @@ export function PhotoStrip({ images, onChange }: PhotoStripProps) {
         onCamera={takePhoto}
       />
       <ActionSheet visible={selected !== null} onClose={() => setSelected(null)} actions={photoActions} />
+      <ImageViewerModal
+        visible={previewIndex !== null}
+        images={viewerImages}
+        index={previewIndex ?? 0}
+        onClose={() => setPreviewIndex(null)}
+      />
     </View>
   );
 }
@@ -243,6 +291,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+  },
+  optionsButton: {
+    position: 'absolute',
+    right: spacing.xs,
+    top: spacing.xs,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.imageScrim,
   },
   coverBadge: {
     position: 'absolute',

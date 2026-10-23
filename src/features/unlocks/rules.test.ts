@@ -6,10 +6,9 @@ const state = { unlocked: [] as never[], creations: 2, referrals: 1, collaborati
 
 describe('unlock progress', () => {
   it('shows honest progress until unlocked', () => {
-    const [theme, frame, together, recap] = UNLOCKS;
+    const [theme, frame, recap] = UNLOCKS;
     expect(theme!.progress(state)).toBe('2 of 3 creations');
     expect(frame!.progress(state)).toBe('1 of 2 friends joined with your code');
-    expect(together!.progress(state)).toBe('Co-post a creation with a friend');
     expect(recap!.progress({ ...state, creations: 14 })).toBe('10 of 10 creations');
     expect(theme!.progress({ ...state, unlocked: ['theme_saffron'] as never[] })).toBeNull();
   });
@@ -17,6 +16,11 @@ describe('unlock progress', () => {
   it('only announces unlocks once', () => {
     expect(newlyUnlocked(['theme_saffron', 'recap'], ['theme_saffron'])).toEqual(['recap']);
     expect(newlyUnlocked(['theme_saffron'], ['theme_saffron'])).toEqual([]);
+  });
+
+  it('never announces Made Together, which is no longer a profile distinction', () => {
+    expect(UNLOCKS.map((u) => u.id)).not.toContain('made_together');
+    expect(newlyUnlocked(['made_together', 'recap'], [])).toEqual(['recap']);
   });
 });
 
@@ -57,10 +61,18 @@ describe('recapView', () => {
 
 describe('referralStatus', () => {
   it('counts down to the frame', () => {
-    expect(referralStatus({ referrals: 0, unlocked: [] })).toMatchObject({ joined: 0, goal: 2, unlocked: false, label: '2 friends to go' });
+    expect(referralStatus({ referrals: 0, unlocked: [] })).toMatchObject({
+      joined: 0,
+      goal: 2,
+      unlocked: false,
+      label: '2 friends to go',
+    });
     expect(referralStatus({ referrals: 1, unlocked: [] }).label).toBe('1 more friend to go');
   });
   it('reports the unlock, even past the goal', () => {
-    expect(referralStatus({ referrals: 3, unlocked: ['frame_host'] })).toMatchObject({ joined: 3, unlocked: true });
+    expect(referralStatus({ referrals: 3, unlocked: ['frame_host'] })).toMatchObject({
+      joined: 3,
+      unlocked: true,
+    });
   });
 });

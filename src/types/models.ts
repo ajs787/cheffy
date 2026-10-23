@@ -27,6 +27,8 @@ export interface Profile extends ProfileSummary {
   isPrivate: boolean;
   /** May their lowest-rated public creations appear in Discover's Most Hated. */
   allowMostHated: boolean;
+  /** One of Cheffy's first ten accounts (permanent, server-assigned). */
+  isOgChef: boolean;
   /** Unlocked profile style, shown to everyone. */
   theme: 'saffron' | null;
   frame: 'host' | null;
@@ -37,14 +39,15 @@ export interface ProfileWithViewer extends Profile {
   /** The viewer has a pending follow request to this account. */
   viewerHasRequested: boolean;
   viewerHasBlocked: boolean;
-  /** Has co-created at least one creation ("Made Together"). */
-  madeTogether: boolean;
 }
 
 /** Where the viewer stands with someone: drives the Follow button. */
 export type FollowState = 'none' | 'requested' | 'following';
 
-export function followStateOf(user: { viewerIsFollowing: boolean; viewerHasRequested?: boolean }): FollowState {
+export function followStateOf(user: {
+  viewerIsFollowing: boolean;
+  viewerHasRequested?: boolean;
+}): FollowState {
   if (user.viewerIsFollowing) return 'following';
   return user.viewerHasRequested ? 'requested' : 'none';
 }
@@ -206,12 +209,7 @@ export interface Page<T> {
 }
 
 export type ReportReason =
-  | 'spam'
-  | 'inappropriate'
-  | 'harassment'
-  | 'not_homemade'
-  | 'intellectual_property'
-  | 'other';
+  'spam' | 'inappropriate' | 'harassment' | 'not_homemade' | 'intellectual_property' | 'other';
 
 export type ReportTarget =
   | { type: 'user'; userId: string }

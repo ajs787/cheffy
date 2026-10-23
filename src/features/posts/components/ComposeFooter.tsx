@@ -13,10 +13,19 @@ export interface ComposeFooterProps {
   paused: boolean;
   progress: SaveProgress | null;
   onSubmit: () => void;
+  /** Shown on the button while saving, e.g. "Posting…". */
+  loadingLabel?: string;
 }
 
 /** Pinned submit bar for Create, with upload progress or an offline notice. */
-export function ComposeFooter({ label, saving, paused, progress, onSubmit }: ComposeFooterProps) {
+export function ComposeFooter({
+  label,
+  loadingLabel,
+  saving,
+  paused,
+  progress,
+  onSubmit,
+}: ComposeFooterProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
@@ -32,6 +41,7 @@ export function ComposeFooter({ label, saving, paused, progress, onSubmit }: Com
         size="lg"
         fullWidth
         loading={saving}
+        loadingLabel={loadingLabel}
         onPress={onSubmit}
         testID="compose-submit"
       />

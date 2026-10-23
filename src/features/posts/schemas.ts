@@ -58,6 +58,8 @@ export const postFormSchema = z.object({
     .max(500, 'That link is too long.')
     .refine((v) => v === '' || /^https?:\/\/\S+$/i.test(v), 'Links need to start with http:// or https://'),
   ingredients: optionalText(2000, 'Ingredients'),
+  // No longer editable (removed from the form in V7). Older posts keep their
+  // values: they load into the form untouched and save back unchanged.
   prepNotes: optionalText(2000, 'Notes'),
   nextTimeNotes: optionalText(1000, 'Notes for next time'),
   cookTimeMinutes: z.number().int().min(1, 'At least 1 minute.').max(2880, 'Max 48 hours.').nullable(),

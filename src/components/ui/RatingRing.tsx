@@ -10,8 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
-import { colors, fonts, MAX_FONT_SCALE, ratingScale } from '@/theme';
-import { formatRating, ratingFill } from '@/utils/rating';
+import { colors, fonts, MAX_FONT_SCALE } from '@/theme';
+import { formatRating, RATING_COLOR_STOPS, RATING_COLOR_VALUES, ratingFill } from '@/utils/rating';
 
 import { AppText } from './AppText';
 
@@ -24,8 +24,8 @@ export interface RatingRingProps {
   size?: keyof typeof RING_SIZES;
 }
 
-const STOPS = [...ratingScale.stops];
-const STOP_COLORS = [...ratingScale.colors];
+const STOPS = RATING_COLOR_STOPS;
+const STOP_COLORS = RATING_COLOR_VALUES;
 
 /**
  * A rating as a circular progress ring: filled to rating / 10 from 12 o'clock,

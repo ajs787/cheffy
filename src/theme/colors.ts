@@ -54,18 +54,13 @@ export const categoryColors: Record<string, string> = {
 };
 
 /**
- * Rating ring scale: muted red → coral → orange → golden → yellow-green →
- * green → deep green. Each color sits at a rating; values between blend.
+ * The rating scale, 0 (red) to 10 (bright green). Colors sit at these
+ * ratings and blend evenly (in OKLab) in between — see utils/rating. This is
+ * the one place the scale is defined; every ring, slider and number uses it.
  */
 export const ratingScale = {
-  stops: [1, 3, 5, 6.5, 7.5, 8.5, 9.5],
-  colors: ['#A3473F', '#D9694F', '#E08A35', '#D9A92E', '#99A83A', '#4E9550', '#22663D'],
-} as const;
-
-export const ratingColors = {
-  great: brand.oxblood,
-  good: '#8C6534',
-  low: '#8C7B6E',
+  stops: [0, 2, 4, 5, 6.5, 8, 10],
+  colors: ['#E5484D', '#F16A43', '#F5A524', '#E9C746', '#A9C94D', '#53B96B', '#20C967'],
 } as const;
 
 /** Unlockable profile accents. Each keeps AA contrast on ivory. */

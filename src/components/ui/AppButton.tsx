@@ -17,6 +17,8 @@ export interface AppButtonProps {
   size?: Size;
   icon?: LucideIcon;
   loading?: boolean;
+  /** Shown beside the spinner while loading, e.g. "Posting…". */
+  loadingLabel?: string;
   disabled?: boolean;
   fullWidth?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -44,6 +46,7 @@ export function AppButton({
   size = 'md',
   icon: Icon,
   loading = false,
+  loadingLabel,
   disabled = false,
   fullWidth = false,
   style,
@@ -58,7 +61,7 @@ export function AppButton({
     <PressableScale
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={loading && loadingLabel ? loadingLabel : label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
@@ -79,7 +82,14 @@ export function AppButton({
         style,
       ]}
     >
-      {loading ? (
+      {loading && loadingLabel ? (
+        <View style={styles.content} accessibilityLiveRegion="polite">
+          <ActivityIndicator color={colors[v.text]} />
+          <AppText variant={size === 'sm' ? 'calloutStrong' : 'button'} color={v.text} numberOfLines={1}>
+            {loadingLabel}
+          </AppText>
+        </View>
+      ) : loading ? (
         <ActivityIndicator color={colors[v.text]} />
       ) : (
         <View style={styles.content}>

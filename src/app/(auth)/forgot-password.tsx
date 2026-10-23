@@ -9,24 +9,21 @@ import { ControlledInput } from '@/components/shared/ControlledInput';
 import { AppButton, AppText, EmptyState } from '@/components/ui';
 import { sendPasswordReset } from '@/features/auth/api';
 import { forgotPasswordSchema, type ForgotPasswordValues } from '@/features/auth/schemas';
-import { toUserMessage } from '@/lib/errors';
+import { useAuthSubmit } from '@/features/auth/useAuthSubmit';
 
 export default function ForgotPasswordScreen() {
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const { control, handleSubmit, formState } = useForm<ForgotPasswordValues>({
+  const auth = useAuthSubmit();
+  const { control, handleSubmit } = useForm<ForgotPasswordValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
   });
 
   const onSubmit = handleSubmit(async ({ email }) => {
-    setFormError(null);
-    try {
+    await auth.submit(async () => {
       await sendPasswordReset(email);
       setSentTo(email);
-    } catch (error) {
-      setFormError(toUserMessage(error));
-    }
+    });
   });
 
   if (sentTo) {
@@ -57,12 +54,20 @@ export default function ForgotPasswordScreen() {
         returnKeyType="send"
         onSubmitEditing={() => void onSubmit()}
       />
-      {formError ? (
-        <AppText variant="callout" color="danger">
-          {formError}
+      {auth.error ? (
+        <AppText variant="callout" color="danger" accessibilityLiveRegion="polite">
+          {auth.error}
         </AppText>
       ) : null}
-      <AppButton label="Send reset link" size="lg" fullWidth loading={formState.isSubmitting} onPress={onSubmit} />
+      <AppButton
+        label={auth.locked ? `Try again in ${auth.secondsLeft}s` : 'Send reset link'}
+        size="lg"
+        fullWidth
+        loading={auth.busy}
+        loadingLabel="Sending…"
+        disabled={auth.locked}
+        onPress={onSubmit}
+      />
     </AuthScaffold>
   );
 }

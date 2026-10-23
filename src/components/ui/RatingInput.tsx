@@ -1,7 +1,12 @@
 import { Minus, Plus } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, type LayoutChangeEvent } from 'react-native';
-import { GestureDetector, useCompetingGestures, usePanGesture, useTapGesture } from 'react-native-gesture-handler';
+import {
+  GestureDetector,
+  useCompetingGestures,
+  usePanGesture,
+  useTapGesture,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -13,12 +18,23 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { haptics } from '@/lib/haptics';
-import { colors, iconSizes, MAX_FONT_SCALE, radii, shadows, spacing, springs, strokes, typography } from '@/theme';
+import {
+  colors,
+  iconSizes,
+  MAX_FONT_SCALE,
+  radii,
+  shadows,
+  spacing,
+  springs,
+  strokes,
+  typography,
+} from '@/theme';
 import {
   formatRating,
   parseRatingInput,
   RATING_MAX,
   ratingColor,
+  ratingTextColor,
   ratingDescriptor,
   stepRating,
 } from '@/utils/rating';
@@ -56,7 +72,9 @@ export function RatingInput({ value, onChange, error }: RatingInputProps) {
   const lastTenths = useSharedValue(value === null ? -1 : Math.round(value * 10));
   const numberScale = useSharedValue(1);
 
+  // Track and thumb use the scale color; the big number a readable version of it.
   const color = ratingColor(value);
+  const numberColor = ratingTextColor(value, 3);
 
   // Keep the thumb in sync with changes that don't come from dragging.
   useEffect(() => {
@@ -180,7 +198,7 @@ export function RatingInput({ value, onChange, error }: RatingInputProps) {
             placeholderTextColor={colors.borderStrong}
             maxFontSizeMultiplier={MAX_FONT_SCALE}
             accessibilityLabel="Exact rating, from 0 to 10"
-            style={[typography.rating, styles.numberInput, { color }]}
+            style={[typography.rating, styles.numberInput, { color: numberColor }]}
             selectionColor={colors.accent}
             testID="rating-exact-input"
           />
@@ -189,13 +207,15 @@ export function RatingInput({ value, onChange, error }: RatingInputProps) {
             onPress={beginEditing}
             accessibilityRole="button"
             accessibilityLabel={
-              value === null ? 'No rating yet. Tap to type a rating' : `Rating ${formatRating(value)}. Tap to type`
+              value === null
+                ? 'No rating yet. Tap to type a rating'
+                : `Rating ${formatRating(value)}. Tap to type`
             }
             testID="rating-number"
           >
             <Animated.View style={numberStyle}>
               {/* Unrated: a ghosted 0.0 placeholder (the descriptor says "Slide to rate"). */}
-              <AppText variant="rating" style={{ color: value === null ? colors.border : color }}>
+              <AppText variant="rating" style={{ color: value === null ? colors.border : numberColor }}>
                 {value === null ? '0.0' : formatRating(value)}
               </AppText>
             </Animated.View>

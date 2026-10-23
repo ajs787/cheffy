@@ -10,32 +10,27 @@ import { ControlledInput } from '@/components/shared/ControlledInput';
 import { AppButton, AppText, EmptyState } from '@/components/ui';
 import { signUp } from '@/features/auth/api';
 import { ResendConfirmation } from '@/features/auth/components/ResendConfirmation';
+import { useAuthSubmit } from '@/features/auth/useAuthSubmit';
 import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
 import { PRIVACY_URL } from '@/constants/app';
-import { toUserMessage } from '@/lib/errors';
 import { openWebPage } from '@/lib/links';
-import { haptics } from '@/lib/haptics';
 import { colors, radii, spacing, strokes } from '@/theme';
 
 export default function SignUpScreen() {
-  const [formError, setFormError] = useState<string | null>(null);
   const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
-  const { control, handleSubmit, formState } = useForm<SignUpValues>({
+  const auth = useAuthSubmit();
+  const { control, handleSubmit } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
     defaultValues: { email: '', password: '', acceptedTerms: false as unknown as true },
   });
 
+  // One request per press; the keyboard's Done key can't start a second one.
   const onSubmit = handleSubmit(async ({ email, password }) => {
-    setFormError(null);
-    try {
+    await auth.submit(async () => {
       const { needsConfirmation } = await signUp(email, password);
-      haptics.success();
       if (needsConfirmation) setConfirmEmail(email.trim());
       // Otherwise the session starts and the root guard moves on to onboarding.
-    } catch (error) {
-      haptics.error();
-      setFormError(toUserMessage(error));
-    }
+    });
   });
 
   if (confirmEmail) {
@@ -88,7 +83,7 @@ export default function SignUpScreen() {
         name="password"
         label="Password"
         placeholder="At least 8 characters"
-        secureTextEntry
+        password
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="done"
@@ -131,16 +126,18 @@ export default function SignUpScreen() {
           </View>
         )}
       />
-      {formError ? (
+      {auth.error ? (
         <AppText variant="callout" color="danger" accessibilityLiveRegion="polite">
-          {formError}
+          {auth.error}
         </AppText>
       ) : null}
       <AppButton
-        label="Create account"
+        label={auth.locked ? `Try again in ${auth.secondsLeft}s` : 'Create account'}
         size="lg"
         fullWidth
-        loading={formState.isSubmitting}
+        loading={auth.busy}
+        loadingLabel="Creating account…"
+        disabled={auth.locked}
         onPress={onSubmit}
       />
     </AuthScaffold>

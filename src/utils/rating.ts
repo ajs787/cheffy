@@ -1,9 +1,7 @@
-import { ratingColors, ratingScale } from '@/theme';
+import { colors as palette, ratingScale } from '@/theme';
 
 export const RATING_MIN = 0;
 export const RATING_MAX = 10;
-
-export type RatingTier = keyof typeof ratingColors;
 
 export function clampRating(value: number): number {
   if (Number.isNaN(value)) return RATING_MIN;
@@ -24,37 +22,106 @@ export function formatRating(value: number | null | undefined): string {
   return roundRating(value).toFixed(1);
 }
 
-export function ratingTier(value: number): RatingTier {
-  if (value >= 8) return 'great';
-  if (value >= 6) return 'good';
-  return 'low';
+// ---------------------------------------------------------------------------
+// Color: one red → bright-green scale for every ring, slider and number.
+// Blending happens in OKLab so the in-between colors look evenly spaced
+// (plain RGB blending goes muddy between orange and green).
+// ---------------------------------------------------------------------------
+type Rgb = [number, number, number];
+
+const hexToRgb = (c: string): Rgb => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)) as Rgb;
+const rgbToHex = (rgb: Rgb) =>
+  `#${rgb
+    .map((v) =>
+      Math.round(Math.min(255, Math.max(0, v)))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+
+const toLinear = (v: number) => {
+  const c = v / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+};
+const fromLinear = (v: number) => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
+
+function rgbToOklab([r, g, b]: Rgb): Rgb {
+  const [lr, lg, lb] = [toLinear(r), toLinear(g), toLinear(b)];
+  const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
 }
 
+function oklabToRgb([L, a, b]: Rgb): Rgb {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    fromLinear(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    fromLinear(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    fromLinear(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+  ];
+}
+
+const ANCHORS = ratingScale.stops.map((stop, i) => ({
+  stop,
+  lab: rgbToOklab(hexToRgb(ratingScale.colors[i]!)),
+}));
+
+/** Shown for "not rated yet". */
+export const UNRATED_COLOR = palette.textTertiary;
+
+/** The scale color for a rating: rings, the slider track, fills. */
 export function ratingColor(value: number | null | undefined): string {
-  if (value === null || value === undefined) return ratingColors.low;
-  return ratingColors[ratingTier(value)];
-}
-
-const hex = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
-const toHex = (rgb: number[]) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
-
-/** The rating ring's color for a value, blended between the scale's stops. */
-export function ratingRingColor(value: number | null | undefined): string {
-  const { stops, colors } = ratingScale;
-  const first = colors[0].toLowerCase();
-  if (value === null || value === undefined || Number.isNaN(value)) return first;
+  if (value === null || value === undefined || Number.isNaN(value)) return UNRATED_COLOR;
   const v = clampRating(value);
-  if (v <= stops[0]) return first;
-  for (let i = 1; i < stops.length; i++) {
-    if (v <= stops[i]) {
-      const t = (v - stops[i - 1]) / (stops[i] - stops[i - 1]);
-      const a = hex(colors[i - 1]);
-      const b = hex(colors[i]);
-      return toHex(a.map((x, k) => x + (b[k] - x) * t));
+  for (let i = 1; i < ANCHORS.length; i++) {
+    const lo = ANCHORS[i - 1]!;
+    const hi = ANCHORS[i]!;
+    if (v <= hi.stop) {
+      const t = (v - lo.stop) / (hi.stop - lo.stop);
+      return rgbToHex(oklabToRgb(lo.lab.map((x, k) => x + (hi.lab[k]! - x) * t) as Rgb));
     }
   }
-  return colors[colors.length - 1].toLowerCase();
+  return ratingScale.colors[ratingScale.colors.length - 1]!.toLowerCase();
 }
+
+const luminance = (rgb: Rgb) => {
+  const [r, g, b] = rgb.map(toLinear) as Rgb;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+export function contrastRatio(a: string, b: string): number {
+  const [la, lb] = [luminance(hexToRgb(a)), luminance(hexToRgb(b))];
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/**
+ * The same color, deepened just enough to read as text on ivory (WCAG: 4.5
+ * for normal text, 3 for large numbers). Bright yellow-green and green need
+ * this; reds and oranges barely change.
+ */
+export function ratingTextColor(value: number | null | undefined, minContrast = 4.5): string {
+  const base = ratingColor(value);
+  if (value === null || value === undefined) return base;
+  const lab = rgbToOklab(hexToRgb(base));
+  for (let L = lab[0]; L > 0.2; L -= 0.01) {
+    const candidate = rgbToHex(oklabToRgb([L, lab[1], lab[2]]));
+    if (contrastRatio(candidate, palette.background) >= minContrast) return candidate;
+  }
+  return palette.text;
+}
+
+/**
+ * Dense stops for animated color (Reanimated blends linearly in RGB, so
+ * closely spaced OKLab samples keep the animation as smooth as the scale).
+ */
+export const RATING_COLOR_STOPS: number[] = Array.from({ length: 21 }, (_, i) => i / 2);
+export const RATING_COLOR_VALUES: string[] = RATING_COLOR_STOPS.map((v) => ratingColor(v));
 
 /** Fraction of the ring to fill: rating / 10, clamped. */
 export function ratingFill(value: number | null | undefined): number {
