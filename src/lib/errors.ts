@@ -29,7 +29,7 @@ const AUTH_MESSAGES: [RegExp, string][] = [
   [/password should be at least/i, 'Passwords need at least 8 characters.'],
   [/isn.t allowed on Cheffy/i, 'That includes words that aren’t allowed on Cheffy.'],
   [/removed by Cheffy/i, 'This post was removed by Cheffy’s moderators and can’t be republished.'],
-  [/rate limit|too many requests/i, 'Too many attempts. Please wait a minute and try again.'],
+  [/rate limit|too many requests/i, 'Too many attempts right now. Please try again later.'],
   [/same password/i, 'Choose a password different from your current one.'],
   [/weak password|pwned/i, 'That password is too easy to guess. Try a longer one.'],
 ];

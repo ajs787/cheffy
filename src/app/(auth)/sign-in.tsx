@@ -23,7 +23,7 @@ export default function SignInScreen() {
 
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setUnconfirmedEmail(null);
-    await auth.submit(async () => {
+    await auth.submit('signin', async () => {
       try {
         await signIn(email, password);
       } catch (error) {

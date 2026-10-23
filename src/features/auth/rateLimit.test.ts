@@ -11,6 +11,11 @@ describe('parseRateLimit', () => {
     expect(waitSeconds(limit!)).toBe(37);
   });
 
+  it('never invents a wait when Supabase gives none', () => {
+    expect(waitSeconds({ kind: 'email', retryAfterSeconds: null })).toBeNull();
+    expect(waitSeconds({ kind: 'requests', retryAfterSeconds: null })).toBeNull();
+  });
+
   it('recognises the project email quota', () => {
     expect(parseRateLimit({ message: 'email rate limit exceeded', status: 429 })).toEqual({
       kind: 'email',

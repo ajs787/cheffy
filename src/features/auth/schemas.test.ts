@@ -8,13 +8,15 @@ describe('auth schemas', () => {
   });
 
   it('requires 8+ char passwords and accepted terms to sign up', () => {
-    expect(signUpSchema.safeParse({ email: 'a@b.co', password: 'short', acceptedTerms: true }).success).toBe(false);
-    expect(signUpSchema.safeParse({ email: 'a@b.co', password: 'long enough', acceptedTerms: false }).success).toBe(
+    expect(signUpSchema.safeParse({ email: 'a@b.co', password: 'short', acceptedTerms: true }).success).toBe(
       false,
     );
-    expect(signUpSchema.safeParse({ email: 'a@b.co', password: 'long enough', acceptedTerms: true }).success).toBe(
-      true,
-    );
+    expect(
+      signUpSchema.safeParse({ email: 'a@b.co', password: 'long enough', acceptedTerms: false }).success,
+    ).toBe(false);
+    expect(
+      signUpSchema.safeParse({ email: 'a@b.co', password: 'long enough', acceptedTerms: true }).success,
+    ).toBe(true);
   });
 
   it('requires matching new passwords', () => {

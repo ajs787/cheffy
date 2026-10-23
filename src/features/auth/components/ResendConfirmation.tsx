@@ -9,6 +9,7 @@ import { spacing } from '@/theme';
 import { resendConfirmation } from '../api';
 import { cooldownLeft } from '../cooldown';
 import { parseRateLimit, rateLimitMessage } from '../rateLimit';
+import { logAuthFailure } from '../useAuthSubmit';
 
 /**
  * "Send it again" for the sign-up confirmation email, with a cooldown so
@@ -37,6 +38,7 @@ export function ResendConfirmation({ email, justSent = false }: { email: string;
       setStatus({ tone: 'ok', text: `Sent. Check ${email}, including spam.` });
     } catch (error) {
       haptics.error();
+      logAuthFailure('resend_confirmation', error);
       const limit = parseRateLimit(error);
       setStatus({
         tone: 'error',

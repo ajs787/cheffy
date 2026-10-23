@@ -16,7 +16,12 @@ const CATEGORIES = [
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.lg }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.lg },
+      ]}
+    >
       <View style={styles.masthead}>
         <AppText variant="overline">Club de cuisine</AppText>
         <AppText variant="overline">Est. MMXXVI</AppText>
@@ -39,7 +44,12 @@ export default function WelcomeScreen() {
 
       <Animated.View entering={FadeInDown.delay(350).duration(600)} style={styles.actions}>
         <AppButton label="Join the table" size="lg" fullWidth onPress={() => router.push('/sign-up')} />
-        <AppButton label="I already have an account" variant="ghost" fullWidth onPress={() => router.push('/sign-in')} />
+        <AppButton
+          label="I already have an account"
+          variant="ghost"
+          fullWidth
+          onPress={() => router.push('/sign-in')}
+        />
         <AppText variant="overline" color="textTertiary" align="center" style={styles.motto}>
           Cook. Note. Share. Repeat.
         </AppText>

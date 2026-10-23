@@ -16,7 +16,8 @@ import { spacing } from '@/theme';
 
 export type PlayfulMotion = 'wiggle' | 'bounce' | 'tilt';
 
-const quick = (toValue: number, duration = 70) => withTiming(toValue, { duration, easing: Easing.out(Easing.quad) });
+const quick = (toValue: number, duration = 70) =>
+  withTiming(toValue, { duration, easing: Easing.out(Easing.quad) });
 const settle = { damping: 9, stiffness: 220, mass: 0.6 };
 
 /**
@@ -24,7 +25,15 @@ const settle = { damping: 9, stiffness: 220, mass: 0.6 };
  * tapped: the pot wiggles, the cake hops, the cup tips as if pouring. Every
  * tap restarts it. With Reduce Motion on it only dims briefly.
  */
-export function PlayfulCategory({ slug, label, motion }: { slug: string; label: string; motion: PlayfulMotion }) {
+export function PlayfulCategory({
+  slug,
+  label,
+  motion,
+}: {
+  slug: string;
+  label: string;
+  motion: PlayfulMotion;
+}) {
   const reduceMotion = useReducedMotion();
   const rotate = useSharedValue(0);
   const lift = useSharedValue(0);
@@ -49,7 +58,12 @@ export function PlayfulCategory({ slug, label, motion }: { slug: string; label: 
         rotate.set(withSequence(quick(-9), quick(9), quick(-6), quick(6), quick(-3), withSpring(0, settle)));
         break;
       case 'bounce':
-        lift.set(withSequence(withTiming(-12, { duration: 140, easing: Easing.out(Easing.cubic) }), withSpring(0, settle)));
+        lift.set(
+          withSequence(
+            withTiming(-12, { duration: 140, easing: Easing.out(Easing.cubic) }),
+            withSpring(0, settle),
+          ),
+        );
         rotate.set(withSequence(quick(-7, 140), withSpring(0, settle)));
         break;
       case 'tilt':

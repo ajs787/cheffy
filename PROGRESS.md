@@ -835,3 +835,25 @@ chip scrolls fully into view.
 - comment collapse;
 - the photo preview over the composer;
 - the OG tag and the new rating colors on screen (both need the migrations pushed first).
+
+## Sign-up rate limit — follow-up (2026-10-23)
+
+- **Evidence:** across every hour since launch, Supabase has never sent more than 2
+  confirmation emails in one clock hour (today: 16:38, 16:45, then nothing until 17:39). That
+  matches the built-in email sender's project-wide limit. No account has been
+  re-sent a confirmation, and no password resets were requested. The reported message
+  ("…Please wait a minute and try again.") only exists in builds ≤ 6.
+- **Code trace:** one Supabase client, one sign-up call site, one resend call site, and no
+  auth effects or automatic retries (auth-js only labels errors retryable). React Query
+  mutations use `retry: 0`.
+- **Changed today:**
+  - The form locks only for a wait Supabase actually returns (`after N seconds`), never an
+    invented one.
+  - Honest messages for the email quota and for request throttling.
+  - The generic mapping no longer promises "a minute".
+  - Safe `[auth]` diagnostics: operation, status, code, kind, time; never email, password or
+    tokens.
+  - A neutral note on "Check your inbox" for already-registered emails. Supabase sends no
+    link in that case and hides it deliberately.
+- **Not fixed until you configure custom SMTP.** Confirm in Supabase → Logs → Auth: filter
+  for status 429 and look for `over_email_send_rate_limit`.

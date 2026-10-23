@@ -5,5 +5,7 @@ import { colors } from '@/theme';
 export const unstable_settings = { anchor: 'welcome' };
 
 export default function AuthLayout() {
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
+  );
 }

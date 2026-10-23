@@ -20,7 +20,7 @@ export default function ForgotPasswordScreen() {
   });
 
   const onSubmit = handleSubmit(async ({ email }) => {
-    await auth.submit(async () => {
+    await auth.submit('password_reset', async () => {
       await sendPasswordReset(email);
       setSentTo(email);
     });

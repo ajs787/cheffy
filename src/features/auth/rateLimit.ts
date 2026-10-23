@@ -39,10 +39,13 @@ export function parseRateLimit(error: unknown): RateLimit | null {
   return null;
 }
 
-/** How long the submit button stays disabled after a rate-limit response. */
-export function waitSeconds(limit: RateLimit): number {
-  if (limit.retryAfterSeconds !== null) return Math.max(1, limit.retryAfterSeconds);
-  return limit.kind === 'email' ? 60 : 30;
+/**
+ * Seconds to lock the form after a rate-limit response — only when Supabase
+ * said how long. We never invent a wait: without one the button stays usable
+ * and the message explains what happened.
+ */
+export function waitSeconds(limit: RateLimit): number | null {
+  return limit.retryAfterSeconds === null ? null : Math.max(1, limit.retryAfterSeconds);
 }
 
 export function rateLimitMessage(limit: RateLimit): string {
@@ -50,8 +53,8 @@ export function rateLimitMessage(limit: RateLimit): string {
     case 'cooldown':
       return 'We just sent you an email. Check your inbox (and spam) before asking for another.';
     case 'email':
-      return 'Lots of people are joining right now, so we couldn’t send your email yet. Please try again in a little while.';
+      return 'Cheffy couldn’t send a confirmation email right now because too many have gone out recently. Your details are still here — please try again later.';
     case 'requests':
-      return 'Too many attempts from this network. Please wait a moment and try again.';
+      return 'Too many sign-in attempts from this network. Please try again shortly.';
   }
 }

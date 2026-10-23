@@ -26,7 +26,7 @@ export default function SignUpScreen() {
 
   // One request per press; the keyboard's Done key can't start a second one.
   const onSubmit = handleSubmit(async ({ email, password }) => {
-    await auth.submit(async () => {
+    await auth.submit('signup', async () => {
       const { needsConfirmation } = await signUp(email, password);
       if (needsConfirmation) setConfirmEmail(email.trim());
       // Otherwise the session starts and the root guard moves on to onboarding.
@@ -41,6 +41,13 @@ export default function SignUpScreen() {
           title="Confirm your email"
           message={`We sent a link to ${confirmEmail}. Open it on this phone to finish creating your account. It can take a minute, and sometimes lands in spam.`}
         />
+        {/* Supabase answers a sign-up for an existing account exactly like a new
+            one (so nobody can probe which emails are registered) and sends no
+            email. Say so plainly, for everyone, without revealing anything. */}
+        <AppText variant="caption" color="textSecondary" align="center">
+          Already have a Cheffy account with this email? No new link is sent — sign in, or use “Forgot
+          password”.
+        </AppText>
         <View style={styles.confirmActions}>
           <ResendConfirmation email={confirmEmail} justSent />
           <AppButton

@@ -5,6 +5,25 @@ import { haptics } from '@/lib/haptics';
 
 import { parseRateLimit, rateLimitMessage, waitSeconds } from './rateLimit';
 
+export type AuthOperation = 'signup' | 'signin' | 'password_reset' | 'resend_confirmation';
+
+/**
+ * Safe diagnostics for a failed auth request: which operation, the HTTP
+ * status, Supabase's error code, how we classified it, and when. Never the
+ * email, password or any token. Visible in Xcode/Console device logs.
+ */
+export function logAuthFailure(operation: AuthOperation, error: unknown): void {
+  const e = (error ?? {}) as { status?: number; code?: string; name?: string };
+  console.warn('[auth]', {
+    operation,
+    status: e.status ?? null,
+    code: e.code ?? null,
+    name: e.name ?? null,
+    kind: parseRateLimit(error)?.kind ?? null,
+    at: new Date().toISOString(),
+  });
+}
+
 /**
  * Runs an auth request at most once at a time. The button and the keyboard's
  * Done key can both call `submit`; a ref (not state) blocks the second call
@@ -26,7 +45,8 @@ export function useAuthSubmit() {
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
-  const submit = async (request: () => Promise<void>): Promise<boolean> => {
+  /** `operation` names the request in diagnostics, e.g. 'signup'. */
+  const submit = async (operation: AuthOperation, request: () => Promise<void>): Promise<boolean> => {
     if (inFlight.current || secondsLeft > 0) return false;
     inFlight.current = true;
     setBusy(true);
@@ -37,11 +57,15 @@ export function useAuthSubmit() {
       return true;
     } catch (e) {
       haptics.error();
+      logAuthFailure(operation, e);
       const limit = parseRateLimit(e);
       if (limit) {
-        const until = Date.now() + waitSeconds(limit) * 1000;
-        setNow(Date.now());
-        setLockedUntil(until);
+        // Lock only for a wait Supabase actually gave; never a made-up one.
+        const wait = waitSeconds(limit);
+        if (wait !== null) {
+          setNow(Date.now());
+          setLockedUntil(Date.now() + wait * 1000);
+        }
         setError(rateLimitMessage(limit));
       } else {
         setError(toUserMessage(e));
