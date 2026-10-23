@@ -18,6 +18,19 @@ const SORTS: { value: Sort; label: string }[] = [
   { value: 'loved', label: 'Most loved' },
 ];
 
+// Budget Eats: price caps use the stored cost per serving (cents).
+const BUDGET_SORTS: { value: Sort; label: string }[] = [
+  { value: 'top', label: 'Highest rated' },
+  { value: 'recent', label: 'Newest' },
+  { value: 'cheapest', label: 'Lowest cost' },
+];
+const PRICE_CAPS: { value: number | null; label: string }[] = [
+  { value: null, label: 'All Budget Eats' },
+  { value: 300, label: 'Under $3' },
+  { value: 500, label: 'Under $5' },
+  { value: 1000, label: 'Under $10' },
+];
+
 /** A grid of posts for a category, tag, or curated Discover section. */
 export default function BrowseScreen() {
   const params = useLocalSearchParams<{
@@ -28,8 +41,11 @@ export default function BrowseScreen() {
     followingOnly?: string;
     sort?: Sort;
     sinceDays?: string;
+    budget?: string;
   }>();
-  const [sort, setSort] = useState<Sort>(params.sort ?? 'recent');
+  const budget = params.budget === '1';
+  const [sort, setSort] = useState<Sort>(params.sort ?? (budget ? 'top' : 'recent'));
+  const [maxCost, setMaxCost] = useState<number | null>(null);
   const query = useDiscoverGrid({
     sort,
     primaryId: params.primaryId ?? null,
@@ -37,6 +53,8 @@ export default function BrowseScreen() {
     tagId: params.tagId ?? null,
     followingOnly: params.followingOnly === '1',
     sinceDays: params.sinceDays ? Number(params.sinceDays) : null,
+    budget,
+    maxCostCents: budget ? maxCost : null,
   });
   const posts = query.data?.pages.flatMap((page) => page.items) ?? [];
   const { refreshing, onRefresh } = usePullToRefresh(() => query.refetch());
@@ -44,8 +62,21 @@ export default function BrowseScreen() {
   return (
     <View style={styles.screen}>
       <AppHeader title={params.title ?? 'Browse'} />
+      {budget ? (
+        <View style={styles.sorts}>
+          {PRICE_CAPS.map((c) => (
+            <Chip
+              key={c.label}
+              label={c.label}
+              size="sm"
+              selected={maxCost === c.value}
+              onPress={() => setMaxCost(c.value)}
+            />
+          ))}
+        </View>
+      ) : null}
       <View style={styles.sorts}>
-        {SORTS.map((s) => (
+        {(budget ? BUDGET_SORTS : SORTS).map((s) => (
           <Chip
             key={s.value}
             label={s.label}
@@ -61,7 +92,7 @@ export default function BrowseScreen() {
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : (
         <PostGrid
-          key={sort}
+          key={`${sort}:${maxCost}`}
           posts={posts}
           empty={
             <EmptyState
@@ -86,6 +117,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   sorts: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     paddingHorizontal: SCREEN_GUTTER,
     paddingBottom: spacing.md,

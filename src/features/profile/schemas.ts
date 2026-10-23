@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { parseInstagram } from '@/utils/instagram';
+
 export const usernameSchema = z
   .string()
   .trim()
@@ -16,6 +18,11 @@ export const profileSchema = z.object({
   username: usernameSchema,
   displayName: z.string().trim().min(1, 'Add your name.').max(50, '50 characters max.'),
   bio: z.string().trim().max(160, '160 characters max.'),
+  /** Optional: a username, @username or profile link; stored as a clean username. */
+  instagram: z.string().superRefine((value, ctx) => {
+    const parsed = parseInstagram(value);
+    if (!parsed.ok) ctx.addIssue({ code: 'custom', message: parsed.error });
+  }),
 });
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;

@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 
 import { unwrap } from '@/lib/errors';
+import { parseInstagram } from '@/utils/instagram';
 import { prepareAvatar } from '@/lib/images';
 import { supabase } from '@/lib/supabase/client';
 import { BUCKETS, removeFiles, uploadImageFile } from '@/lib/supabase/storage';
@@ -82,10 +83,18 @@ async function uploadAvatar(userId: string, localUri: string): Promise<{ square:
   return { square, original };
 }
 
+/** The clean username to store (validation already ran in the form). */
+function instagramFrom(input: string | undefined): string | null {
+  const parsed = parseInstagram(input ?? '');
+  return parsed.ok ? parsed.username : null;
+}
+
 export interface ProfileInput {
   username: string;
   displayName: string;
   bio: string;
+  /** As typed: username, @username or profile link ('' removes it). */
+  instagram?: string;
   /** Local file to upload, null to remove, undefined to keep. */
   avatarLocalUri?: string | null;
 }
@@ -100,6 +109,7 @@ export async function createProfile(userId: string, input: ProfileInput): Promis
         username: input.username,
         display_name: input.displayName,
         bio: input.bio,
+        instagram_username: instagramFrom(input.instagram),
         avatar_path: avatar?.square ?? null,
         avatar_original_path: avatar?.original ?? null,
       })
@@ -128,6 +138,7 @@ export async function updateProfile(userId: string, current: Profile, input: Pro
         username: input.username,
         display_name: input.displayName,
         bio: input.bio,
+        instagram_username: instagramFrom(input.instagram),
         avatar_path: avatarPath,
         avatar_original_path: originalPath,
       })

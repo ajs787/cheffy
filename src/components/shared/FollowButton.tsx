@@ -2,7 +2,11 @@ import { AppButton } from '@/components/ui';
 import { useFollowAction } from '@/features/social/hooks';
 import type { FollowState } from '@/types/models';
 
-const LABELS: Record<FollowState, string> = { none: 'Follow', requested: 'Requested', following: 'Following' };
+const LABELS: Record<FollowState, string> = {
+  none: 'Follow',
+  requested: 'Requested',
+  following: 'Following',
+};
 
 /**
  * Follow / Requested / Following. Private accounts get a request; tapping
@@ -26,6 +30,8 @@ export function FollowButton({
       label={LABELS[state]}
       variant={state === 'none' ? 'primary' : 'secondary'}
       size={size}
+      // One request at a time: shows a spinner and ignores taps until it lands.
+      loading={follow.isPending}
       onPress={() => follow.mutate({ userId, action, isPrivate })}
       accessibilityHint={
         state === 'following'

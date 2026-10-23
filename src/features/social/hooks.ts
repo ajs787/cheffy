@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useRequiredUserId } from '@/features/auth/store';
+import { useRequiredUserId, useUserId } from '@/features/auth/store';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import {
@@ -25,7 +25,12 @@ import {
   fetchBlockedUsers,
   fetchConnections,
   fetchFollowRequests,
+  dismissSuggestion,
   fetchSuggestedCooks,
+  fetchSuggestedFriends,
+  PEOPLE_PAGE,
+  searchPeople,
+  type SuggestedFriend,
   followUser,
   likePost,
   removeFollower,
@@ -228,6 +233,49 @@ export function useUserSearch(query: string) {
     queryFn: () => searchUsers(q),
     enabled: q.length >= 1,
     staleTime: 60_000,
+  });
+}
+
+/** Paged people search for Find Friends (cached under ['users'] so follow buttons stay in sync). */
+export function usePeopleSearch(query: string) {
+  const q = query.trim().toLowerCase();
+  return useInfiniteQuery({
+    queryKey: ['users', 'people-search', q],
+    queryFn: ({ pageParam }) => searchPeople(q, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => (last.length === PEOPLE_PAGE ? pages.length * PEOPLE_PAGE : undefined),
+    enabled: q.length >= 1,
+    staleTime: 60_000,
+  });
+}
+
+const suggestedFriendsKey = ['users', 'suggested-friends'] as const;
+
+export function useSuggestedFriends() {
+  const me = useUserId();
+  return useQuery({
+    queryKey: suggestedFriendsKey,
+    queryFn: () => fetchSuggestedFriends(20),
+    enabled: !!me,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Removes a suggestion at once; it never comes back unless the save fails. */
+export function useDismissSuggestion() {
+  const qc = useQueryClient();
+  const me = useRequiredUserId();
+  return useMutation({
+    mutationFn: (userId: string) => dismissSuggestion(me, userId),
+    onMutate: async (userId) => {
+      await qc.cancelQueries({ queryKey: suggestedFriendsKey });
+      const previous = qc.getQueryData<SuggestedFriend[]>(suggestedFriendsKey);
+      qc.setQueryData<SuggestedFriend[]>(suggestedFriendsKey, (list) => list?.filter((u) => u.id !== userId));
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) qc.setQueryData(suggestedFriendsKey, context.previous);
+    },
   });
 }
 

@@ -857,3 +857,55 @@ chip scrolls fully into view.
     link in that case and hides it deliberately.
 - **Not fixed until you configure custom SMTP.** Confirm in Supabase → Logs → Auth: filter
   for status 429 and look for `over_email_send_rate_limit`.
+
+## Budget Eats, Find Friends, Instagram (2026-10-24, built; migrations not pushed; not committed)
+
+**Budget Eats** (`20261024000002`)
+- `posts.is_budget` and `posts.budget_cost_cents` (USD cents, 1–100,000, only on tagged
+  posts), plus a partial index.
+- `save_post` writes them only when the client sends them, so builds ≤ 7 editing a post can't
+  erase them.
+- `discover_posts` gains `p_budget`, `p_max_cost_cents` and a `cheapest` sort. Price filters
+  use the stored number; unpriced posts appear under "All" but not in priced filters.
+- App:
+  - a Budget Eats switch plus an optional "$ / serving" field on the entry form;
+  - "Budget Eats · ~$3.20 / serving" on cards and post pages;
+  - a Discover section, with a browse screen offering All / Under $3 / $5 / $10 and Highest
+    rated / Newest / Lowest cost.
+
+**Find Friends** (`20261024000003`, new `/find-friends`)
+- `search_profiles(q, offset, limit)`:
+  - partial username or display-name matching, best matches first, paged;
+  - `_` and `%` treated literally;
+  - hides blocked people *both* ways (profile visibility rules only hid people who blocked
+    you) and suspended accounts;
+  - the Search screen's People tab uses it too.
+- `suggested_friends`: honest reasons ("Follows you", "Followed by @x and N others",
+  "Active on Cheffy"). It leaves out people you follow, have requested, blocked, or
+  dismissed (`suggestion_dismissals`, private to you).
+- The screen:
+  - search with a 250 ms debounce, then a vertical results list with an invite row at the
+    end;
+  - Recents (on device, per account, max 12, remove one or clear all);
+  - Suggested cards with a dismiss X and "See all";
+  - an Invite card (share sheet with the cheffy.me invite link, invite from contacts, link
+    to code and rewards).
+- Follow buttons now show a spinner and ignore taps until the request finishes. The invite
+  screen is invitations only.
+- Entry points: a Discover header button, Settings, and the empty states on Home, Discover
+  and Friends' Rankings.
+- **Not built:** server-side contact matching. Contacts stay on the phone. Matching would
+  need consented, privacy-preserving hashing of phone numbers and emails and a
+  discoverability setting; neither exists, so nobody is labelled a contact match.
+
+**Instagram** (`20261024000001`)
+- `profiles.instagram_username` with a format check, editable in Edit Profile (username,
+  @username or an instagram.com profile link; blank removes it).
+- Other sites, other URL schemes, post links and bad characters are rejected.
+- The profile shows an outline glyph that opens `https://www.instagram.com/<name>/` (iOS
+  opens the app when it's installed). It's hidden from people who can't see a private
+  account's content. Unverified: no Instagram login.
+
+**Checks:** typecheck, lint, 369 tests (198 database, including new Budget Eats, Find
+Friends and OG/terms coverage). **Font note:** the brief mentions Bodoni Moda, but the app
+uses DM Serif Display. It was kept, so nothing changed visually.

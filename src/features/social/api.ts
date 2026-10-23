@@ -1,4 +1,8 @@
-import { mapProfileSummary, PROFILE_SUMMARY_SELECT, type ProfileSummaryRow } from '@/features/profile/mappers';
+import {
+  mapProfileSummary,
+  PROFILE_SUMMARY_SELECT,
+  type ProfileSummaryRow,
+} from '@/features/profile/mappers';
 import { unwrap } from '@/lib/errors';
 import { supabase } from '@/lib/supabase/client';
 import { fetchRows } from '@/lib/supabase/query';
@@ -46,7 +50,9 @@ export async function fetchFollowRequests(me: string): Promise<FollowRequest[]> 
       .order('created_at', { ascending: false })
       .limit(200),
   );
-  return rows.flatMap((row) => (row.user ? [{ user: mapUserListItem(row.user), createdAt: row.created_at }] : []));
+  return rows.flatMap((row) =>
+    row.user ? [{ user: mapUserListItem(row.user), createdAt: row.created_at }] : [],
+  );
 }
 
 export async function acceptFollowRequest(requester: string): Promise<void> {
@@ -97,20 +103,61 @@ export async function fetchConnections(
   return rows.flatMap((row) => (row.profile ? [mapUserListItem(row.profile)] : []));
 }
 
-export async function searchUsers(query: string): Promise<UserListItem[]> {
+export const PEOPLE_PAGE = 20;
+
+/**
+ * People search (username or display name, partial), best matches first.
+ * The database hides blocked people both ways and suspended accounts.
+ */
+export async function searchPeople(query: string, offset = 0, limit = PEOPLE_PAGE): Promise<UserListItem[]> {
   const q = sanitizeSearch(query);
   if (q.length < 1) return [];
   const rows = await fetchRows<UserListRow>(
     supabase
+      .rpc('search_profiles', { p_query: q, p_offset: offset, p_limit: limit })
+      .select(USER_LIST_SELECT),
+  );
+  // Keep the database's ranking (PostgREST doesn't promise to).
+  const rank = (u: UserListRow) =>
+    u.username === q ? 0 : u.username.startsWith(q) ? 1 : u.display_name.toLowerCase().startsWith(q) ? 2 : 3;
+  return rows.sort((a, b) => rank(a) - rank(b) || a.username.localeCompare(b.username)).map(mapUserListItem);
+}
+
+/** First page of people search (the Search screen's People tab). */
+export function searchUsers(query: string): Promise<UserListItem[]> {
+  return searchPeople(query, 0, 25);
+}
+
+/** A suggestion, with the honest reason it's shown ("Follows you", …). */
+export type SuggestedFriend = UserListItem & { reason: string };
+
+export async function fetchSuggestedFriends(limit = 20): Promise<SuggestedFriend[]> {
+  const picks = await fetchRows<{ user_id: string; reason: string; score: number }>(
+    supabase.rpc('suggested_friends', { p_limit: limit }),
+  );
+  if (picks.length === 0) return [];
+  const rows = await fetchRows<UserListRow>(
+    supabase
       .from('profiles')
       .select(USER_LIST_SELECT)
-      .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
-      .order('username')
-      .limit(25),
+      .in(
+        'id',
+        picks.map((p) => p.user_id),
+      ),
   );
-  // Exact and prefix username matches first.
-  const score = (u: UserListRow) => (u.username === q ? 0 : u.username.startsWith(q) ? 1 : 2);
-  return rows.sort((a, b) => score(a) - score(b)).map(mapUserListItem);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return picks.flatMap((p) => {
+    const row = byId.get(p.user_id);
+    return row ? [{ ...mapUserListItem(row), reason: p.reason }] : [];
+  });
+}
+
+/** "Not interested": that person stops being suggested to you. */
+export async function dismissSuggestion(me: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('suggestion_dismissals')
+    .insert({ user_id: me, dismissed_id: userId });
+  if (error && error.code !== ALREADY_EXISTS) throw error;
 }
 
 export async function fetchSuggestedCooks(): Promise<UserListItem[]> {
@@ -160,7 +207,9 @@ export async function fetchBlockedUsers(): Promise<(UserListItem & { blockedAt: 
       .select(`created_at, profile:profiles!user_blocks_blocked_id_fkey(${USER_LIST_SELECT})`)
       .order('created_at', { ascending: false }),
   );
-  return rows.flatMap((row) => (row.profile ? [{ ...mapUserListItem(row.profile), blockedAt: row.created_at }] : []));
+  return rows.flatMap((row) =>
+    row.profile ? [{ ...mapUserListItem(row.profile), blockedAt: row.created_at }] : [],
+  );
 }
 
 export async function reportContent(

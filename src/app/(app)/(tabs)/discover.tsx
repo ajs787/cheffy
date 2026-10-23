@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
-import { Compass, Search } from 'lucide-react-native';
+import { Compass, Search, UserPlus } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { PostGrid } from '@/components/shared/PostGrid';
 import { SectionHeader } from '@/components/shared/SectionHeader';
-import { AppHeader, AppText, EmptyState, GridSkeleton, PressableScale } from '@/components/ui';
+import { AppHeader, AppText, EmptyState, GridSkeleton, IconButton, PressableScale } from '@/components/ui';
 import { CategoryTiles } from '@/features/discover/components/CategoryTiles';
 import { DiscoverRow } from '@/features/discover/components/DiscoverRow';
 import { MostHatedRow } from '@/features/discover/components/MostHatedRow';
@@ -76,6 +76,12 @@ export default function DiscoverScreen() {
         onSeeAll={() => browse({ sort: 'loved', sinceDays: '14', title: 'Most loved' })}
       />
       <MostHatedRow />
+      <DiscoverRow
+        title="Budget Eats"
+        subtitle="Homemade and easy on the wallet"
+        params={{ sort: 'top', budget: true, sinceDays: 60 }}
+        onSeeAll={() => browse({ budget: '1', title: 'Budget Eats' })}
+      />
       {(trending.data ?? []).slice(0, 4).map((item) => {
         const title = item.kind === 'tag' ? `#${item.name}` : item.name;
         const params =
@@ -103,7 +109,13 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader variant="large" title="Discover" />
+      <AppHeader
+        variant="large"
+        title="Discover"
+        right={
+          <IconButton icon={UserPlus} label="Find friends" onPress={() => router.push('/find-friends')} />
+        }
+      />
       <PostGrid
         listRef={listRef}
         posts={posts}
@@ -119,7 +131,7 @@ export default function DiscoverScreen() {
               actionLabel="Log something you made"
               onAction={() => router.push('/compose')}
               secondaryLabel="Find friends to follow"
-              onSecondary={() => router.push({ pathname: '/search', params: { tab: 'people' } })}
+              onSecondary={() => router.push('/find-friends')}
             />
           )
         }

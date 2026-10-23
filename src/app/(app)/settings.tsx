@@ -11,6 +11,7 @@ import {
   Mail,
   NotebookPen,
   Palette,
+  Search,
   Send,
   Shield,
   ShieldCheck,
@@ -126,7 +127,9 @@ export default function SettingsScreen() {
         <NotificationSettings />
 
         <SettingsGroup title="Account">
-          <SettingsRow icon={Send} label="Find friends" onPress={() => router.push('/invite')} />
+          <SettingsRow icon={Search} label="Find friends" onPress={() => router.push('/find-friends')} />
+          <Divider inset={spacing.lg} />
+          <SettingsRow icon={Send} label="Invite friends" onPress={() => router.push('/invite')} />
           <Divider inset={spacing.lg} />
           <SettingsRow
             icon={Palette}

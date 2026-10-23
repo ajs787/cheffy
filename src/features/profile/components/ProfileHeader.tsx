@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { Lock } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { InstagramGlyph } from '@/components/icons/InstagramGlyph';
 import { FollowButton } from '@/components/shared/FollowButton';
 import { AppButton, AppText, Avatar, categoryColorFor } from '@/components/ui';
 import { shareProfile } from '@/lib/share';
@@ -10,6 +11,7 @@ import { colors, fonts, profileThemes, SCREEN_GUTTER, spacing, strokes } from '@
 import { followStateOf, type ProfileStats, type ProfileWithViewer } from '@/types/models';
 import { formatMemberSince } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
+import { instagramProfileUrl } from '@/utils/instagram';
 
 import { SharedFavorites } from '@/features/rankings/components/SharedFavorites';
 
@@ -60,6 +62,12 @@ export function ProfileHeader({
     router.push({ pathname: '/user/[id]/connections', params: { id: profile.id, type } });
 
   const accent = profileThemes[profile.theme ?? 'default'].accent;
+  // Only for people who can see this profile's content (private accounts:
+  // followers). The URL is built from a validated username, never typed text.
+  const instagramUrl =
+    profile.instagramUsername && (isOwn || showPreview)
+      ? instagramProfileUrl(profile.instagramUsername)
+      : null;
 
   return (
     <View style={styles.container}>
@@ -118,6 +126,18 @@ export function ProfileHeader({
               strokeWidth={strokes.bold}
               accessibilityLabel="Private account"
             />
+          ) : null}
+          {instagramUrl ? (
+            <Pressable
+              onPress={() => void Linking.openURL(instagramUrl).catch(() => undefined)}
+              hitSlop={10}
+              style={({ pressed }) => [styles.instagram, pressed && styles.pressed]}
+              accessibilityRole="link"
+              accessibilityLabel={`Instagram: @${profile.instagramUsername}`}
+              accessibilityHint="Opens their Instagram profile"
+            >
+              <InstagramGlyph size={17} color={colors.textSecondary} />
+            </Pressable>
           ) : null}
         </View>
         {profile.bio ? (
@@ -235,6 +255,7 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     letterSpacing: 0.5,
   },
+  instagram: { marginLeft: 'auto', paddingLeft: spacing.sm },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   name: { fontFamily: fonts.textSemiBold, flexShrink: 1 },
   actions: { flexDirection: 'row', gap: spacing.sm },

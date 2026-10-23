@@ -27,6 +27,8 @@ export interface Profile extends ProfileSummary {
   isPrivate: boolean;
   /** May their lowest-rated public creations appear in Discover's Most Hated. */
   allowMostHated: boolean;
+  /** Optional, unverified Instagram username (clean; no @). */
+  instagramUsername: string | null;
   /** One of Cheffy's first ten accounts (permanent, server-assigned). */
   isOgChef: boolean;
   /** Unlocked profile style, shown to everyone. */
@@ -117,6 +119,9 @@ export interface Post {
   story: string;
   visibility: Visibility;
   status: PostStatus;
+  /** Budget Eats tag and optional estimated cost per serving (USD cents). */
+  isBudget: boolean;
+  budgetCostCents: number | null;
   /** Why moderators removed it (shown to the author only). */
   removedReason: string | null;
   madeOn: string;

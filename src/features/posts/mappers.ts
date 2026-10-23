@@ -20,7 +20,7 @@ const CATEGORY_FIELDS = 'id, slug, name';
 
 /** One select string for every post-shaped query, so all lists share a mapper. */
 export const POST_SELECT = `
-  id, title, rating, review, story, visibility, status, removed_reason, made_on, would_make_again, recipe_url,
+  id, title, rating, review, story, visibility, status, removed_reason, is_budget, budget_cost_cents, made_on, would_make_again, recipe_url,
   ingredients, prep_notes, next_time_notes, cook_time_minutes, temperature, milk, sweetener,
   like_count, comment_count, published_at, created_at, updated_at,
   author:profiles!posts_author_id_fkey(${PROFILE_SUMMARY_SELECT}),
@@ -65,6 +65,8 @@ export interface PostRow {
   visibility: Visibility;
   status: PostStatus;
   removed_reason?: string | null;
+  is_budget?: boolean;
+  budget_cost_cents?: number | null;
   made_on: string;
   would_make_again: boolean | null;
   recipe_url: string | null;
@@ -162,6 +164,8 @@ export function mapPost(row: PostRow): Post | null {
     visibility: row.visibility,
     status: row.status,
     removedReason: row.removed_reason ?? null,
+    isBudget: row.is_budget ?? false,
+    budgetCostCents: row.budget_cost_cents ?? null,
     madeOn: row.made_on,
     wouldMakeAgain: row.would_make_again,
     recipeUrl: row.recipe_url,

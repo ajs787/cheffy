@@ -14,6 +14,7 @@ import { madeByNames, type Post } from '@/types/models';
 import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
+import { BudgetTag } from './BudgetTag';
 import { CategoryLine } from './CategoryLine';
 import { MadeTogetherTag } from './MadeTogetherTag';
 import { LikeButton } from './LikeButton';
@@ -95,6 +96,7 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
                 {formatEntryDate(post.madeOn)}
               </AppText>
             </View>
+            {post.isBudget ? <BudgetTag costCents={post.budgetCostCents} /> : null}
           </View>
           <RatingDisplay value={post.rating} size="lg" />
         </View>

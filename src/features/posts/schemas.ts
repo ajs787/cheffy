@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { MAX_COST_CENTS, parseDollars } from '@/utils/price';
+
 import type { Post, Taxonomy, Visibility } from '@/types/models';
 import { toLocalISODate } from '@/utils/dates';
 import { slugifyTag } from '@/utils/format';
@@ -67,6 +69,14 @@ export const postFormSchema = z.object({
   milk: optionalText(40, 'Milk'),
   sweetener: optionalText(40, 'Sweetener'),
   images: z.array(z.custom<ComposeImage>()).max(MAX_IMAGES, `Up to ${MAX_IMAGES} photos.`),
+  /** Budget Eats: optional tag with an optional estimated cost per serving. */
+  isBudget: z.boolean(),
+  budgetCost: z.string().superRefine((value, ctx) => {
+    const cents = parseDollars(value);
+    if (cents !== null && (Number.isNaN(cents) || cents < 1 || cents > MAX_COST_CENTS)) {
+      ctx.addIssue({ code: 'custom', message: 'Enter a price like 3.20 (up to $1,000).' });
+    }
+  }),
 });
 
 export type PostFormValues = z.infer<typeof postFormSchema>;
@@ -105,6 +115,8 @@ export function emptyPostForm(defaults?: {
     milk: '',
     sweetener: '',
     images: [],
+    isBudget: false,
+    budgetCost: '',
   };
 }
 
@@ -132,6 +144,8 @@ export function postToForm(post: Post): PostFormValues {
     temperature: post.temperature,
     milk: post.milk ?? '',
     sweetener: post.sweetener ?? '',
+    isBudget: post.isBudget,
+    budgetCost: post.budgetCostCents === null ? '' : (post.budgetCostCents / 100).toFixed(2),
     images: post.images.map((image) => ({
       key: image.id,
       kind: 'remote',
@@ -212,6 +226,8 @@ export function toSavePayload(
       temperature: isDrink ? values.temperature : null,
       milk: isDrink ? trimmed(values.milk) || null : null,
       sweetener: isDrink ? trimmed(values.sweetener) || null : null,
+      is_budget: values.isBudget,
+      budget_cost_cents: values.isBudget ? parseDollars(values.budgetCost) : null,
     },
     p_tags: normalizeTags(values.tags),
     p_categories: categories,

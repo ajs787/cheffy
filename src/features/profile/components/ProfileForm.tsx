@@ -150,6 +150,17 @@ export function ProfileForm({
         showCount
         inputStyle={styles.bio}
       />
+      <ControlledInput
+        control={control}
+        name="instagram"
+        label="Instagram username"
+        placeholder="@yourname (optional)"
+        helper="Shows an Instagram link on your profile. Leave blank to remove it."
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+        textContentType="none"
+      />
       {formError ? (
         <AppText variant="callout" color="danger">
           {formError}

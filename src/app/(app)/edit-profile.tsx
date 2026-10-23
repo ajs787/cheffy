@@ -22,7 +22,12 @@ export default function EditProfileScreen() {
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <ProfileForm
-              initial={{ username: p.username, displayName: p.displayName, bio: p.bio }}
+              initial={{
+                username: p.username,
+                displayName: p.displayName,
+                bio: p.bio,
+                instagram: p.instagramUsername ?? '',
+              }}
               initialAvatarUrl={p.avatarUrl}
               currentUsername={p.username}
               submitLabel="Save"

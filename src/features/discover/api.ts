@@ -17,6 +17,8 @@ export interface DiscoverPage {
 
 /** Re-applies the RPC's ordering (PostgREST doesn't promise to keep it). */
 export function compareDiscoverRows(a: PostRow, b: PostRow, sort: DiscoverQueryParams['sort']): number {
+  if (sort === 'cheapest' && a.budget_cost_cents !== b.budget_cost_cents)
+    return (a.budget_cost_cents ?? Infinity) - (b.budget_cost_cents ?? Infinity);
   if (sort === 'top' && a.rating !== b.rating) return Number(b.rating ?? -1) - Number(a.rating ?? -1);
   if (sort === 'loved' && a.like_count !== b.like_count) return b.like_count - a.like_count;
   return (b.published_at ?? '').localeCompare(a.published_at ?? '') || b.id.localeCompare(a.id);
@@ -27,7 +29,8 @@ export async function fetchDiscoverPage(
   pageParam: DiscoverPageParam,
   limit = DISCOVER_PAGE_SIZE,
 ): Promise<DiscoverPage> {
-  const since = params.sinceDays != null ? new Date(Date.now() - params.sinceDays * 86_400_000).toISOString() : null;
+  const since =
+    params.sinceDays != null ? new Date(Date.now() - params.sinceDays * 86_400_000).toISOString() : null;
   const cursor = pageParam && 'before' in pageParam ? pageParam : null;
   const offset = pageParam && 'offset' in pageParam ? pageParam.offset : 0;
 
@@ -44,6 +47,8 @@ export async function fetchDiscoverPage(
         p_before_id: cursor?.beforeId ?? null,
         p_offset: offset,
         p_limit: limit,
+        p_budget: params.budget ?? false,
+        p_max_cost_cents: params.maxCostCents ?? null,
       })
       .select(POST_SELECT),
   );
@@ -86,10 +91,20 @@ export interface TrendingItem {
 }
 
 export async function fetchTrending(): Promise<TrendingItem[]> {
-  const rows = await fetchRows<{ kind: TrendingItem['kind']; id: string; slug: string; name: string; post_count: number }>(
-    supabase.rpc('trending_taxonomy', { p_min_posts: 2, p_limit: 6 }),
-  );
-  return rows.map((r) => ({ kind: r.kind, id: r.id, slug: r.slug, name: r.name, postCount: Number(r.post_count) }));
+  const rows = await fetchRows<{
+    kind: TrendingItem['kind'];
+    id: string;
+    slug: string;
+    name: string;
+    post_count: number;
+  }>(supabase.rpc('trending_taxonomy', { p_min_posts: 2, p_limit: 6 }));
+  return rows.map((r) => ({
+    kind: r.kind,
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    postCount: Number(r.post_count),
+  }));
 }
 
 export async function searchPosts(query: string, cursor: Cursor | null): Promise<Page<Post>> {
@@ -112,7 +127,9 @@ export async function searchPosts(query: string, cursor: Cursor | null): Promise
   return {
     items: posts,
     nextCursor:
-      rows.length === DISCOVER_PAGE_SIZE && last?.published_at ? { before: last.published_at, beforeId: last.id } : null,
+      rows.length === DISCOVER_PAGE_SIZE && last?.published_at
+        ? { before: last.published_at, beforeId: last.id }
+        : null,
   };
 }
 

@@ -27,6 +27,7 @@ import { useUserId } from '@/features/auth/store';
 import { CategorySelector } from '@/features/posts/components/CategorySelector';
 import { ComposeFooter } from '@/features/posts/components/ComposeFooter';
 import { DetailsSection } from '@/features/posts/components/DetailsSection';
+import { BudgetField } from '@/features/posts/components/BudgetField';
 import { FormSection } from '@/features/posts/components/FormSection';
 import { inviteCollaborators } from '@/features/collaboration/api';
 import { MadeWithField } from '@/features/collaboration/components/MadeWithField';
@@ -352,6 +353,26 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
               )}
             />
           </FormSection>
+
+          <Controller
+            control={control}
+            name="isBudget"
+            render={({ field }) => (
+              <Controller
+                control={control}
+                name="budgetCost"
+                render={({ field: cost, fieldState }) => (
+                  <BudgetField
+                    enabled={field.value}
+                    onToggle={field.onChange}
+                    defaultCost={initial.budgetCost}
+                    onCostChange={cost.onChange}
+                    error={fieldState.error?.message}
+                  />
+                )}
+              />
+            )}
+          />
 
           <View>
             <Collapsible

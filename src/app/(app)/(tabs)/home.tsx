@@ -76,7 +76,7 @@ export default function HomeScreen() {
             : 'When the people you follow log something, it shows up here.'
         }
         actionLabel="Find friends"
-        onAction={() => router.push({ pathname: '/search', params: { tab: 'people' } })}
+        onAction={() => router.push('/find-friends')}
         secondaryLabel="See what everyone’s making"
         onSecondary={() => setChosenMode('forYou')}
       />
@@ -138,7 +138,7 @@ export default function HomeScreen() {
 }
 
 function FindFriendsBanner() {
-  const open = () => router.push({ pathname: '/search', params: { tab: 'people' } });
+  const open = () => router.push('/find-friends');
   return (
     <PressableScale
       onPress={open}

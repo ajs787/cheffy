@@ -1,14 +1,12 @@
 import { router } from 'expo-router';
-import { BookUser, Copy, Search, Send, Users } from 'lucide-react-native';
-import { useDeferredValue, useState } from 'react';
+import { BookUser, Copy, Send } from 'lucide-react-native';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { UserRow } from '@/components/shared/UserRow';
-import { AppButton, AppHeader, AppInput, AppText, Avatar, EmptyState, Monogram, RowSkeleton } from '@/components/ui';
+import { AppButton, AppHeader, AppText, Avatar, Monogram } from '@/components/ui';
 import { contactsSupported } from '@/features/invite/deviceContacts';
 import { useMyProfile } from '@/features/profile/hooks';
-import { useSuggestedCooks, useUserSearch } from '@/features/social/hooks';
 import { RedeemInviteCode } from '@/features/unlocks/components/RedeemInviteCode';
 import { useInviteCode, useUnlocks } from '@/features/unlocks/hooks';
 import { referralStatus } from '@/features/unlocks/rules';
@@ -20,22 +18,17 @@ import { colors, HAIRLINE, radii, SCREEN_GUTTER, spacing } from '@/theme';
 
 /** Accounts this new can still credit the friend who invited them (server rule). */
 const REDEEM_WINDOW_MS = 14 * 86_400_000;
-const SUGGESTED_SHOWN = 5;
 
 /**
- * Find friends: search people on Cheffy, follow suggestions, and invite the
- * rest. Invites go through the share sheet or a copied link; the optional
- * contacts picker runs on device and nothing from the address book is uploaded.
+ * Invite friends: referral progress, share or copy your link, invite from
+ * contacts (on device; nothing uploaded), and your code. Searching for people
+ * already on Cheffy lives in Find Friends.
  */
-export default function FindFriendsScreen() {
+export default function InviteScreen() {
   const insets = useSafeAreaInsets();
   const { data: me } = useMyProfile();
   const code = useInviteCode();
   const unlocks = useUnlocks();
-  const [query, setQuery] = useState('');
-  const q = useDeferredValue(query.trim());
-  const search = useUserSearch(q);
-  const suggested = useSuggestedCooks();
   const referrals = unlocks.data ? referralStatus(unlocks.data) : null;
   const [now] = useState(() => Date.now());
   const isNewAccount = me ? now - new Date(me.createdAt).getTime() < REDEEM_WINDOW_MS : false;
@@ -58,52 +51,14 @@ export default function FindFriendsScreen() {
     }
   };
 
-  const people = q.length > 0 ? (search.data ?? []) : (suggested.data ?? []).slice(0, SUGGESTED_SHOWN);
-
   return (
     <View style={styles.screen}>
-      <AppHeader title="Find friends" />
+      <AppHeader title="Invite friends" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}
       >
-        <View style={styles.gutter}>
-          <AppInput
-            icon={Search}
-            // Uncontrolled: a controlled value can drop fast keystrokes while results re-render.
-            onChangeText={setQuery}
-            placeholder="Search by name or username"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            accessibilityLabel="Search people on Cheffy"
-          />
-        </View>
-
-        {/* People already on Cheffy */}
-        <View>
-          {q.length > 0 ? null : people.length > 0 ? (
-            <AppText variant="overline" color="textSecondary" style={styles.label}>
-              Suggested for you
-            </AppText>
-          ) : null}
-          {q.length > 0 && search.isPending ? (
-            <RowSkeleton count={3} />
-          ) : q.length > 0 && people.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              compact
-              title={`No one matches “${q}”`}
-              message="Not on Cheffy yet? Send them an invite below."
-            />
-          ) : (
-            people.map((user) => <UserRow key={user.id} user={user} />)
-          )}
-        </View>
-
-        <View style={styles.rule} />
-
         {/* Invite */}
         <View style={styles.gutter}>
           <View style={styles.card}>
@@ -179,8 +134,8 @@ export default function FindFriendsScreen() {
             />
           ) : null}
           <AppText variant="caption" color="textTertiary" align="center">
-            Friends count once they create and verify a new account with your code. Sending an invite
-            alone doesn’t count.
+            Friends count once they create and verify a new account with your code. Sending an invite alone
+            doesn’t count.
           </AppText>
         </View>
 
@@ -206,8 +161,7 @@ export default function FindFriendsScreen() {
         ) : null}
 
         <AppText variant="caption" color="textTertiary" style={[styles.gutter, styles.note]}>
-          Cheffy never uploads your address book or messages anyone for you. You choose who gets
-          your invite.
+          Cheffy never uploads your address book or messages anyone for you. You choose who gets your invite.
         </AppText>
       </ScrollView>
     </View>
@@ -227,7 +181,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
-  progress: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  progress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   dots: { flexDirection: 'row', gap: spacing.xs },
   dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: colors.ivory },
   dotOn: { backgroundColor: colors.ivory },

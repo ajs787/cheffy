@@ -72,7 +72,7 @@ export function FriendsRankings({ header }: { header: React.ReactElement }) {
             title="Nothing ranked yet"
             message="When people you follow rate what they make, their favorites show up here."
             actionLabel="Find friends"
-            onAction={() => router.push({ pathname: '/search', params: { tab: 'people' } })}
+            onAction={() => router.push('/find-friends')}
           />
         )
       }
@@ -142,7 +142,12 @@ function FriendRow({ item }: { item: FriendTop }) {
 
 const styles = StyleSheet.create({
   list: { paddingBottom: spacing.xxl },
-  filters: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  filters: {
+    paddingHorizontal: SCREEN_GUTTER,
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
   friend: { paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.md, gap: spacing.sm },
   friendHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 40 },
   flex: { flex: 1 },

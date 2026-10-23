@@ -18,13 +18,18 @@ export default function OnboardingScreen() {
       subtitle="This is how friends will find you."
       showBack={false}
       footer={
-        <AppText variant="calloutStrong" color="textSecondary" onPress={() => void signOut()} accessibilityRole="button">
+        <AppText
+          variant="calloutStrong"
+          color="textSecondary"
+          onPress={() => void signOut()}
+          accessibilityRole="button"
+        >
           Sign out
         </AppText>
       }
     >
       <ProfileForm
-        initial={{ username: suggestUsername(email), displayName: '', bio: '' }}
+        initial={{ username: suggestUsername(email), displayName: '', bio: '', instagram: '' }}
         initialAvatarUrl={null}
         submitLabel="Start cooking"
         onSubmit={async (input) => {

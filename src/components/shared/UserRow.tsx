@@ -13,16 +13,22 @@ function UserRowBase({
   user,
   showFollow = true,
   trailing,
+  onOpen,
 }: {
   user: UserListItem;
   showFollow?: boolean;
   /** Replaces the Follow button (e.g. Remove, Confirm/Delete). */
   trailing?: ReactNode;
+  /** Called before opening the profile (e.g. to remember it in recents). */
+  onOpen?: (user: UserListItem) => void;
 }) {
   const me = useUserId();
   return (
     <PressableScale
-      onPress={() => router.push({ pathname: '/user/[id]', params: { id: user.id } })}
+      onPress={() => {
+        onOpen?.(user);
+        router.push({ pathname: '/user/[id]', params: { id: user.id } });
+      }}
       activeScale={0.98}
       accessibilityRole="link"
       accessibilityLabel={`${user.displayName}, @${user.username}`}

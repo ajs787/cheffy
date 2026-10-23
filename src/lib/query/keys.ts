@@ -8,12 +8,15 @@ export interface RankingQueryParams {
 }
 
 export interface DiscoverQueryParams {
-  sort: 'recent' | 'top' | 'loved';
+  sort: 'recent' | 'top' | 'loved' | 'cheapest';
   primaryId?: string | null;
   categoryId?: string | null;
   tagId?: string | null;
   followingOnly?: boolean;
   sinceDays?: number | null;
+  /** Budget Eats only, optionally at or under a cost per serving (cents). */
+  budget?: boolean;
+  maxCostCents?: number | null;
 }
 
 /**

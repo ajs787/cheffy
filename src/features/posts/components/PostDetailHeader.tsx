@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Bookmark, Lock, MessageCircle, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { BudgetTag } from '@/components/shared/BudgetTag';
 import { CategoryLine } from '@/components/shared/CategoryLine';
 import { MadeTogetherTag } from '@/components/shared/MadeTogetherTag';
 import { ImageCarousel } from '@/components/shared/ImageCarousel';
@@ -77,6 +78,7 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
             {formatEntryDate(post.madeOn)}
           </AppText>
         </View>
+        {post.isBudget ? <BudgetTag costCents={post.budgetCostCents} /> : null}
         <View style={styles.titleRow}>
           <AppText variant="display" color="accent" accessibilityRole="header" style={styles.flex}>
             {post.title}

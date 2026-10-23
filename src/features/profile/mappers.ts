@@ -3,7 +3,7 @@ import type { Profile, ProfileStats, ProfileSummary, ProfileWithViewer } from '@
 
 export const PROFILE_SUMMARY_SELECT = 'id, username, display_name, avatar_path';
 export const PROFILE_SELECT =
-  'id, username, display_name, bio, avatar_path, avatar_original_path, created_at, is_private, allow_most_hated, theme, frame, og:og_chefs(slot)';
+  'id, username, display_name, bio, avatar_path, avatar_original_path, created_at, is_private, allow_most_hated, theme, frame, instagram_username, og:og_chefs(slot)';
 export const PROFILE_WITH_VIEWER_SELECT = `${PROFILE_SELECT}, viewer_is_following, viewer_has_requested, viewer_has_blocked, unlocks:profile_unlocks(unlock)`;
 
 export interface ProfileSummaryRow {
@@ -18,6 +18,7 @@ export interface ProfileRow extends ProfileSummaryRow {
   created_at: string;
   is_private: boolean;
   allow_most_hated?: boolean;
+  instagram_username?: string | null;
   og?: { slot: number } | { slot: number }[] | null;
   avatar_original_path?: string | null;
   theme?: 'saffron' | null;
@@ -50,6 +51,7 @@ export function mapProfile(row: ProfileRow): Profile {
     createdAt: row.created_at,
     isPrivate: row.is_private ?? false,
     allowMostHated: row.allow_most_hated ?? true,
+    instagramUsername: row.instagram_username ?? null,
     isOgChef: Array.isArray(row.og) ? row.og.length > 0 : !!row.og,
     theme: row.theme ?? null,
     frame: row.frame ?? null,
