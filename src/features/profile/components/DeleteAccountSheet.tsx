@@ -4,7 +4,7 @@ import { ConfirmationDialog } from '@/components/ui';
 import { toUserMessage } from '@/lib/errors';
 import { toast } from '@/stores/toast';
 
-import { finishAccountDeletion } from '../api';
+import { finishAccountDeletion, SessionExpiredError } from '../api';
 import { useDeleteAccount } from '../hooks';
 
 const STEPS = [
@@ -30,18 +30,21 @@ const STEPS = [
 export function DeleteAccountSheet({ visible, onDone }: { visible: boolean; onDone: () => void }) {
   const deleteAccount = useDeleteAccount();
   const [step, setStep] = useState<0 | 1>(0);
-  const [deleted, setDeleted] = useState(false);
+  // Set once the sheet should sign this phone out when it closes: after a
+  // deletion, or when the server says the sign-in is no longer valid.
+  const [signOutMessage, setSignOutMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const finished = useRef(false);
   const current = STEPS[step];
 
   // Runs once: normally when the sheet reports it has closed, or after a
   // short fallback in case that report never comes.
-  const finish = () => {
+  const finish = (message: string) => {
     if (finished.current) return;
     finished.current = true;
     void finishAccountDeletion()
       .catch(() => undefined)
-      .finally(() => toast.show('Your account was deleted.'));
+      .finally(() => toast.show(message));
   };
 
   const close = () => {
@@ -55,24 +58,34 @@ export function DeleteAccountSheet({ visible, onDone }: { visible: boolean; onDo
       message={current.message}
       confirmLabel={current.confirmLabel}
       destructive
+      error={error}
       onCancel={close}
       onConfirm={async () => {
         if (step === 0) {
           setStep(1);
           return;
         }
+        setError(null);
         try {
           await deleteAccount.mutateAsync();
-          setDeleted(true);
+          const message = 'Your account was deleted.';
+          setSignOutMessage(message);
           close();
-          setTimeout(finish, 1500);
-        } catch (error) {
-          toast.error(toUserMessage(error, 'Couldn’t delete your account. Please try again.'));
+          setTimeout(() => finish(message), 1500);
+        } catch (e) {
+          if (e instanceof SessionExpiredError) {
+            setSignOutMessage(e.message);
+            close();
+            setTimeout(() => finish(e.message), 1500);
+            return;
+          }
+          setError(toUserMessage(e, 'Couldn’t delete your account. Please try again.'));
         }
       }}
       onClosed={() => {
         setStep(0);
-        if (deleted) finish();
+        setError(null);
+        if (signOutMessage) finish(signOutMessage);
       }}
     />
   );

@@ -163,6 +163,14 @@ export async function updateProfile(userId: string, current: Profile, input: Pro
   return mapProfile(row);
 }
 
+/** The server rejected this phone's sign-in; the person must sign in again. */
+export class SessionExpiredError extends Error {
+  constructor() {
+    super('Your sign-in has expired. Please sign in again, then delete your account.');
+    this.name = 'SessionExpiredError';
+  }
+}
+
 /**
  * Deletes the account on the server (Edge Function `delete-account`): every
  * photo in Storage, then the auth user, which cascades to all their data.
@@ -174,7 +182,28 @@ export async function deleteAccount(): Promise<void> {
   const { data, error } = await supabase.functions.invoke<{ deleted?: boolean }>('delete-account', {
     method: 'POST',
   });
-  if (error || !data?.deleted) throw error ?? new Error('Account deletion failed');
+  if (error) {
+    // Pull the HTTP status and body out of FunctionsHttpError for diagnostics.
+    const response = (error as { context?: Response }).context;
+    let body = '';
+    try {
+      body = response ? (await response.clone().text()).slice(0, 200) : '';
+    } catch {
+      // ignore
+    }
+    console.warn('[delete-account]', {
+      name: (error as Error).name,
+      status: response?.status ?? null,
+      body,
+      at: new Date().toISOString(),
+    });
+    // 401 means the server no longer accepts this phone's sign-in (for
+    // example it was signed out everywhere), even though the app still holds
+    // a token. Signing in again fixes it.
+    if (response?.status === 401) throw new SessionExpiredError();
+    throw Object.assign(new Error(body || (error as Error).message), { status: response?.status });
+  }
+  if (!data?.deleted) throw new Error('Account deletion failed');
 }
 
 /**

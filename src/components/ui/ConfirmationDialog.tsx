@@ -18,6 +18,8 @@ export interface ConfirmationDialogProps {
   onCancel: () => void;
   /** After the sheet has finished closing (safe moment to navigate or sign out). */
   onClosed?: () => void;
+  /** Shown inside the sheet (a toast would be hidden behind it on iOS). */
+  error?: string | null;
 }
 
 /** Sheet-styled confirmation for consequential actions (delete, block, sign out). */
@@ -31,6 +33,7 @@ export function ConfirmationDialog({
   onConfirm,
   onCancel,
   onClosed,
+  error = null,
 }: ConfirmationDialogProps) {
   const [busy, setBusy] = useState(false);
 
@@ -57,6 +60,11 @@ export function ConfirmationDialog({
         {message ? (
           <AppText variant="callout" color="textSecondary" align="center">
             {message}
+          </AppText>
+        ) : null}
+        {error ? (
+          <AppText variant="callout" color="danger" align="center" accessibilityLiveRegion="polite">
+            {error}
           </AppText>
         ) : null}
       </View>
