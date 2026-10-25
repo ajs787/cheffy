@@ -909,3 +909,12 @@ chip scrolls fully into view.
 **Checks:** typecheck, lint, 369 tests (198 database, including new Budget Eats, Find
 Friends and OG/terms coverage). **Font note:** the brief mentions Bodoni Moda, but the app
 uses DM Serif Display. It was kept, so nothing changed visually.
+
+## Supabase reliability (2026-10-25) — see SUPABASE_RELIABILITY_AUDIT.md
+- **Database:** restarted 02:11 UTC Oct 25, not caused by app load or migrations (likely
+  Supabase infrastructure; unconfirmed).
+- **App bug fixed:** HTTP 5xx was reported as "offline".
+- **New:** error classification, request timeouts, jittered and bounded retries, and
+  ambiguous-sign-up messaging.
+- **Accounts:** none created since Oct 23. Check Resend delivery and Supabase Auth logs
+  (dashboard).

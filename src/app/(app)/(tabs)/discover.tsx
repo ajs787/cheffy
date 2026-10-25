@@ -5,7 +5,15 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { PostGrid } from '@/components/shared/PostGrid';
 import { SectionHeader } from '@/components/shared/SectionHeader';
-import { AppHeader, AppText, EmptyState, GridSkeleton, IconButton, PressableScale } from '@/components/ui';
+import {
+  AppHeader,
+  AppText,
+  EmptyState,
+  ErrorState,
+  GridSkeleton,
+  IconButton,
+  PressableScale,
+} from '@/components/ui';
 import { CategoryTiles } from '@/features/discover/components/CategoryTiles';
 import { DiscoverRow } from '@/features/discover/components/DiscoverRow';
 import { MostHatedRow } from '@/features/discover/components/MostHatedRow';
@@ -123,6 +131,9 @@ export default function DiscoverScreen() {
         empty={
           latest.isPending ? (
             <GridSkeleton count={4} columns={2} />
+          ) : latest.isError ? (
+            // An outage isn't "nothing posted yet".
+            <ErrorState error={latest.error} onRetry={() => void latest.refetch()} />
           ) : (
             <EmptyState
               icon={Compass}

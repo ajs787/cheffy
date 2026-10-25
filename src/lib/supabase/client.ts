@@ -3,6 +3,7 @@ import './crypto-polyfill';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 
+import { fetchWithTimeout } from './fetchWithTimeout';
 import { EncryptedSessionStorage } from './secure-storage';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -22,6 +23,7 @@ export const supabase: SupabaseClient = createClient(
       detectSessionInUrl: false,
       flowType: 'pkce',
     },
+    global: { fetch: fetchWithTimeout },
   },
 );
 
