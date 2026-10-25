@@ -1,5 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { GestureDetector, GestureHandlerRootView, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -14,6 +23,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { colors, durations, radii, SCREEN_GUTTER, spacing, springs } from '@/theme';
 
 import { AppText } from './AppText';
+import { useKeyboardVisible } from './KeyboardDoneBar';
 
 export interface BottomSheetProps {
   visible: boolean;
@@ -25,13 +35,20 @@ export interface BottomSheetProps {
   /** Extra bottom padding is added for the home indicator automatically. */
   contentPadding?: boolean;
   accessibilityLabel?: string;
+  /**
+   * Drag to dismiss from the handle and title only, so a ScrollView in the
+   * content can scroll freely. Use for sheets with scrolling or text fields.
+   */
+  dragFromHandleOnly?: boolean;
 }
 
 const OFFSCREEN = 900;
 
 /**
  * Modal sheet that slides up from the bottom. Drag the handle (or the sheet)
- * down, or tap the backdrop, to dismiss.
+ * down, or tap the backdrop, to dismiss. It rises above the keyboard, and
+ * while the keyboard is up a backdrop tap only hides the keyboard, so typed
+ * text is never lost to a stray tap.
  */
 export function BottomSheet({
   visible,
@@ -41,8 +58,11 @@ export function BottomSheet({
   children,
   contentPadding = true,
   accessibilityLabel,
+  dragFromHandleOnly = false,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
+  // Above the keyboard the home-indicator inset is covered anyway; drop it.
+  const keyboardUp = useKeyboardVisible();
   const reduceMotion = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
   const translateY = useSharedValue(OFFSCREEN);
@@ -100,6 +120,42 @@ export function BottomSheet({
     if (!mounted && Platform.OS !== 'ios') onClosed?.();
   }, [mounted, onClosed]);
 
+  const top = (
+    <>
+      <View style={styles.handle} />
+      {title ? (
+        <AppText variant="title3" align="center" style={styles.title} accessibilityRole="header">
+          {title}
+        </AppText>
+      ) : null}
+    </>
+  );
+  const sheet = (
+    <Animated.View
+      onLayout={handleLayout}
+      accessibilityViewIsModal
+      accessibilityLabel={accessibilityLabel ?? title}
+      style={[
+        styles.sheet,
+        {
+          paddingBottom: keyboardUp
+            ? spacing.md
+            : (contentPadding ? spacing.lg : 0) + Math.max(insets.bottom, spacing.md),
+        },
+        sheetStyle,
+      ]}
+    >
+      {dragFromHandleOnly ? (
+        <GestureDetector gesture={pan}>
+          <View>{top}</View>
+        </GestureDetector>
+      ) : (
+        top
+      )}
+      <View style={[contentPadding && styles.content, styles.body]}>{children}</View>
+    </Animated.View>
+  );
+
   return (
     <Modal
       transparent
@@ -113,31 +169,18 @@ export function BottomSheet({
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
           <Pressable
             style={StyleSheet.absoluteFill}
-            onPress={onClose}
+            onPress={() => (Keyboard.isVisible() ? Keyboard.dismiss() : onClose())}
             accessibilityRole="button"
             accessibilityLabel="Dismiss"
           />
         </Animated.View>
-        <GestureDetector gesture={pan}>
-          <Animated.View
-            onLayout={handleLayout}
-            accessibilityViewIsModal
-            accessibilityLabel={accessibilityLabel ?? title}
-            style={[
-              styles.sheet,
-              { paddingBottom: (contentPadding ? spacing.lg : 0) + Math.max(insets.bottom, spacing.md) },
-              sheetStyle,
-            ]}
-          >
-            <View style={styles.handle} />
-            {title ? (
-              <AppText variant="title3" align="center" style={styles.title} accessibilityRole="header">
-                {title}
-              </AppText>
-            ) : null}
-            <View style={contentPadding ? styles.content : undefined}>{children}</View>
-          </Animated.View>
-        </GestureDetector>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.root}
+          pointerEvents="box-none"
+        >
+          {dragFromHandleOnly ? sheet : <GestureDetector gesture={pan}>{sheet}</GestureDetector>}
+        </KeyboardAvoidingView>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -163,4 +206,6 @@ const styles = StyleSheet.create({
   },
   title: { marginBottom: spacing.md, paddingHorizontal: SCREEN_GUTTER },
   content: { paddingHorizontal: SCREEN_GUTTER },
+  // Lets a ScrollView in the content shrink to fit above the keyboard.
+  body: { flexShrink: 1 },
 });

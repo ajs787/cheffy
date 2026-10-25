@@ -37,4 +37,27 @@ describe('user list caches', () => {
     restoreUserCaches(qc, snapshot);
     expect(qc.getQueryData<UserListItem[]>(queryKeys.suggestedCooks)![0]!.viewerIsFollowing).toBe(false);
   });
+
+  it('updates the actor of Activity rows and leaves the unread count alone', () => {
+    const qc = new QueryClient();
+    qc.setQueryData(
+      ['activity'],
+      [
+        { id: 'n1', actor: user('a') },
+        { id: 'n2', actor: user('b') },
+      ],
+    );
+    qc.setQueryData(['activity', 'unread'], 3);
+
+    const snapshot = setFollowStateInUserCaches(qc, 'a', 'requested');
+    const rows = qc.getQueryData<{ actor: UserListItem }[]>(['activity'])!;
+    expect([rows[0]!.actor.viewerIsFollowing, rows[0]!.actor.viewerHasRequested]).toEqual([false, true]);
+    expect(rows[1]!.actor.viewerHasRequested).toBe(false);
+    expect(qc.getQueryData(['activity', 'unread'])).toBe(3);
+
+    restoreUserCaches(qc, snapshot);
+    expect(qc.getQueryData<{ actor: UserListItem }[]>(['activity'])![0]!.actor.viewerHasRequested).toBe(
+      false,
+    );
+  });
 });

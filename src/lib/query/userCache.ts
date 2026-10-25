@@ -14,7 +14,11 @@ function mapUsers(data: UserCacheShape, fn: (user: UserListItem) => UserListItem
   return data;
 }
 
-export type UserCacheSnapshot = [QueryKey, UserCacheShape][];
+/** Activity rows carry the actor as a user ({ actor: UserListItem }). */
+const ACTOR_LIST_ROOTS: QueryKey[] = [['activity']];
+type ActorRow = { actor: UserListItem };
+
+export type UserCacheSnapshot = [QueryKey, unknown][];
 
 /** Optimistically sets the follow state for one user in every cached list; returns a snapshot for rollback. */
 export function setFollowStateInUserCaches(
@@ -23,17 +27,29 @@ export function setFollowStateInUserCaches(
   state: FollowState,
 ): UserCacheSnapshot {
   const snapshot: UserCacheSnapshot = [];
-  for (const root of USER_LIST_ROOTS) {
-    for (const [key, data] of qc.getQueriesData<UserCacheShape>({ queryKey: root })) {
+  const withState = (user: UserListItem): UserListItem =>
+    user.id === userId
+      ? { ...user, viewerIsFollowing: state === 'following', viewerHasRequested: state === 'requested' }
+      : user;
+  for (const root of ACTOR_LIST_ROOTS) {
+    for (const [key, data] of qc.getQueriesData<unknown>({ queryKey: root })) {
+      // Only lists of rows with an actor (the unread count lives here too).
+      if (!Array.isArray(data)) continue;
       snapshot.push([key, data]);
       qc.setQueryData(
         key,
-        mapUsers(data, (user) =>
-          user.id === userId
-            ? { ...user, viewerIsFollowing: state === 'following', viewerHasRequested: state === 'requested' }
-            : user,
+        (data as ActorRow[]).map((row) =>
+          row && typeof row === 'object' && 'actor' in row && row.actor
+            ? { ...row, actor: withState(row.actor) }
+            : row,
         ),
       );
+    }
+  }
+  for (const root of USER_LIST_ROOTS) {
+    for (const [key, data] of qc.getQueriesData<UserCacheShape>({ queryKey: root })) {
+      snapshot.push([key, data]);
+      qc.setQueryData(key, mapUsers(data, withState));
     }
   }
   return snapshot;

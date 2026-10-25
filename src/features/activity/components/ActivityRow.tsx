@@ -48,7 +48,9 @@ function ActivityRowBase({ item }: { item: ActivityItem }) {
         />
       </View>
     );
-  } else if (item.type === 'follow' && !item.actor.viewerIsFollowing) {
+  } else if (item.type === 'follow') {
+    // Always shown, so following back turns it into "Following" (or
+    // "Requested") instead of making the button vanish.
     trailing = (
       <FollowButton
         userId={item.actor.id}

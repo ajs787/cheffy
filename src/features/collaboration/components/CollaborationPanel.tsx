@@ -86,9 +86,9 @@ export function CollaborationPanel({ post }: { post: Post }) {
             <Avatar uri={c.profile.avatarUrl} name={c.profile.displayName} size="sm" />
             <View style={styles.flex}>
               <AppText variant="calloutStrong">{c.profile.id === me ? 'You' : c.profile.displayName}</AppText>
-              {c.review ? (
+              {c.review?.trim() ? (
                 <AppText variant="callout" color="textSecondary" numberOfLines={3}>
-                  {c.review}
+                  {c.review.trim()}
                 </AppText>
               ) : c.rating === null ? (
                 <AppText variant="caption" color="textTertiary">

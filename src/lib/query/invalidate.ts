@@ -23,5 +23,6 @@ export function invalidateAfterGraphChange(qc: QueryClient, otherUserId: string)
     qc.invalidateQueries({ queryKey: ['users'] }),
     qc.invalidateQueries({ queryKey: queryKeys.rankingsForUser(otherUserId) }),
     qc.invalidateQueries({ queryKey: ['posts', 'discover'] }),
+    qc.invalidateQueries({ queryKey: ['activity'], exact: true }),
   ]);
 }

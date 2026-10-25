@@ -140,6 +140,7 @@ export function useFollowAction() {
         qc.cancelQueries({ queryKey: queryKeys.profile(userId) }),
         qc.cancelQueries({ queryKey: ['users'] }),
         qc.cancelQueries({ queryKey: ['connections'] }),
+        qc.cancelQueries({ queryKey: ['activity'], exact: true }),
       ]);
       haptics.light();
       return apply(userId, optimisticFollowState(action, isPrivate));

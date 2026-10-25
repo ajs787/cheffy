@@ -50,17 +50,16 @@ export function ProfileView({ userId, isOwn, isTabRoot = false, initialTab }: Pr
   const settingsButton = (
     <IconButton icon={Settings} label="Settings" onPress={() => router.push('/settings')} />
   );
-  // Profile tab: "@username" + settings (the logo lives on Home only); pushed: Back.
+  // Every profile shows "@username" up top (read from the profile query, so a
+  // changed handle shows right away). Profile tab: settings, no Back; pushed: Back.
+  const handle = profile.data ? `@${profile.data.username}` : '';
   const topBar = isTabRoot ? (
-    <AppHeader
-      title={profile.data ? `@${profile.data.username}` : ''}
-      leading="none"
-      right={settingsButton}
-    />
+    <AppHeader title={handle} leading="none" right={settingsButton} />
   ) : isOwn ? (
-    <AppHeader title={profile.data ? `@${profile.data.username}` : ''} right={settingsButton} />
+    <AppHeader title={handle} right={settingsButton} />
   ) : (
     <AppHeader
+      title={handle}
       right={
         profile.data ? (
           <IconButton icon={Ellipsis} label="More options" onPress={() => setMenuOpen(true)} />

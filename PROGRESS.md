@@ -934,7 +934,7 @@ uses DM Serif Display. It was kept, so nothing changed visually.
 - No contact matching exists, so "From your contacts" is never shown.
 - DB tests: ranking order and labels, opt-out, paging, private accounts (200 DB tests).
 
-## Fix: delete-account / sign-out freeze (2026-10-25, not committed)
+## Fix: delete-account / sign-out freeze (2026-10-25, committed 6e21062)
 - Cause: iOS can't present one modal while another is still dismissing, or tear down the
   navigator under a visible modal. Deletion swapped two separate confirmation sheets
   mid-animation, and both deletion and sign-out signed out while a sheet was still open.
@@ -943,3 +943,46 @@ uses DM Serif Display. It was kept, so nothing changed visually.
   sign-out runs from the sheet's `onClosed`, with a once-only 1.5 s fallback. Sign out
   works the same way. `ConfirmationDialog` gains `onClosed`.
 - Unverified on a device (the simulator is signed out).
+- Follow-up (50c465f): a 401 from `delete-account` (the server had already signed this
+  phone out) now signs out and asks the person to sign in again. Errors show in the sheet.
+  Verified in the simulator: the test account was deleted at 22:48 UTC.
+- Sign-in error (5a7340c) now also covers having no account. Supabase deliberately
+  doesn't say which, so sign-in can't reveal who has an account.
+
+## Profile, Co-Chef, banners & follow fixes (2026-10-25, not committed)
+1. **@username header on every profile.** Other people's profiles now show it too (own
+   profile already did). It comes from the profile query, so a changed handle shows right
+   away. Long handles truncate between the Back and menu buttons.
+2. **"You both love" cards.** The cause was one-line text in 220 pt chips. Cards are now
+   about 68% of the screen width (at most 260 pt). The category wraps to 2 lines and each
+   dish to 3; cards in a row share the tallest height; the rating sits on its own line so
+   it's never cut. Tapping a dish opens its post, where the full title is.
+3. **Co-Chef review keyboard.** `BottomSheet` now rises above the keyboard, drops its
+   home-indicator padding while the keyboard is up, and a backdrop tap first only hides the
+   keyboard. New `dragFromHandleOnly` option. `KeyboardDoneBar` is an in-sheet "Done" row
+   shown while the keyboard is up (RN 0.88 deprecates `InputAccessoryView`).
+   `MyEvaluationSheet`: the form scrolls (drag down hides the keyboard), a tap on blank space
+   hides it, and Save stays above it. Reviews are trimmed on save, and blank ones are ignored
+   when shown. A saved review of a single blank character (likely a Return pressed to close
+   the keyboard) had hidden the placeholder and left an empty gap under "You".
+4. **Banners.** Swipe up (or a quick flick) to dismiss without opening; a swipe cancels the
+   tap. The banner stays up while touched. 4.5 s, or 10 s with VoiceOver/TalkBack. There
+   is a VoiceOver "Dismiss" action and escape gesture. Banners queue one at a time (up to
+   3 waiting, 280 ms apart). Dismissing hides the banner only; Activity and unread state
+   are unchanged.
+5. **Follow from Activity.** Cause: the follow mutation updated profile, search,
+   suggestion and follower-list caches, but not Activity, and the row hid the button once
+   following. Now the same optimistic update and rollback also covers Activity rows; the
+   button stays and shows Following/Requested (with a spinner and no double taps while
+   saving). Activity is cancelled and refetched with the other graph queries.
+- Tests: Activity follow-state sync and rollback; banner queue (388 tests total).
+  Typecheck and lint clean.
+- **Simulator (iPhone 16, @chefshin, read-only):** checked the @helenkwok header; the wrapping
+  cards, scrolling to the last card, and a dish opening its post; the review sheet's keyboard
+  (Done, backdrop tap, text kept, Save reachable, placeholder restored), closed without
+  saving.
+- **Not verified:** banners (need someone else's live activity) and following from Activity
+  (needs a real follow). Also not tried: iPhone SE size, large text.
+- Expo Go crashed once in Hermes during a hot reload while the old `InputAccessoryView`
+  sheet was open. A fresh load was fine.
+

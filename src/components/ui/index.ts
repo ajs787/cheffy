@@ -15,6 +15,7 @@ export * from './EmptyState';
 export * from './ErrorState';
 export * from './FoodImage';
 export * from './IconButton';
+export * from './KeyboardDoneBar';
 export * from './PressableScale';
 export * from './RatingDisplay';
 export * from './RatingInput';
