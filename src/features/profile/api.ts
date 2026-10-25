@@ -53,6 +53,14 @@ export async function setAccountPrivacy(userId: string, isPrivate: boolean): Pro
   return mapProfile(row);
 }
 
+/** Opts in or out of being shown in other people's "Suggested for you". */
+export async function setDiscoverable(userId: string, discoverable: boolean): Promise<Profile> {
+  const row = unwrap(
+    await supabase.from('profiles').update({ discoverable }).eq('id', userId).select(PROFILE_SELECT).single(),
+  ) as ProfileRow;
+  return mapProfile(row);
+}
+
 /** Opts in or out of Discover's "Most Hated" section. */
 export async function setMostHatedOptIn(userId: string, allow: boolean): Promise<Profile> {
   const row = unwrap(

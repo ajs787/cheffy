@@ -64,20 +64,55 @@ describe('search_profiles', () => {
 });
 
 describe('suggested_friends', () => {
-  it('explains each suggestion and ranks followers, then friends of friends', async () => {
+  it('ranks mutual follows, then followers, then shared interests, then activity, with true labels', async () => {
+    const friendA = await db.createUser('friend_a');
+    const friendB = await db.createUser('friend_b');
+    const popular = await db.createUser('popular'); // followed by both my friends
+    const fof = await db.createUser('fof'); // followed by one
     const fan = await db.createUser('fan');
-    const friend = await db.createUser('friend');
-    const fof = await db.createUser('fof');
+    const baker = await db.createUser('baker');
     const busy = await db.createUser('busy');
+    await db.follow(me.id, friendA.id);
+    await db.follow(me.id, friendB.id);
+    await db.follow(friendA.id, popular.id);
+    await db.follow(friendB.id, popular.id);
+    await db.follow(friendA.id, fof.id);
     await db.follow(fan.id, me.id);
-    await db.follow(me.id, friend.id);
-    await db.follow(friend.id, fof.id);
+    const baking = await db.categoryId('primary', 'baking');
+    await db.createPost(me.id, { primary_category_id: baking });
+    await db.createPost(baker.id, { primary_category_id: baking });
+    await db.createPost(baker.id, { primary_category_id: baking });
     await db.createPost(busy.id);
-    expect(await suggestions(me)).toEqual([
-      { username: 'fan', reason: 'Follows you' },
-      { username: 'fof', reason: 'Followed by @friend' },
-      { username: 'busy', reason: 'Active on Cheffy' },
-    ]);
+    const list = await suggestions(me);
+    expect(list.map((s) => s.username)).toEqual(['popular', 'fof', 'fan', 'baker', 'busy']);
+    expect(list[0]!.reason).toMatch(/^Followed by @friend_[ab] and 1 other$/);
+    expect(list[1]!.reason).toBe('Followed by @friend_a');
+    expect(list[2]!.reason).toBe('Follows you');
+    expect(list[3]!.reason).toBe('Also loves baking');
+    expect(list[4]!.reason).toBe('Active on Cheffy');
+  });
+
+  it('never suggests people who opted out, and pages the full list', async () => {
+    const shy = await db.createUser('shy');
+    await db.createPost(shy.id);
+    await db.query(shy.id, 'update public.profiles set discoverable = false where id = $1', [shy.id]);
+    for (let i = 0; i < 5; i++) await db.createPost((await db.createUser(`cook${i}`)).id);
+    const all = await suggestions(me);
+    expect(all.map((s) => s.username)).not.toContain('shy');
+    const page = (offset: number) =>
+      db.query<{ user_id: string }>(me.id, 'select user_id from public.suggested_friends(2, $1)', [offset]);
+    const pages = [...(await page(0)), ...(await page(2)), ...(await page(4))].map((r) => r.user_id);
+    expect(new Set(pages).size).toBe(5);
+  });
+
+  it('does not reveal what private accounts make', async () => {
+    const secret = await db.createUser('secret');
+    await db.query(secret.id, 'update public.profiles set is_private = true where id = $1', [secret.id]);
+    const baking = await db.categoryId('primary', 'baking');
+    await db.createPost(me.id, { primary_category_id: baking });
+    await db.createPost(secret.id, { primary_category_id: baking });
+    await db.createPost(secret.id, { primary_category_id: baking });
+    expect(await suggestions(me)).toEqual([]);
   });
 
   it('leaves out people you follow, have requested, blocked, or dismissed', async () => {

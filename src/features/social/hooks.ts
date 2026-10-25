@@ -29,6 +29,7 @@ import {
   fetchSuggestedCooks,
   fetchSuggestedFriends,
   PEOPLE_PAGE,
+  SUGGESTIONS_PAGE,
   searchPeople,
   type SuggestedFriend,
   followUser,
@@ -250,31 +251,61 @@ export function usePeopleSearch(query: string) {
 }
 
 const suggestedFriendsKey = ['users', 'suggested-friends'] as const;
+const suggestedAllKey = ['users', 'suggested-friends-all'] as const;
+// Refreshed every 10 minutes at most, not on every visit.
+const SUGGESTIONS_STALE_MS = 10 * 60_000;
 
+/** The row on Find Friends: the first page. */
 export function useSuggestedFriends() {
   const me = useUserId();
   return useQuery({
     queryKey: suggestedFriendsKey,
-    queryFn: () => fetchSuggestedFriends(20),
+    queryFn: () => fetchSuggestedFriends(SUGGESTIONS_PAGE, 0),
     enabled: !!me,
-    staleTime: 5 * 60_000,
+    staleTime: SUGGESTIONS_STALE_MS,
   });
 }
 
-/** Removes a suggestion at once; it never comes back unless the save fails. */
+/** The full "See all" list, paged. */
+export function useAllSuggestedFriends() {
+  const me = useUserId();
+  return useInfiniteQuery({
+    queryKey: suggestedAllKey,
+    queryFn: ({ pageParam }) => fetchSuggestedFriends(SUGGESTIONS_PAGE, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) =>
+      last.length === SUGGESTIONS_PAGE ? pages.length * SUGGESTIONS_PAGE : undefined,
+    enabled: !!me,
+    staleTime: SUGGESTIONS_STALE_MS,
+  });
+}
+
+type SuggestionCache = SuggestedFriend[] | { pages: SuggestedFriend[][]; pageParams: unknown[] } | undefined;
+const withoutUser = (data: SuggestionCache, userId: string): SuggestionCache => {
+  if (!data) return data;
+  if (Array.isArray(data)) return data.filter((u) => u.id !== userId);
+  return { ...data, pages: data.pages.map((page) => page.filter((u) => u.id !== userId)) };
+};
+
+/** Removes a suggestion everywhere at once; it never comes back unless the save fails. */
 export function useDismissSuggestion() {
   const qc = useQueryClient();
   const me = useRequiredUserId();
   return useMutation({
     mutationFn: (userId: string) => dismissSuggestion(me, userId),
     onMutate: async (userId) => {
-      await qc.cancelQueries({ queryKey: suggestedFriendsKey });
-      const previous = qc.getQueryData<SuggestedFriend[]>(suggestedFriendsKey);
-      qc.setQueryData<SuggestedFriend[]>(suggestedFriendsKey, (list) => list?.filter((u) => u.id !== userId));
+      await Promise.all([
+        qc.cancelQueries({ queryKey: suggestedFriendsKey }),
+        qc.cancelQueries({ queryKey: suggestedAllKey }),
+      ]);
+      const previous = [suggestedFriendsKey, suggestedAllKey].map(
+        (key) => [key, qc.getQueryData<SuggestionCache>(key)] as const,
+      );
+      for (const [key] of previous) qc.setQueryData<SuggestionCache>(key, (d) => withoutUser(d, userId));
       return { previous };
     },
     onError: (_error, _id, context) => {
-      if (context?.previous) qc.setQueryData(suggestedFriendsKey, context.previous);
+      for (const [key, data] of context?.previous ?? []) qc.setQueryData(key, data);
     },
   });
 }

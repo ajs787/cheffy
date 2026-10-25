@@ -223,7 +223,6 @@ const RecentPerson = memo(function RecentPerson({
 function Suggested({ onOpen }: { onOpen: (p: ProfileSummary) => void }) {
   const suggested = useSuggestedFriends();
   const dismiss = useDismissSuggestion();
-  const [showAll, setShowAll] = useState(false);
   const people = suggested.data ?? [];
 
   if (suggested.isPending) return <RowSkeleton count={2} />;
@@ -235,37 +234,29 @@ function Suggested({ onOpen }: { onOpen: (p: ProfileSummary) => void }) {
           Suggested for you
         </AppText>
         {people.length > 3 ? (
-          <Pressable onPress={() => setShowAll((v) => !v)} hitSlop={10} accessibilityRole="button">
+          <Pressable
+            onPress={() => router.push('/suggested')}
+            hitSlop={10}
+            accessibilityRole="link"
+            accessibilityLabel="See all suggestions"
+          >
             <AppText variant="caption" color="accent">
-              {showAll ? 'Show less' : 'See all'}
+              See all
             </AppText>
           </Pressable>
         ) : null}
       </View>
-      {showAll ? (
-        <View>
-          {people.map((person) => (
-            <View key={person.id}>
-              <UserRow user={person} onOpen={onOpen} />
-              <AppText variant="caption" color="textTertiary" style={styles.rowReason}>
-                {person.reason}
-              </AppText>
-            </View>
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          horizontal
-          data={people}
-          keyExtractor={(p) => p.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hRow}
-          initialNumToRender={4}
-          renderItem={({ item }) => (
-            <SuggestionCard person={item} onOpen={onOpen} onDismiss={(id) => dismiss.mutate(id)} />
-          )}
-        />
-      )}
+      <FlatList
+        horizontal
+        data={people}
+        keyExtractor={(p) => p.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.hRow}
+        initialNumToRender={4}
+        renderItem={({ item }) => (
+          <SuggestionCard person={item} onOpen={onOpen} onDismiss={(id) => dismiss.mutate(id)} />
+        )}
+      />
     </View>
   );
 }
@@ -446,12 +437,6 @@ const styles = StyleSheet.create({
   cardBody: { alignItems: 'center', gap: 2, alignSelf: 'stretch' },
   reason: { minHeight: 32, marginTop: 2 },
   dismiss: { position: 'absolute', top: spacing.sm, right: spacing.sm, zIndex: 1 },
-  rowReason: {
-    paddingHorizontal: SCREEN_GUTTER,
-    marginTop: -spacing.xs,
-    marginBottom: spacing.sm,
-    marginLeft: SCREEN_GUTTER + 56,
-  },
   invite: { gap: spacing.md, padding: spacing.xl, borderRadius: radii.lg, backgroundColor: colors.oxblood },
   ivory: { color: colors.ivory },
   rose: { color: '#E3C4C9' },

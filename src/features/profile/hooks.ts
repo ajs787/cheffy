@@ -11,6 +11,7 @@ import {
   fetchProfile,
   fetchProfileStats,
   setAccountPrivacy,
+  setDiscoverable,
   setMostHatedOptIn,
   updateProfile,
   type ProfileInput,
@@ -94,6 +95,29 @@ export function useSetAccountPrivacy() {
       void qc.invalidateQueries({ queryKey: queryKeys.followRequests });
       void qc.invalidateQueries({ queryKey: queryKeys.profileStats(profile.id) });
     },
+  });
+}
+
+/** Suggest-my-account opt-in/out. Optimistic. */
+export function useSetDiscoverable() {
+  const qc = useQueryClient();
+  const userId = useUserId();
+  return useMutation({
+    mutationFn: (discoverable: boolean) => {
+      if (!userId) throw new Error('Not signed in');
+      return setDiscoverable(userId, discoverable);
+    },
+    onMutate: async (discoverable) => {
+      const key = queryKeys.profile(userId ?? 'anonymous');
+      await qc.cancelQueries({ queryKey: key, exact: true });
+      const previous = qc.getQueryData<Profile | null>(key);
+      if (previous) qc.setQueryData(key, { ...previous, discoverable });
+      return { previous, key };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) qc.setQueryData(context.key, context.previous);
+    },
+    onSuccess: (profile) => qc.setQueryData(queryKeys.profile(profile.id), profile),
   });
 }
 

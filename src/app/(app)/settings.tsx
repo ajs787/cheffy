@@ -18,6 +18,7 @@ import {
   Trash2,
   UserCheck,
   UserPen,
+  UserPlus,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, View } from 'react-native';
@@ -33,6 +34,7 @@ import {
   useDeleteAccount,
   useMyProfile,
   useSetAccountPrivacy,
+  useSetDiscoverable,
   useSetMostHatedOptIn,
 } from '@/features/profile/hooks';
 import { useIsModerator, useModerationQueue } from '@/features/moderation/hooks';
@@ -49,6 +51,8 @@ export default function SettingsScreen() {
   const profile = useMyProfile();
   const setPrivacy = useSetAccountPrivacy();
   const setMostHated = useSetMostHatedOptIn();
+  const setDiscoverable = useSetDiscoverable();
+  const discoverable = profile.data?.discoverable ?? true;
   const allowMostHated = profile.data?.allowMostHated ?? true;
   const requests = useFollowRequests();
   const isModerator = useIsModerator().data === true;
@@ -82,6 +86,24 @@ export default function SettingsScreen() {
               />
             }
           />
+          <Divider inset={spacing.lg} />
+          <SettingsRow
+            icon={UserPlus}
+            label="Suggest my account to others"
+            trailing={
+              <Switch
+                value={discoverable}
+                disabled={!profile.data || setDiscoverable.isPending}
+                onValueChange={(value) =>
+                  setDiscoverable.mutate(value, {
+                    onError: (error) => toast.error(toUserMessage(error, 'Couldn’t change this setting.')),
+                  })
+                }
+                trackColor={{ true: colors.accent, false: colors.border }}
+                accessibilityLabel="Suggest my account to others"
+              />
+            }
+          />
           {isPrivate || pending > 0 ? (
             <>
               <Divider inset={spacing.lg} />
@@ -97,7 +119,10 @@ export default function SettingsScreen() {
         <AppText variant="caption" color="textSecondary" style={styles.note}>
           {isPrivate
             ? 'Only people you approve can see your creations, rankings and collections. Anyone can still find your name and photo.'
-            : 'Anyone can follow you and see your public creations. Turn this on to approve followers first.'}
+            : 'Anyone can follow you and see your public creations. Turn this on to approve followers first.'}{' '}
+          {discoverable
+            ? 'You may appear in “Suggested for you”.'
+            : 'You won’t appear in “Suggested for you”, but people can still search for you.'}
         </AppText>
 
         <SettingsGroup title="Discover">

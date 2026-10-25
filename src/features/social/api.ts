@@ -131,9 +131,15 @@ export function searchUsers(query: string): Promise<UserListItem[]> {
 /** A suggestion, with the honest reason it's shown ("Follows you", …). */
 export type SuggestedFriend = UserListItem & { reason: string };
 
-export async function fetchSuggestedFriends(limit = 20): Promise<SuggestedFriend[]> {
+export const SUGGESTIONS_PAGE = 20;
+
+/** One page of suggestions, best first, each with its reason. Two requests total, never per person. */
+export async function fetchSuggestedFriends(
+  limit = SUGGESTIONS_PAGE,
+  offset = 0,
+): Promise<SuggestedFriend[]> {
   const picks = await fetchRows<{ user_id: string; reason: string; score: number }>(
-    supabase.rpc('suggested_friends', { p_limit: limit }),
+    supabase.rpc('suggested_friends', { p_limit: limit, p_offset: offset }),
   );
   if (picks.length === 0) return [];
   const rows = await fetchRows<UserListRow>(

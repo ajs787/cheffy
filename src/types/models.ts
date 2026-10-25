@@ -27,6 +27,8 @@ export interface Profile extends ProfileSummary {
   isPrivate: boolean;
   /** May their lowest-rated public creations appear in Discover's Most Hated. */
   allowMostHated: boolean;
+  /** May be shown to others in "Suggested for you". */
+  discoverable: boolean;
   /** Optional, unverified Instagram username (clean; no @). */
   instagramUsername: string | null;
   /** One of Cheffy's first ten accounts (permanent, server-assigned). */

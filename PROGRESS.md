@@ -918,3 +918,18 @@ uses DM Serif Display. It was kept, so nothing changed visually.
   ambiguous-sign-up messaging.
 - **Accounts:** none created since Oct 23. Check Resend delivery and Supabase Auth logs
   (dashboard).
+
+## Smarter suggestions (2026-10-25; migration live; UI not yet seen signed-in)
+- `suggested_friends(limit, offset)` ranks:
+  - mutual follows ("Followed by @x and N others");
+  - then people who follow you ("Follows you");
+  - then shared cooking interest, meaning ≥2 public posts in the category you make most
+    ("Also loves baking");
+  - then recent public activity ("Active on Cheffy").
+  Follower counts never matter, and private accounts' posts are never used.
+- New `profiles.discoverable` (Settings → "Suggest my account to others"); search still
+  finds opted-out people.
+- New paged "See all" screen (`/suggested`) with "Not interested". Dismissals apply to every
+  cached list, and suggestions refresh at most every 10 minutes.
+- No contact matching exists, so "From your contacts" is never shown.
+- DB tests: ranking order and labels, opt-out, paging, private accounts (200 DB tests).
