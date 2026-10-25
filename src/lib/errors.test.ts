@@ -39,6 +39,6 @@ describe('classifyError', () => {
 
   it('leaves ordinary errors to their own messages', () => {
     expect(classifyError({ status: 400, message: 'Invalid login credentials' })).toBe('other');
-    expect(toUserMessage({ status: 400, message: 'Invalid login credentials' })).toMatch(/don’t match/);
+    expect(toUserMessage({ status: 400, message: 'Invalid login credentials' })).toMatch(/create an account if you don’t have one/);
   });
 });

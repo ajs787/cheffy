@@ -24,7 +24,8 @@ interface ErrorLike {
  * type it uses for a lost connection, so the HTTP status must be checked
  * before calling anything "offline".
  */
-export type ErrorKind = 'offline' | 'timeout' | 'unreachable' | 'unavailable' | 'email_send' | 'rate_limit' | 'other';
+export type ErrorKind =
+  'offline' | 'timeout' | 'unreachable' | 'unavailable' | 'email_send' | 'rate_limit' | 'other';
 
 /** Set by the query client from the OS network state (expo-network). */
 let deviceOnline = true;
@@ -33,7 +34,17 @@ export function setDeviceOnline(online: boolean): void {
 }
 
 // Postgres codes for a database that is shutting down, restarting or unreachable.
-const DB_UNAVAILABLE = new Set(['57P01', '57P02', '57P03', '08000', '08003', '08006', '08001', '08004', '53300']);
+const DB_UNAVAILABLE = new Set([
+  '57P01',
+  '57P02',
+  '57P03',
+  '08000',
+  '08003',
+  '08006',
+  '08001',
+  '08004',
+  '53300',
+]);
 
 export function classifyError(error: unknown): ErrorKind {
   const e = (error ?? {}) as ErrorLike;
@@ -76,7 +87,10 @@ export const KIND_MESSAGES: Record<Exclude<ErrorKind, 'other'>, string> = {
 };
 
 const AUTH_MESSAGES: [RegExp, string][] = [
-  [/invalid login credentials/i, 'That email and password don’t match. Try again?'],
+  [
+    /invalid login credentials/i,
+    'We couldn’t sign you in with that email and password. Check them, or create an account if you don’t have one.',
+  ],
   [/email not confirmed/i, 'Check your inbox to confirm your email, then sign in.'],
   [/user already registered/i, 'An account with that email already exists. Try signing in.'],
   [/password should be at least/i, 'Passwords need at least 8 characters.'],
