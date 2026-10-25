@@ -20,7 +20,7 @@ import {
   UserPen,
   UserPlus,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,9 +29,9 @@ import { AppHeader, AppText, ConfirmationDialog, Divider } from '@/components/ui
 import { PRIVACY_URL, SUPPORT_EMAIL } from '@/constants/app';
 import { NotificationSettings } from '@/features/activity/components/NotificationSettings';
 import { signOut } from '@/features/auth/api';
+import { DeleteAccountSheet } from '@/features/profile/components/DeleteAccountSheet';
 import { useSession } from '@/features/auth/store';
 import {
-  useDeleteAccount,
   useMyProfile,
   useSetAccountPrivacy,
   useSetDiscoverable,
@@ -47,7 +47,6 @@ import { colors, spacing } from '@/theme';
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const session = useSession();
-  const deleteAccount = useDeleteAccount();
   const profile = useMyProfile();
   const setPrivacy = useSetAccountPrivacy();
   const setMostHated = useSetMostHatedOptIn();
@@ -60,7 +59,18 @@ export default function SettingsScreen() {
   const isPrivate = profile.data?.isPrivate ?? false;
   const pending = requests.data?.length ?? 0;
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  // Sign out only once the sheet has fully closed (see DeleteAccountSheet).
+  const [signOutConfirmed, setSignOutConfirmed] = useState(false);
+  const signingOut = useRef(false);
+  const runSignOut = () => {
+    if (signingOut.current) return;
+    signingOut.current = true;
+    signOut().catch((error: unknown) => {
+      signingOut.current = false;
+      toast.error(toUserMessage(error));
+    });
+  };
 
   return (
     <View style={styles.screen}>
@@ -208,7 +218,7 @@ export default function SettingsScreen() {
         <SettingsGroup title="Session">
           <SettingsRow icon={LogOut} label="Sign out" onPress={() => setConfirmSignOut(true)} />
           <Divider inset={spacing.lg} />
-          <SettingsRow icon={Trash2} label="Delete account" destructive onPress={() => setDeleteStep(1)} />
+          <SettingsRow icon={Trash2} label="Delete account" destructive onPress={() => setDeleteOpen(true)} />
         </SettingsGroup>
 
         <AppText variant="caption" color="textTertiary" align="center">
@@ -222,41 +232,16 @@ export default function SettingsScreen() {
         message="Your diary is saved to your account. Sign back in anytime."
         confirmLabel="Sign out"
         onCancel={() => setConfirmSignOut(false)}
-        onConfirm={async () => {
-          try {
-            await signOut();
-          } catch (error) {
-            toast.error(toUserMessage(error));
-          }
+        onConfirm={() => {
+          setSignOutConfirmed(true);
           setConfirmSignOut(false);
+          setTimeout(runSignOut, 1500); // fallback if the close report never comes
+        }}
+        onClosed={() => {
+          if (signOutConfirmed) runSignOut();
         }}
       />
-      <ConfirmationDialog
-        visible={deleteStep === 1}
-        title="Delete your account?"
-        message="This permanently deletes your profile, every post and photo, your rankings, collections, comments and likes. It can’t be undone."
-        confirmLabel="Continue"
-        destructive
-        onCancel={() => setDeleteStep(0)}
-        onConfirm={() => setDeleteStep(2)}
-      />
-      <ConfirmationDialog
-        visible={deleteStep === 2}
-        title="Are you absolutely sure?"
-        message="Everything you’ve logged on Cheffy will be gone for good."
-        confirmLabel="Delete my account"
-        destructive
-        onCancel={() => setDeleteStep(0)}
-        onConfirm={async () => {
-          try {
-            await deleteAccount.mutateAsync();
-            toast.show('Your account was deleted.');
-          } catch (error) {
-            toast.error(toUserMessage(error, 'Couldn’t delete your account. Please try again.'));
-          }
-          setDeleteStep(0);
-        }}
-      />
+      <DeleteAccountSheet visible={deleteOpen} onDone={() => setDeleteOpen(false)} />
     </View>
   );
 }

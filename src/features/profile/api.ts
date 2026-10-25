@@ -166,6 +166,7 @@ export async function updateProfile(userId: string, current: Profile, input: Pro
 /**
  * Deletes the account on the server (Edge Function `delete-account`): every
  * photo in Storage, then the auth user, which cascades to all their data.
+ * Doesn't sign out; see finishAccountDeletion.
  * Doing it server-side means a crash or lost connection can't leave photos
  * behind. Throws (and keeps the account) if any step fails.
  */
@@ -174,5 +175,14 @@ export async function deleteAccount(): Promise<void> {
     method: 'POST',
   });
   if (error || !data?.deleted) throw error ?? new Error('Account deletion failed');
+}
+
+/**
+ * Ends the (now deleted) account's session on this phone. Called only after
+ * the confirmation sheet has fully closed: signing out swaps the whole
+ * navigator, and doing that under an open iOS modal can leave an invisible
+ * layer that blocks every tap.
+ */
+export async function finishAccountDeletion(): Promise<void> {
   await supabase.auth.signOut({ scope: 'local' });
 }

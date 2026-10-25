@@ -16,6 +16,8 @@ export interface ConfirmationDialogProps {
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
+  /** After the sheet has finished closing (safe moment to navigate or sign out). */
+  onClosed?: () => void;
 }
 
 /** Sheet-styled confirmation for consequential actions (delete, block, sign out). */
@@ -28,6 +30,7 @@ export function ConfirmationDialog({
   destructive = false,
   onConfirm,
   onCancel,
+  onClosed,
 }: ConfirmationDialogProps) {
   const [busy, setBusy] = useState(false);
 
@@ -41,7 +44,12 @@ export function ConfirmationDialog({
   };
 
   return (
-    <BottomSheet visible={visible} onClose={busy ? () => undefined : onCancel} accessibilityLabel={title}>
+    <BottomSheet
+      visible={visible}
+      onClose={busy ? () => undefined : onCancel}
+      onClosed={onClosed}
+      accessibilityLabel={title}
+    >
       <View style={styles.body}>
         <AppText variant="title2" align="center">
           {title}

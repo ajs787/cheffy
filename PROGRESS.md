@@ -933,3 +933,13 @@ uses DM Serif Display. It was kept, so nothing changed visually.
   cached list, and suggestions refresh at most every 10 minutes.
 - No contact matching exists, so "From your contacts" is never shown.
 - DB tests: ranking order and labels, opt-out, paging, private accounts (200 DB tests).
+
+## Fix: delete-account / sign-out freeze (2026-10-25, not committed)
+- Cause: iOS can't present one modal while another is still dismissing, or tear down the
+  navigator under a visible modal. Deletion swapped two separate confirmation sheets
+  mid-animation, and both deletion and sign-out signed out while a sheet was still open.
+  Either can leave an invisible layer that blocks all taps.
+- Fix: one two-step `DeleteAccountSheet`. `deleteAccount()` no longer signs out; the
+  sign-out runs from the sheet's `onClosed`, with a once-only 1.5 s fallback. Sign out
+  works the same way. `ConfirmationDialog` gains `onClosed`.
+- Unverified on a device (the simulator is signed out).
