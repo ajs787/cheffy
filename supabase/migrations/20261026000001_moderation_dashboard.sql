@@ -632,7 +632,7 @@ $$;
 -- details in the email). Configure in the SQL editor, never in the app:
 --   insert into public.app_config (key, value) values
 --     ('moderation.alert_function_url', '"https://<ref>.supabase.co/functions/v1/moderation-alert"'),
---     ('moderation.alert_function_auth', '"<publishable or anon key>"'),
+--     ('moderation.alert_function_auth', '"<legacy anon key (a JWT), so verify_jwt can stay on>"'),
 --     ('moderation.alert_secret', '"<same value as the function''s MODERATION_ALERT_SECRET>"')
 --   on conflict (key) do update set value = excluded.value;
 -- Delivery is asynchronous (pg_net): a failed alert never blocks or loses a
