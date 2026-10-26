@@ -1,3 +1,14 @@
 /.well-known/apple-app-site-association
   Content-Type: application/json
   Cache-Control: max-age=300
+
+# Moderation dashboard: never indexed, framed, cached or leaking referrers;
+# scripts only from this site, API calls only to Cheffy's Supabase project.
+/admin/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://yqzycfujpzibzkkdybyu.supabase.co data:; connect-src https://yqzycfujpzibzkkdybyu.supabase.co; form-action 'self'; base-uri 'none'; frame-ancestors 'none'

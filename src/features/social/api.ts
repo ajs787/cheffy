@@ -224,15 +224,16 @@ export async function reportContent(
   reason: ReportReason,
   details: string,
 ): Promise<void> {
-  unwrap(
-    await supabase.from('reports').insert({
-      reporter_id: me,
-      target_type: target.type,
-      target_user_id: target.type === 'user' ? target.userId : null,
-      target_post_id: target.type === 'post' ? target.postId : null,
-      target_comment_id: target.type === 'comment' ? target.commentId : null,
-      reason,
-      details: details.trim(),
-    }),
-  );
+  const result = await supabase.from('reports').insert({
+    reporter_id: me,
+    target_type: target.type,
+    target_user_id: target.type === 'user' ? target.userId : null,
+    target_post_id: target.type === 'post' ? target.postId : null,
+    target_comment_id: target.type === 'comment' ? target.commentId : null,
+    reason,
+    details: details.trim(),
+  });
+  // Already reported by this person and still being reviewed: nothing to add.
+  if (result.error?.code === '23505') return;
+  unwrap(result);
 }

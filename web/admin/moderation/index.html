@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Cheffy moderation</title>
+  <link rel="icon" href="/images/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Newsreader:ital,wght@0,400;0,600;1,600&display=swap">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="wordmark" href="/admin/moderation/">cheffy<span>.</span> <small>moderation</small></a>
+    <div class="bar-right" id="session" hidden>
+      <span class="pending-pill" id="pending-pill" title="Pending reports">0</span>
+      <span class="who" id="who"></span>
+      <button type="button" class="link" id="sign-out">Sign out</button>
+    </div>
+  </header>
+
+  <!-- Sign in -->
+  <main id="view-signin" class="narrow" hidden>
+    <h1>Moderator sign in</h1>
+    <p class="muted">For Cheffy moderators only. Use your Cheffy account; access is checked on the server.</p>
+    <form id="signin-form" autocomplete="on">
+      <label>Email <input type="email" name="email" autocomplete="username" required></label>
+      <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary">Sign in</button>
+      <p class="error" id="signin-error" role="alert"></p>
+    </form>
+  </main>
+
+  <!-- Queue -->
+  <main id="view-queue" hidden>
+    <section class="cards" id="cards" aria-label="Overview"></section>
+
+    <form class="filters" id="filters" aria-label="Filter reports">
+      <label>Status
+        <select name="status">
+          <option value="active">Needs attention</option>
+          <option value="open">Pending</option>
+          <option value="reviewed">Under review</option>
+          <option value="actioned">Resolved</option>
+          <option value="dismissed">Dismissed</option>
+          <option value="all">All</option>
+        </select>
+      </label>
+      <label>Type
+        <select name="type">
+          <option value="">All</option><option value="post">Post</option>
+          <option value="comment">Comment</option><option value="user">Profile</option>
+        </select>
+      </label>
+      <label>Reason
+        <select name="reason">
+          <option value="">All</option><option value="inappropriate">Inappropriate</option>
+          <option value="harassment">Harassment</option><option value="spam">Spam</option>
+          <option value="not_homemade">Not homemade</option>
+          <option value="intellectual_property">Intellectual property</option><option value="other">Other</option>
+        </select>
+      </label>
+      <label>Priority
+        <select name="priority">
+          <option value="">All</option><option value="urgent">Urgent</option>
+          <option value="normal">Normal</option><option value="low">Low</option>
+        </select>
+      </label>
+      <label>From <input type="date" name="from"></label>
+      <label>To <input type="date" name="to"></label>
+      <label class="grow">Search <input type="search" name="search" placeholder="Report ID, content or username"></label>
+    </form>
+
+    <div class="table-wrap">
+      <table class="queue">
+        <thead>
+          <tr>
+            <th>Report</th><th>Type</th><th>Reason</th><th>Reported content</th><th>Reported user</th>
+            <th>Submitted</th><th>Status</th><th>Priority</th><th><span class="sr">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="muted center" id="queue-empty" hidden>Nothing here. 🎉</p>
+    <p class="center"><button type="button" class="secondary" id="load-more" hidden>Load more</button></p>
+    <p class="muted small center" id="refreshed"></p>
+  </main>
+
+  <!-- Detail -->
+  <main id="view-detail" hidden>
+    <p><a href="#/" class="back">← Back to the queue</a></p>
+    <div id="detail"></div>
+  </main>
+
+  <!-- Not a moderator -->
+  <main id="view-denied" class="narrow" hidden>
+    <h1>Not authorized</h1>
+    <p>This account isn’t a Cheffy moderator. You’ve been signed out.</p>
+    <p><a href="/admin/moderation/">Sign in with another account</a></p>
+  </main>
+
+  <dialog id="confirm">
+    <form method="dialog" id="confirm-form">
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-body"></p>
+      <label id="confirm-note-label">Note (stored in the moderation log)
+        <textarea name="note" rows="3" maxlength="2000"></textarea>
+      </label>
+      <label id="confirm-type-label" hidden>Type <b id="confirm-word"></b> to confirm
+        <input name="typed" autocomplete="off">
+      </label>
+      <p class="error" id="confirm-error" role="alert"></p>
+      <div class="row">
+        <button value="cancel" class="secondary" formnovalidate>Cancel</button>
+        <button value="ok" class="primary" id="confirm-ok">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/admin/config.js"></script>
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

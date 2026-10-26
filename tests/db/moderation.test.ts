@@ -128,7 +128,8 @@ describe('posts', () => {
     const postId = await db.createPost(author.id);
     const others = [await db.createUser('rep_a'), await db.createUser('rep_b')];
     await report(viewer, 'post', postId);
-    await report(viewer, 'post', postId); // same person twice still counts once
+    // The same person can't stack reports while theirs is still active.
+    await expectDbError(report(viewer, 'post', postId), /duplicate key/);
     await report(others[0]!, 'post', postId);
     expect(await status(postId)).toBe('published');
     await report(others[1]!, 'post', postId);
