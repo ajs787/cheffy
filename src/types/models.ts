@@ -105,6 +105,13 @@ export interface PostImage {
   thumbUrl: string | null;
 }
 
+export interface CommentPreview {
+  id: string;
+  body: string;
+  likeCount: number;
+  author: ProfileSummary;
+}
+
 export interface Post {
   id: string;
   author: ProfileSummary;
@@ -147,6 +154,8 @@ export interface Post {
   viewerHasSaved: boolean;
   /** Newest likers (feed only; empty elsewhere). */
   recentLikers: ProfileSummary[];
+  /** Top comments to preview on a feed card (feed queries only). */
+  topComments?: CommentPreview[];
   /** Accepted co-creators, each with their own rating and review. */
   coCreators: CoCreator[];
   /** Invitations still waiting (visible to the creator and the invitee only). */

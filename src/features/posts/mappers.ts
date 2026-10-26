@@ -9,6 +9,7 @@ import type {
   CategoryRef,
   CoCreator,
   CollaborationStatus,
+  CommentPreview,
   Post,
   PostImage,
   PostStatus,
@@ -36,24 +37,54 @@ export const POST_SELECT = `
 `;
 
 /**
- * Feed queries add the most recent likers for "Liked by …". Callers must
- * order and limit the `likers` embed (see `withRecentLikers`).
+ * Feed queries add the most recent likers for "Liked by …" and a preview of
+ * the top comments. Callers must filter, order and limit both embeds (see
+ * `withFeedExtras`), so it stays one request per page.
  */
 export const FEED_POST_SELECT = `${POST_SELECT},
-  likers:likes(created_at, profile:profiles!likes_user_id_fkey(${PROFILE_SUMMARY_SELECT}))
+  likers:likes(created_at, profile:profiles!likes_user_id_fkey(${PROFILE_SUMMARY_SELECT})),
+  top_comments:comments(id, body, like_count, created_at, parent_id, author:profiles!comments_author_id_fkey(${PROFILE_SUMMARY_SELECT}))
 `;
+
+/** How many comments a feed card previews. */
+export const PREVIEW_COMMENTS = 2;
+/**
+ * Comments fetched per post to find them. Replies are dropped on the client:
+ * an embedded filter isn't supported on the feed RPCs, so a few extra rows
+ * leave room for top-level ones.
+ */
+const PREVIEW_CANDIDATES = 6;
 
 type OrderLimitBuilder<T> = {
   order: (column: string, options: { ascending: boolean; referencedTable: string }) => T;
 };
 
-/** Newest three likers per post. */
-export function withRecentLikers<
-  T extends OrderLimitBuilder<T> & { limit: (n: number, o: { referencedTable: string }) => T },
+/**
+ * Newest three likers per post, and the most-liked comments (then earliest)
+ * as candidates for the preview.
+ */
+export function withFeedExtras<
+  T extends OrderLimitBuilder<T> & {
+    limit: (n: number, o: { referencedTable: string }) => T;
+  },
 >(query: T): T {
   return query
     .order('created_at', { ascending: false, referencedTable: 'likers' })
-    .limit(3, { referencedTable: 'likers' });
+    .limit(3, { referencedTable: 'likers' })
+    .order('like_count', { ascending: false, referencedTable: 'top_comments' })
+    .order('created_at', { ascending: true, referencedTable: 'top_comments' })
+    .limit(PREVIEW_CANDIDATES, { referencedTable: 'top_comments' });
+}
+
+/** The preview: top-level comments only; a hidden (blocked) author's is left out. */
+export function mapTopComments(rows: PostRow['top_comments']): CommentPreview[] {
+  return (rows ?? [])
+    .flatMap((c) =>
+      c.author && !c.parent_id
+        ? [{ id: c.id, body: c.body, likeCount: c.like_count ?? 0, author: mapProfileSummary(c.author) }]
+        : [],
+    )
+    .slice(0, PREVIEW_COMMENTS);
 }
 
 export interface PostRow {
@@ -98,6 +129,13 @@ export interface PostRow {
   viewer_has_liked: boolean;
   viewer_has_saved: boolean;
   likers?: { created_at: string; profile: ProfileSummaryRow | null }[];
+  top_comments?: {
+    id: string;
+    body: string;
+    like_count: number;
+    parent_id: string | null;
+    author: ProfileSummaryRow | null;
+  }[];
   collaborators?: { status: CollaborationStatus; user: ProfileSummaryRow | null }[];
   evaluations?: { user_id: string; rating: number | string; review: string }[];
 }
@@ -199,6 +237,7 @@ export function mapPost(row: PostRow): Post | null {
     viewerHasLiked: row.viewer_has_liked,
     viewerHasSaved: row.viewer_has_saved,
     recentLikers: (row.likers ?? []).flatMap((l) => (l.profile ? [mapProfileSummary(l.profile)] : [])),
+    topComments: mapTopComments(row.top_comments),
     ...mapCollaboration(row.collaborators, row.evaluations),
   };
 }

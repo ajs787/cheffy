@@ -986,3 +986,16 @@ uses DM Serif Display. It was kept, so nothing changed visually.
 - Expo Go crashed once in Hermes during a hot reload while the old `InputAccessoryView`
   sheet was open. A fresh load was fine.
 
+
+## Top comments on feed cards (2026-10-25, not committed)
+- Feed cards (Following and For You) show up to two top-level comments, most liked first
+  then earliest: **username** comment, two lines each. "View all N comments" appears when
+  there are more. Tapping opens the post's comments.
+- Same request as the feed: the comments come in with each page, like "Liked by". There is
+  no extra request per card and no database change. Six candidates are fetched per post and
+  replies dropped on the client, because an embedded filter fails on the feed's database
+  functions (`column pgrst_call.parent_id does not exist`).
+- Your new top-level comment fills an empty preview slot; a deleted one leaves the preview
+  at once. Comments from blocked people are left out.
+- Verified in the simulator (iPhone 16, @chefshin): one-comment and two-comment cards, and
+  tapping to open the post. "View all N" (more than two top-level comments) not seen live.

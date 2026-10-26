@@ -1,4 +1,10 @@
-import { attachImageUrls, FEED_POST_SELECT, mapPosts, withRecentLikers, type PostRow } from '@/features/posts/mappers';
+import {
+  attachImageUrls,
+  FEED_POST_SELECT,
+  mapPosts,
+  withFeedExtras,
+  type PostRow,
+} from '@/features/posts/mappers';
 import { supabase } from '@/lib/supabase/client';
 import { fetchRows } from '@/lib/supabase/query';
 import type { Cursor, Page, Post } from '@/types/models';
@@ -14,14 +20,16 @@ async function toPage(rows: PostRow[]): Promise<Page<Post>> {
   return {
     items: posts,
     nextCursor:
-      rows.length === FEED_PAGE_SIZE && last?.published_at ? { before: last.published_at, beforeId: last.id } : null,
+      rows.length === FEED_PAGE_SIZE && last?.published_at
+        ? { before: last.published_at, beforeId: last.id }
+        : null,
   };
 }
 
 /** Following: people you follow (and you), newest first. */
 export async function fetchFollowingPage(cursor: Cursor | null): Promise<Page<Post>> {
   const rows = await fetchRows<PostRow>(
-    withRecentLikers(
+    withFeedExtras(
       supabase
         .rpc('feed_posts', {
           p_before: cursor?.before ?? null,
@@ -42,7 +50,7 @@ export async function fetchFollowingPage(cursor: Cursor | null): Promise<Page<Po
  */
 export async function fetchForYouPage(cursor: Cursor | null): Promise<Page<Post>> {
   const rows = await fetchRows<PostRow>(
-    withRecentLikers(
+    withFeedExtras(
       supabase
         .rpc('discover_posts', {
           p_sort: 'recent',

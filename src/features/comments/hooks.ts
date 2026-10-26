@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useRequiredUserId } from '@/features/auth/store';
+import { PREVIEW_COMMENTS } from '@/features/posts/mappers';
 import { useMyProfile } from '@/features/profile/hooks';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
@@ -96,6 +97,20 @@ export function useAddComment(postId: string) {
       qc.setQueryData<CommentPages>(context.key, (data) =>
         replaceComment(data, context.optimisticId, comment),
       );
+      // Feed cards preview the top comments; fill an empty slot with this one.
+      if (!comment.parentId) {
+        updatePostInCaches(qc, postId, (p) =>
+          !p.topComments || p.topComments.length >= PREVIEW_COMMENTS
+            ? p
+            : {
+                ...p,
+                topComments: [
+                  ...p.topComments,
+                  { id: comment.id, body: comment.body, likeCount: 0, author: comment.author },
+                ],
+              },
+        );
+      }
     },
     onError: (error, { reply }, context) => {
       if (context) qc.setQueryData(context.key, context.previous);
@@ -128,7 +143,11 @@ export function useDeleteComment(postId: string) {
       }
       // A top-level comment takes its replies with it.
       const removed = 1 + (comment.parentId ? 0 : comment.replyCount);
-      updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: Math.max(0, p.commentCount - removed) }));
+      updatePostInCaches(qc, postId, (p) => ({
+        ...p,
+        commentCount: Math.max(0, p.commentCount - removed),
+        topComments: p.topComments?.filter((c) => c.id !== comment.id),
+      }));
       return { previous, key, removed };
     },
     onError: (error, comment, context) => {

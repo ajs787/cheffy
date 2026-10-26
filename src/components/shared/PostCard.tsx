@@ -45,6 +45,7 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
       pathname: '/post/[id]',
       params: focusComment ? { id: post.id, focus: 'comment' } : { id: post.id },
     });
+  const topComments = post.topComments ?? [];
   const likedBy = likedBySummary(post.recentLikers, post.likeCount, post.viewerHasLiked, me);
 
   return (
@@ -163,6 +164,28 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
         </AppText>
       ) : null}
 
+      {topComments.length > 0 ? (
+        <Pressable
+          onPress={() => openPost(true)}
+          style={styles.comments}
+          accessibilityRole="link"
+          accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${c.body}`).join('. ')}`}
+          accessibilityHint="Opens all comments"
+          testID={`post-card-comments-${post.id}`}
+        >
+          {topComments.map((comment) => (
+            <AppText key={comment.id} variant="callout" numberOfLines={2}>
+              <AppText variant="calloutStrong">{comment.author.username}</AppText> {comment.body}
+            </AppText>
+          ))}
+          {post.commentCount > topComments.length ? (
+            <AppText variant="caption" color="textSecondary">
+              View all {formatCount(post.commentCount)} comments
+            </AppText>
+          ) : null}
+        </Pressable>
+      ) : null}
+
       <View style={styles.actions}>
         <LikeButton
           liked={post.viewerHasLiked}
@@ -215,6 +238,7 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
   likedBy: { paddingHorizontal: SCREEN_GUTTER, marginBottom: -spacing.xs },
   likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
+  comments: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.xs },
   // The entry's espresso rule, then its actions.
   actions: {
     flexDirection: 'row',
