@@ -146,46 +146,6 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
         </View>
       ) : null}
 
-      {likedBy ? (
-        <AppText variant="caption" color="textSecondary" style={styles.likedBy}>
-          {likedBy.lead ? (
-            <>
-              Liked by{' '}
-              <AppText variant="caption" style={styles.likedByName}>
-                {likedBy.lead}
-              </AppText>
-              {likedBy.others > 0
-                ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}`
-                : ''}
-            </>
-          ) : (
-            `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
-          )}
-        </AppText>
-      ) : null}
-
-      {topComments.length > 0 ? (
-        <Pressable
-          onPress={() => openPost(true)}
-          style={styles.comments}
-          accessibilityRole="link"
-          accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${c.body}`).join('. ')}`}
-          accessibilityHint="Opens all comments"
-          testID={`post-card-comments-${post.id}`}
-        >
-          {topComments.map((comment) => (
-            <AppText key={comment.id} variant="callout" numberOfLines={2}>
-              <AppText variant="calloutStrong">{comment.author.username}</AppText> {comment.body}
-            </AppText>
-          ))}
-          {post.commentCount > topComments.length ? (
-            <AppText variant="caption" color="textSecondary">
-              View all {formatCount(post.commentCount)} comments
-            </AppText>
-          ) : null}
-        </Pressable>
-      ) : null}
-
       <View style={styles.actions}>
         <LikeButton
           liked={post.viewerHasLiked}
@@ -213,6 +173,50 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
           onPress={() => toggleSave.mutate({ post, save: !post.viewerHasSaved })}
         />
       </View>
+
+      {likedBy || topComments.length > 0 ? (
+        // Instagram order: actions, then likes, then a few comments.
+        <View style={styles.social}>
+          {likedBy ? (
+            <AppText variant="caption" color="textSecondary">
+              {likedBy.lead ? (
+                <>
+                  Liked by{' '}
+                  <AppText variant="caption" style={styles.likedByName}>
+                    {likedBy.lead}
+                  </AppText>
+                  {likedBy.others > 0
+                    ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}`
+                    : ''}
+                </>
+              ) : (
+                `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
+              )}
+            </AppText>
+          ) : null}
+          {topComments.length > 0 ? (
+            <Pressable
+              onPress={() => openPost(true)}
+              style={styles.comments}
+              accessibilityRole="link"
+              accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${c.body}`).join('. ')}`}
+              accessibilityHint="Opens all comments"
+              testID={`post-card-comments-${post.id}`}
+            >
+              {topComments.map((comment) => (
+                <AppText key={comment.id} variant="callout" numberOfLines={4}>
+                  <AppText variant="calloutStrong">{comment.author.username}</AppText> {comment.body}
+                </AppText>
+              ))}
+              {post.commentCount > topComments.length ? (
+                <AppText variant="caption" color="textSecondary">
+                  View all {formatCount(post.commentCount)} comments
+                </AppText>
+              ) : null}
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -236,9 +240,15 @@ const styles = StyleSheet.create({
   photos: { paddingHorizontal: SCREEN_GUTTER },
   words: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm + 2 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
-  likedBy: { paddingHorizontal: SCREEN_GUTTER, marginBottom: -spacing.xs },
+  // Likes and comment previews sit snug under the actions.
+  social: {
+    paddingHorizontal: SCREEN_GUTTER,
+    gap: spacing.xs + 2,
+    marginTop: -spacing.xs,
+    paddingBottom: spacing.sm,
+  },
   likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
-  comments: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.xs },
+  comments: { gap: spacing.xs },
   // The entry's espresso rule, then its actions.
   actions: {
     flexDirection: 'row',

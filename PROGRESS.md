@@ -999,3 +999,8 @@ uses DM Serif Display. It was kept, so nothing changed visually.
   at once. Comments from blocked people are left out.
 - Verified in the simulator (iPhone 16, @chefshin): one-comment and two-comment cards, and
   tapping to open the post. "View all N" (more than two top-level comments) not seen live.
+- Reordered (Instagram style, not committed): photos and review → like/comment/save row →
+  "Liked by" → up to two comments (4 lines each before "…") → "View all N comments".
+  Layout only; same data, no new requests. Seen in the simulator on a multi-photo post
+  with 5 comments.
+
