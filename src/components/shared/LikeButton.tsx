@@ -1,6 +1,6 @@
 import { Heart } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -17,9 +17,11 @@ export interface LikeButtonProps {
   liked: boolean;
   count: number;
   onToggle: () => void;
+  /** Layout overrides (e.g. a shorter row; hitSlop keeps the touch area). */
+  style?: StyleProp<ViewStyle>;
 }
 
-export function LikeButton({ liked, count, onToggle }: LikeButtonProps) {
+export function LikeButton({ liked, count, onToggle, style }: LikeButtonProps) {
   const scale = useSharedValue(1);
   const wasLiked = useRef(liked);
 
@@ -39,7 +41,7 @@ export function LikeButton({ liked, count, onToggle }: LikeButtonProps) {
       accessibilityRole="button"
       accessibilityState={{ selected: liked }}
       accessibilityLabel={liked ? `Unlike. ${count} likes` : `Like. ${count} likes`}
-      style={styles.button}
+      style={[styles.button, style]}
       testID="like-button"
     >
       <Animated.View style={iconStyle}>

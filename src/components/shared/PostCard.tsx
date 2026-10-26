@@ -146,82 +146,94 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
         </View>
       ) : null}
 
-      <View style={styles.actions}>
-        <LikeButton
-          liked={post.viewerHasLiked}
-          count={post.likeCount}
-          onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
-        />
-        <Pressable
-          onPress={() => openPost(true)}
-          hitSlop={8}
-          style={styles.action}
-          accessibilityRole="button"
-          accessibilityLabel={`Comments, ${post.commentCount}`}
-        >
-          <MessageCircle size={iconSizes.lg} color={colors.text} strokeWidth={strokes.regular} />
-          {post.commentCount > 0 ? (
-            <AppText variant="calloutStrong">{formatCount(post.commentCount)}</AppText>
-          ) : null}
-        </Pressable>
-        <View style={styles.flex} />
-        <IconButton
-          icon={Bookmark}
-          label={post.viewerHasSaved ? 'Remove from saved' : 'Save to make later'}
-          filled={post.viewerHasSaved}
-          color={colors.text}
-          onPress={() => toggleSave.mutate({ post, save: !post.viewerHasSaved })}
-        />
-      </View>
-
-      {likedBy || topComments.length > 0 ? (
-        // Instagram order: actions, then likes, then a few comments.
-        <View style={styles.social}>
-          {likedBy ? (
-            <AppText variant="caption" color="textSecondary">
-              {likedBy.lead ? (
-                <>
-                  Liked by{' '}
-                  <AppText variant="caption" style={styles.likedByName}>
-                    {likedBy.lead}
-                  </AppText>
-                  {likedBy.others > 0
-                    ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}`
-                    : ''}
-                </>
-              ) : (
-                `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
-              )}
-            </AppText>
-          ) : null}
-          {topComments.length > 0 ? (
-            <Pressable
-              onPress={() => openPost(true)}
-              style={styles.comments}
-              accessibilityRole="link"
-              accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${c.body}`).join('. ')}`}
-              accessibilityHint="Opens all comments"
-              testID={`post-card-comments-${post.id}`}
-            >
-              {topComments.map((comment) => (
-                <AppText key={comment.id} variant="callout" numberOfLines={4}>
-                  <AppText variant="calloutStrong">{comment.author.username}</AppText> {comment.body}
-                </AppText>
-              ))}
-              {post.commentCount > topComments.length ? (
-                <AppText variant="caption" color="textSecondary">
-                  View all {formatCount(post.commentCount)} comments
-                </AppText>
-              ) : null}
-            </Pressable>
-          ) : null}
+      {/* Actions, likes and comment previews read as one block (no section gap). */}
+      <View>
+        <View style={styles.actions}>
+          <LikeButton
+            liked={post.viewerHasLiked}
+            count={post.likeCount}
+            onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
+            style={styles.compactAction}
+          />
+          <Pressable
+            onPress={() => openPost(true)}
+            hitSlop={8}
+            style={styles.action}
+            accessibilityRole="button"
+            accessibilityLabel={`Comments, ${post.commentCount}`}
+          >
+            <MessageCircle size={iconSizes.lg} color={colors.text} strokeWidth={strokes.regular} />
+            {post.commentCount > 0 ? (
+              <AppText variant="calloutStrong">{formatCount(post.commentCount)}</AppText>
+            ) : null}
+          </Pressable>
+          <View style={styles.flex} />
+          <IconButton
+            icon={Bookmark}
+            label={post.viewerHasSaved ? 'Remove from saved' : 'Save to make later'}
+            filled={post.viewerHasSaved}
+            color={colors.text}
+            onPress={() => toggleSave.mutate({ post, save: !post.viewerHasSaved })}
+            style={styles.compactAction}
+          />
         </View>
-      ) : null}
+
+        {likedBy || topComments.length > 0 ? (
+          // Instagram order: actions, then likes, then a few comments.
+          <View style={styles.social}>
+            {likedBy ? (
+              <AppText variant="caption" color="textSecondary">
+                {likedBy.lead ? (
+                  <>
+                    Liked by{' '}
+                    <AppText variant="caption" style={styles.likedByName}>
+                      {likedBy.lead}
+                    </AppText>
+                    {likedBy.others > 0
+                      ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}`
+                      : ''}
+                  </>
+                ) : (
+                  `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
+                )}
+              </AppText>
+            ) : null}
+            {topComments.length > 0 ? (
+              <Pressable
+                onPress={() => openPost(true)}
+                style={styles.comments}
+                accessibilityRole="link"
+                accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${c.body}`).join('. ')}`}
+                accessibilityHint="Opens all comments"
+                testID={`post-card-comments-${post.id}`}
+              >
+                {topComments.map((comment) => (
+                  <AppText key={comment.id} variant="callout" numberOfLines={4}>
+                    <AppText variant="calloutStrong">{comment.author.username}</AppText> {comment.body}
+                  </AppText>
+                ))}
+                {post.commentCount > topComments.length ? (
+                  <AppText variant="caption" color="textSecondary">
+                    View all {formatCount(post.commentCount)} comments
+                  </AppText>
+                ) : null}
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
 
 export const PostCard = memo(PostCardBase);
+
+/**
+ * The like/comment/save row is 36 pt tall: 6 pt above and below the 24 pt
+ * icons, so "Liked by" sits ~8 pt under them. Each button's hitSlop keeps its
+ * touch area at least 44 pt.
+ */
+const ACTION_ROW = 36;
 
 const styles = StyleSheet.create({
   card: { paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
@@ -240,13 +252,8 @@ const styles = StyleSheet.create({
   photos: { paddingHorizontal: SCREEN_GUTTER },
   words: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm + 2 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
-  // Likes and comment previews sit snug under the actions.
-  social: {
-    paddingHorizontal: SCREEN_GUTTER,
-    gap: spacing.xs + 2,
-    marginTop: -spacing.xs,
-    paddingBottom: spacing.sm,
-  },
+  // Likes and comment previews sit right under the actions.
+  social: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.xs, paddingBottom: spacing.sm },
   likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
   comments: { gap: spacing.xs },
   // The entry's espresso rule, then its actions.
@@ -263,7 +270,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs + 2,
-    minHeight: 44,
+    minHeight: ACTION_ROW,
     paddingHorizontal: spacing.xs,
   },
+  compactAction: { minHeight: ACTION_ROW },
 });

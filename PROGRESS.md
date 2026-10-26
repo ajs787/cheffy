@@ -1003,4 +1003,9 @@ uses DM Serif Display. It was kept, so nothing changed visually.
   "Liked by" → up to two comments (4 lines each before "…") → "View all N comments".
   Layout only; same data, no new requests. Seen in the simulator on a multi-photo post
   with 5 comments.
+- Spacing fix (not committed): actions, likes and comments are now one block, so the
+  card's 12 pt section gap no longer applies between them. The action row is 36 pt
+  (6 pt around the 24 pt icons; hitSlop keeps touch areas ≥ 44 pt). "Liked by" sits
+  about 8 pt under the icons, comments 4 pt below. The −4 pt margin is removed.
+  `LikeButton` takes an optional `style`; the post page is unchanged.
 
