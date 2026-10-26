@@ -25,7 +25,9 @@ Deno.serve(async (req) => {
   if (whoError || !who.user) return json(401, { error: 'not authenticated' });
   const uid = who.user.id;
 
-  // Files live at {uid}/file or {uid}/{postId}/file.
+  // The app stores files at {uid}/file or {uid}/{postId}/file; walk deeper
+  // anyway so nothing a client uploaded under {uid}/ outlives the account.
+  const MAX_DEPTH = 8;
   for (const bucket of BUCKETS) {
     const paths: string[] = [];
     const walk = async (prefix: string, depth: number): Promise<void> => {
@@ -35,7 +37,7 @@ Deno.serve(async (req) => {
         for (const item of data) {
           const path = `${prefix}/${item.name}`;
           if (item.id === null) {
-            if (depth < 2) await walk(path, depth + 1);
+            if (depth < MAX_DEPTH) await walk(path, depth + 1);
           } else {
             paths.push(path);
           }

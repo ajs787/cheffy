@@ -71,7 +71,7 @@ describe('admin access', () => {
       await expectDbError(db.query(reporter.id, sql), /moderators only/);
     }
     // Reporters see only their own reports, and can't touch review fields.
-    expect(await db.query(other.id, 'select * from public.reports')).toEqual([]);
+    expect(await db.query(other.id, 'select id, status from public.reports')).toEqual([]);
     await expectDbError(
       db.query(reporter.id, "update public.reports set status = 'dismissed' where id = $1", [id]),
       /permission denied/,

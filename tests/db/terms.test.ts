@@ -46,12 +46,17 @@ describe('terms acceptance', () => {
   it('cannot be faked when creating or editing the profile', async () => {
     const id = randomUUID();
     await db.admin('insert into auth.users (id, email) values ($1, $2)', [id, 'faker@example.test']);
-    await db.query(
-      id,
-      `insert into public.profiles (id, username, display_name, terms_version, terms_accepted_at)
-       values ($1, 'faker', 'faker', '2099-01-01', now())`,
-      [id],
+    // Terms columns can't be written by the client at all.
+    await expectDbError(
+      db.query(
+        id,
+        `insert into public.profiles (id, username, display_name, terms_version, terms_accepted_at)
+         values ($1, 'faker', 'faker', '2099-01-01', now())`,
+        [id],
+      ),
+      /permission denied/,
     );
+    await db.query(id, `insert into public.profiles (id, username, display_name) values ($1, 'faker', 'faker')`, [id]);
     expect((await terms(id)).terms_version).toBeNull();
     await expectDbError(
       db.query(id, `update public.profiles set terms_version = 'x' where id = $1`, [id]),

@@ -61,10 +61,10 @@ export function BottomSheet({
   dragFromHandleOnly = false,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
-  // Above the keyboard the home-indicator inset is covered anyway; drop it.
-  const keyboardUp = useKeyboardVisible();
   const reduceMotion = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
+  // Above the keyboard the home-indicator inset is covered anyway; drop it.
+  const keyboardUp = useKeyboardVisible(mounted);
   const translateY = useSharedValue(OFFSCREEN);
   const backdrop = useSharedValue(0);
   const sheetHeight = useSharedValue(OFFSCREEN);

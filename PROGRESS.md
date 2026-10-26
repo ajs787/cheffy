@@ -1009,3 +1009,45 @@ uses DM Serif Display. It was kept, so nothing changed visually.
   about 8 pt under the icons, comments 4 pt below. The −4 pt margin is removed.
   `LikeButton` takes an optional `style`; the post page is unchanged.
 
+
+## Cheffy 1.0 launch readiness (2026-10-26, branch `launch-readiness`, not pushed)
+
+Detailed docs: [SECURITY_AUDIT.md](SECURITY_AUDIT.md), [APP_REVIEW_CHECKLIST.md](APP_REVIEW_CHECKLIST.md),
+[MODERATION_ADMIN_GUIDE.md](MODERATION_ADMIN_GUIDE.md), [docs/APP_STORE_METADATA.md](docs/APP_STORE_METADATA.md),
+[docs/security/NEEDS-VALIDATION.md](docs/security/NEEDS-VALIDATION.md).
+
+| Task | Status | Notes |
+|---|---|---|
+| 1. Website TestFlight CTAs | Completed (not deployed) | "Join the iPhone Beta" points to the public TestFlight link on every page. Checked at desktop and phone widths. Deploys on merge to main. |
+| 2. Moderation dashboard | Partially complete | `/admin/moderation` built: per-report review, evidence snapshot, priority, notes, actions, audit trail, pending count, email alert function. Server-enforced via `assert_moderator()`. Tested with DB tests and a local UI run; **not deployed, and not run against the live project**. |
+| 3. App Store metadata | Partially complete | Text, keywords and URLs ready. "(3a0e77)" is the App Store Connect record name set by EAS Submit; you rename it there. 6.9" screenshots still needed. |
+| 4. App Review checklist | Completed (document) | Remaining blockers need your accounts or approval. |
+| 5. Security audit | Completed (audit), fixes not deployed | 14 leads, all `needs_validation` (source-only run). All fixed in `20261026000002_security_hardening.sql` with 14 regression tests. |
+| 6. Code quality and performance | Completed (review) | Listener and timer cleanup, FlashList and image caching fine. Fixed hidden bottom sheets listening to the keyboard. No device profiling. |
+| 7. Release testing | Partially complete | See below. |
+
+### Release testing (Task 7)
+- **Automated:** 418 tests pass (228 database, 190 app). Typecheck and lint are clean.
+- **Browser (local):**
+  - Website CTAs on every page.
+  - `/admin/*` security headers.
+  - Dashboard sign-in screen and rendering.
+  - Callback page forwards only auth fields.
+- **Earlier this week:**
+  - Simulator (read-only, @chefshin): feed, comments, profile, Co-Chef review sheet.
+  - Sign-up, confirmation, password reset and account deletion: seen in the live auth logs
+    for test accounts.
+- **Not run:**
+  - Moderation actions against live data, which need the migrations pushed and a test
+    account.
+  - Banners and following from Activity on a device.
+  - Build 11.
+  - Any destructive flow on real accounts (not allowed).
+- **Owner approvals pending:**
+  - Push both migrations.
+  - Merge to main (deploys the site).
+  - Redeploy `delete-account`.
+  - Deploy `moderation-alert` with its secrets.
+  - Build 11.
+  - App Store Connect fields.
+  - Nothing has been submitted to Apple.

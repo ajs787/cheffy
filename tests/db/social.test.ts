@@ -258,8 +258,8 @@ describe('reports', () => {
       `insert into public.reports (reporter_id, target_type, target_post_id, reason) values ($1, 'post', $2, 'spam')`,
       [b.id, postId],
     );
-    expect(await db.query(b.id, 'select * from public.reports')).toHaveLength(1);
-    expect(await db.query(c.id, 'select * from public.reports')).toHaveLength(0);
+    expect(await db.query(b.id, 'select id, status from public.reports')).toHaveLength(1);
+    expect(await db.query(c.id, 'select id, status from public.reports')).toHaveLength(0);
   });
 
   it('reports must reference their target and cannot be filed as someone else', async () => {

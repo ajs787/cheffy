@@ -163,8 +163,17 @@
       });
     });
   }
+  // Storage paths come from user data: only plain relative paths, never
+  // "." or ".." segments, so a crafted path can't redirect a request that
+  // carries the moderator's token. (The database enforces the same format.)
+  var SAFE_PATH = /^[A-Za-z0-9_-][A-Za-z0-9._-]*(\/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$/;
+  function safePath(path) {
+    return typeof path === 'string' && path.length <= 300 && SAFE_PATH.test(path);
+  }
+
   // Short-lived (5 minute) links for private post photos.
   function signedPhoto(path) {
+    if (!safePath(path)) return Promise.resolve(null);
     return refreshIfNeeded().then(function () {
       return fetch(API + '/storage/v1/object/sign/post-images/' + path.split('/').map(encodeURIComponent).join('/'), {
         method: 'POST',
@@ -177,6 +186,7 @@
     }).catch(function () { return null; });
   }
   function avatarUrl(path) {
+    if (!safePath(path)) return '';
     return API + '/storage/v1/object/public/avatars/' + path.split('/').map(encodeURIComponent).join('/');
   }
 
@@ -410,7 +420,7 @@
         ]));
       }
     } else {
-      if (data.avatar_path) panel.appendChild(el('img', { src: avatarUrl(data.avatar_path), alt: 'Profile photo', class: 'avatar', width: '96', height: '96', referrerpolicy: 'no-referrer' }));
+      if (data.avatar_path && avatarUrl(data.avatar_path)) panel.appendChild(el('img', { src: avatarUrl(data.avatar_path), alt: 'Profile photo', class: 'avatar', width: '96', height: '96', referrerpolicy: 'no-referrer' }));
       panel.appendChild(facts([
         ['Username', data.username ? '@' + data.username : ''],
         ['Name', data.display_name || ''],

@@ -37,10 +37,17 @@
   <script src="/site.js"></script>
   <script>
     (function () {
-      // Hand the exact query (code, type, or error) to the app's own callback screen.
-      var q = new URLSearchParams(location.search);
+      // Hand only the auth callback fields (code, type, error) to the app's own
+      // callback screen. Tokens or anything else in the URL are never forwarded
+      // to the custom scheme, which another app could try to claim.
+      var ALLOWED = ['code', 'type', 'error', 'error_code', 'error_description'];
+      var src = new URLSearchParams(location.search);
       var hash = new URLSearchParams(location.hash.replace(/^#/, ''));
-      hash.forEach(function (v, k) { if (!q.has(k)) q.set(k, v); });
+      var q = new URLSearchParams();
+      ALLOWED.forEach(function (k) {
+        var v = src.get(k) || hash.get(k);
+        if (v) q.set(k, v);
+      });
       var open = document.getElementById('open');
       open.href = 'cheffy://auth/callback' + (q.toString() ? '?' + q.toString() : '');
       var title = document.getElementById('title');
