@@ -1,6 +1,6 @@
-// The one place to set where people get the app. Paste the public TestFlight
-// link now (https://testflight.apple.com/join/…), the App Store link later.
-var DOWNLOAD_URL = '';
+// The one place to set where people get the app: the public TestFlight beta
+// now, the App Store link at launch (then change the button labels too).
+var DOWNLOAD_URL = 'https://testflight.apple.com/join/DHn7FPJp';
 
 document.querySelectorAll('[data-get-app]').forEach(function (el) {
   if (DOWNLOAD_URL) {

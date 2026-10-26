@@ -98,6 +98,8 @@ img { display: block; max-width: 100%; }
 .get-app strong { font-family: var(--text); font-weight: 600; font-size: 22px; }
 .get-app[aria-disabled='true'] { background: var(--espresso); cursor: default; }
 .badges { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.beta-note { font-size: 14px; color: var(--muted); max-width: 24em; margin: 14px auto 0; line-height: 1.45; }
+.beta-note a { color: inherit; }
 
 /* Phone frame around real app screenshots. */
 .phone {
