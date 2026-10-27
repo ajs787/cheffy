@@ -7,5 +7,7 @@
   "assets": {
     "directory": "./web",
     "html_handling": "auto-trailing-slash"
-  }
+  },
+  // Branch builds run `wrangler preview`, which needs this block (empty is fine).
+  "previews": {}
 }
