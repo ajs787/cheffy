@@ -129,7 +129,11 @@ export function searchUsers(query: string): Promise<UserListItem[]> {
 }
 
 /** A suggestion, with the honest reason it's shown ("Follows you", …). */
-export type SuggestedFriend = UserListItem & { reason: string };
+export type SuggestedFriend = UserListItem & {
+  reason: string;
+  /** How many people the viewer follows also follow them. */
+  mutualCount: number;
+};
 
 export const SUGGESTIONS_PAGE = 20;
 
@@ -138,7 +142,7 @@ export async function fetchSuggestedFriends(
   limit = SUGGESTIONS_PAGE,
   offset = 0,
 ): Promise<SuggestedFriend[]> {
-  const picks = await fetchRows<{ user_id: string; reason: string; score: number }>(
+  const picks = await fetchRows<{ user_id: string; reason: string; score: number; mutual_count: number }>(
     supabase.rpc('suggested_friends', { p_limit: limit, p_offset: offset }),
   );
   if (picks.length === 0) return [];
@@ -154,7 +158,7 @@ export async function fetchSuggestedFriends(
   const byId = new Map(rows.map((r) => [r.id, r]));
   return picks.flatMap((p) => {
     const row = byId.get(p.user_id);
-    return row ? [{ ...mapUserListItem(row), reason: p.reason }] : [];
+    return row ? [{ ...mapUserListItem(row), reason: p.reason, mutualCount: p.mutual_count ?? 0 }] : [];
   });
 }
 
@@ -166,16 +170,30 @@ export async function dismissSuggestion(me: string, userId: string): Promise<voi
   if (error && error.code !== ALREADY_EXISTS) throw error;
 }
 
-export async function fetchSuggestedCooks(): Promise<UserListItem[]> {
-  const rows = await fetchRows<UserListRow>(
-    supabase.rpc('suggested_cooks', { p_limit: 12 }).select(USER_LIST_SELECT),
-  );
-  return rows.map(mapUserListItem);
-}
-
 // ---------------------------------------------------------------------------
 // Likes & saves
 // ---------------------------------------------------------------------------
+export const LIKERS_PAGE = 30;
+
+/**
+ * People who liked a post, newest first. RLS does the privacy work: likes
+ * are readable only on posts the viewer can see, and people who blocked the
+ * viewer (or were blocked) have no readable profile, so the inner join
+ * drops them instead of returning a blank row.
+ */
+export async function fetchLikers(postId: string, offset: number): Promise<UserListItem[]> {
+  const rows = await fetchRows<{ profile: UserListRow }>(
+    supabase
+      .from('likes')
+      .select(`created_at, profile:profiles!likes_user_id_fkey!inner(${USER_LIST_SELECT})`)
+      .eq('post_id', postId)
+      .order('created_at', { ascending: false })
+      .order('user_id', { ascending: true })
+      .range(offset, offset + LIKERS_PAGE - 1),
+  );
+  return rows.map((row) => mapUserListItem(row.profile));
+}
+
 export async function likePost(me: string, postId: string): Promise<void> {
   const { error } = await supabase.from('likes').insert({ user_id: me, post_id: postId });
   if (error && error.code !== ALREADY_EXISTS) throw error;

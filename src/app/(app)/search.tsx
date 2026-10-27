@@ -6,9 +6,11 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PostGrid } from '@/components/shared/PostGrid';
+import { ListFooter } from '@/components/shared/ListFooter';
 import { UserRow } from '@/components/shared/UserRow';
 import {
   AppText,
+  Avatar,
   EmptyState,
   ErrorState,
   GridSkeleton,
@@ -17,7 +19,9 @@ import {
   SegmentedControl,
 } from '@/components/ui';
 import { usePostSearch, useTagSearch } from '@/features/discover/hooks';
-import { useSuggestedCooks, useUserSearch } from '@/features/social/hooks';
+import { AlsoKnow } from '@/features/social/components/AlsoKnow';
+import { usePeopleSearch, useSuggestedFriends } from '@/features/social/hooks';
+import { useRecentPeople } from '@/features/social/recentPeople';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   colors,
@@ -30,6 +34,7 @@ import {
   spacing,
   strokes,
 } from '@/theme';
+import type { ProfileSummary } from '@/types/models';
 
 type Tab = 'creations' | 'people' | 'tags';
 
@@ -128,44 +133,118 @@ function CreationResults({ q }: { q: string }) {
   );
 }
 
+/**
+ * People: with no query, people you looked at recently and suggestions
+ * (each with its reason); with a query, matches only, best first and paged,
+ * then a few "You might also know" below them.
+ */
 function PeopleResults({ q }: { q: string }) {
-  const search = useUserSearch(q);
-  const suggested = useSuggestedCooks();
-  const showingSuggestions = q.length === 0;
-  const query = showingSuggestions ? suggested : search;
-  const users = query.data ?? [];
+  const search = usePeopleSearch(q);
+  const suggested = useSuggestedFriends();
+  const recents = useRecentPeople();
+  const searching = q.length > 0;
 
-  if (query.isPending && !showingSuggestions) return <RowSkeleton />;
-  if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  if (!searching) {
+    const people = suggested.data ?? [];
+    return (
+      <FlashList
+        data={people}
+        keyExtractor={(user) => user.id}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => <UserRow user={item} detail={item.reason} onOpen={recents.add} />}
+        ListHeaderComponent={
+          <>
+            {recents.people.length > 0 ? (
+              <>
+                <AppText variant="overline" color="textSecondary" style={styles.listLabel}>
+                  Recent
+                </AppText>
+                {recents.people.slice(0, 5).map((person) => (
+                  <RecentRow key={person.id} person={person} onOpen={recents.add} />
+                ))}
+              </>
+            ) : null}
+            {people.length > 0 ? (
+              <AppText variant="overline" color="textSecondary" style={styles.listLabel}>
+                Suggested for you
+              </AppText>
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={
+          suggested.isPending ? (
+            <RowSkeleton />
+          ) : recents.people.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              compact
+              title="Find your friends"
+              message="Search by name or username to follow people."
+            />
+          ) : null
+        }
+        contentContainerStyle={styles.listContent}
+      />
+    );
+  }
 
+  const users = search.data?.pages.flat() ?? [];
+  if (search.isPending) return <RowSkeleton />;
+  if (search.isError) return <ErrorState error={search.error} onRetry={() => void search.refetch()} />;
   return (
     <FlashList
       data={users}
       keyExtractor={(user) => user.id}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      renderItem={({ item }) => <UserRow user={item} />}
-      ListHeaderComponent={
-        showingSuggestions && users.length > 0 ? (
-          <AppText variant="overline" color="textSecondary" style={styles.listLabel}>
-            Suggested
-          </AppText>
-        ) : null
-      }
+      renderItem={({ item }) => <UserRow user={item} onOpen={recents.add} />}
+      onEndReached={() => {
+        if (search.hasNextPage && !search.isFetchingNextPage) void search.fetchNextPage();
+      }}
       ListEmptyComponent={
         <EmptyState
           icon={Users}
           compact
-          title={showingSuggestions ? 'Find your friends' : `No one matches “${q}”`}
-          message={
-            showingSuggestions
-              ? 'Search by name or username to follow people.'
-              : 'Check the spelling, or try their username.'
-          }
+          title={`No one matches “${q}”`}
+          message="Check the spelling, or try their username."
         />
+      }
+      ListFooterComponent={
+        users.length > 0 && !search.hasNextPage ? (
+          <AlsoKnow exclude={users} onOpen={recents.add} />
+        ) : (
+          <ListFooter loading={search.isFetchingNextPage} />
+        )
       }
       contentContainerStyle={styles.listContent}
     />
+  );
+}
+
+/** A recently opened profile (no follow state is stored for recents). */
+function RecentRow({ person, onOpen }: { person: ProfileSummary; onOpen: (p: ProfileSummary) => void }) {
+  return (
+    <PressableScale
+      onPress={() => {
+        onOpen(person);
+        router.push({ pathname: '/user/[id]', params: { id: person.id } });
+      }}
+      activeScale={0.98}
+      accessibilityRole="link"
+      accessibilityLabel={`${person.displayName}, @${person.username}`}
+      style={styles.recentRow}
+    >
+      <Avatar uri={person.avatarUrl} name={person.displayName} size="md" />
+      <View style={styles.flex}>
+        <AppText variant="bodyStrong" numberOfLines={1}>
+          {person.displayName}
+        </AppText>
+        <AppText variant="callout" color="textSecondary" numberOfLines={1}>
+          @{person.username}
+        </AppText>
+      </View>
+    </PressableScale>
   );
 }
 
@@ -234,6 +313,14 @@ const styles = StyleSheet.create({
   cancel: { minHeight: HIT_TARGET, justifyContent: 'center', paddingHorizontal: spacing.xs },
   gridTop: { height: spacing.lg },
   listContent: { paddingTop: spacing.sm },
+  flex: { flex: 1 },
+  recentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: spacing.sm,
+  },
   listLabel: { paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
   tagRow: {
     flexDirection: 'row',

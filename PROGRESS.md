@@ -1051,3 +1051,105 @@ Detailed docs: [SECURITY_AUDIT.md](SECURITY_AUDIT.md), [APP_REVIEW_CHECKLIST.md]
   - Build 11.
   - App Store Connect fields.
   - Nothing has been submitted to Apple.
+
+## Likes list & smarter discovery (2026-10-27, branch `discovery-likes`, not committed)
+
+**Likes**
+- "Liked by …" on feed cards is now one full-width tap target (the hit area is enlarged
+  without changing the tuned spacing).
+- The like count next to the heart opens the same list. The heart and the count are
+  separate targets, so opening the list can't toggle your like.
+- The list is a native iOS sheet (`/likes/[id]`, form sheet, 60% / full height):
+  - "N likes" total, then avatar, name, @username and Follow / Following / Requested;
+  - each row opens the profile, and Back returns to the list;
+  - paged 30 at a time, with an empty state;
+  - refreshes after you like or unlike.
+- Privacy comes from the existing RLS. Likes are readable only on posts you can see, and
+  people on either side of a block have no readable profile, so they're left out. No
+  database change was needed for this part.
+
+**Find Friends and Search → People**
+- Find Friends: Recent → Suggested for you (top 10 cards) → People you may know (further
+  suggestions with real mutual follows, shown only when they exist) → Invite.
+- Search results list matches only, then up to 3 "You might also know" below them (from
+  the already-loaded suggestions, so no extra request).
+- Search's People tab now matches this: recents and suggestions with reasons when empty,
+  then paged matches.
+
+**Discover**
+- New layout: Search → **For Your Taste** → Suggested for you (people) → category tiles →
+  the existing rows.
+- For Your Taste:
+  - topic chips (tags, cuisines, dish types and Budget Eats, each with its real count);
+  - a carousel of picked creations, with "See all" opening `/taste`;
+  - cards show photo, title, rating, @creator (opens their profile) and the first tag or
+    cuisine.
+- "Home cooks to follow" was replaced by Suggested for you, so the same people don't show
+  twice on one screen.
+
+**Search → Creations** is now ranked by relevance: exact title, then titles starting with
+the query, then a word in the title, then anywhere in the title, then tag and category
+matches. Newest first within each tier.
+
+**Database** (`20261027000001_taste_discovery.sql`, **not pushed**):
+- `taste_topics` and `taste_posts`: SECURITY INVOKER, so posts RLS hides private, blocked,
+  draft and removed content.
+- `search_creations`.
+- `suggested_friends` gains `mutual_count`, with the same ranking.
+
+**Recommendation logic:**
+- Taste is computed from posts you make (weight 3), like (2) and save (2).
+- Topics score: your weight + how many posts there are to browse + fresh activity + a
+  small daily shuffle. Topics with fewer than 2 posts are hidden, and identical names
+  (a "Korean" cuisine and a #korean tag) are merged.
+- Creations score: overlap with your taste + rating above 6 + likes (capped) + recency +
+  the daily shuffle. Excluded: your own posts, posts you liked or saved, and posts without
+  photos. Each cook gets at most 2 spots before anyone's third.
+- New users fall back to popular topics and well-rated recent posts.
+
+**Tests:**
+- 431 pass: 240 database (12 new: privacy, blocks, drafts, dedupe, Budget Eats, ranking,
+  per-cook cap, paging, anon lockout, mutual count, ranked search) and 191 app (new
+  LikeButton test: the count doesn't toggle the like).
+- Typecheck and lint are clean.
+
+**Simulator** (iPhone 16 Pro Max, @chefshin, read-only):
+- Feed "Liked by" and the count both open the sheet ("2 likes", your row without a button,
+  Christian "Following"). A row opens the profile, and Back returns. The like was
+  unchanged.
+- Discover shows Suggested for you under search.
+- Find Friends shows suggestions, and searching "helen" gave the match, then You might
+  also know, then Invite.
+
+**Migration `20261027000001_taste_discovery` is live (pushed 2026-10-27, approved).**
+- `migration list` shows it on the remote.
+- Signed-out callers are refused by `taste_topics`, `taste_posts` and `search_creations`
+  (401, "permission denied").
+- Build 10 is unaffected: it ignores the extra `mutual_count` column.
+
+**Checked in the simulator after the push (read-only, @chefshin, 2026-10-27):**
+- For Your Taste sits directly under the Discover search bar:
+  - personal chips: Chinese 13, Italian 12, American 10;
+  - real cards showing photo, title, creator, rating and a tag or cuisine line.
+- Taps:
+  - the Chinese chip opens Browse filtered to Chinese;
+  - the creator name opens @helenkwok's profile;
+  - the card opens the post, which @chefshin hasn't liked.
+- `/taste` (See all) shows chips plus a grid. The last chip ("Indian 2") scrolls fully into
+  view. The grid ends after 8 creations: that's every candidate left once own, liked and saved
+  posts are excluded, so paging past 18 is covered only by the DB test.
+- Ranked search:
+  - "chicken" and "salmon" put titles starting with the word first, then other titles, then
+    tag or category matches;
+  - "salmonzz" and "tofu" show "No results" (the live DB also returns 0 for "tofu").
+- People you may know: live data has only 2 suggestions (each with 1 mutual). Both show as
+  Suggested cards, so the PYMK list correctly stays hidden; it lists suggestions after the
+  first 10.
+
+**Open issue:**
+- Right after the push, two searches ("chicken", "chickenpasta") showed "Couldn't load this"
+  on the first try and worked on Try again.
+- It didn't happen on 4 later searches, and the same SQL succeeds on the live DB (62 ms for a
+  no-match query). Likely a brief lag right after the migration, but not proven. Watch for it.
+- Separately, the shared `GridSkeleton` loading grid draws tiny squares. That's existing
+  behaviour, unchanged here.

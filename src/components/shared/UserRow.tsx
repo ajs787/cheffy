@@ -14,9 +14,12 @@ function UserRowBase({
   showFollow = true,
   trailing,
   onOpen,
+  detail,
 }: {
   user: UserListItem;
   showFollow?: boolean;
+  /** A short third line, e.g. why they're suggested ("Followed by @x"). */
+  detail?: string;
   /** Replaces the Follow button (e.g. Remove, Confirm/Delete). */
   trailing?: ReactNode;
   /** Called before opening the profile (e.g. to remember it in recents). */
@@ -31,7 +34,7 @@ function UserRowBase({
       }}
       activeScale={0.98}
       accessibilityRole="link"
-      accessibilityLabel={`${user.displayName}, @${user.username}`}
+      accessibilityLabel={`${user.displayName}, @${user.username}${detail ? `. ${detail}` : ''}`}
       style={styles.row}
     >
       <Avatar uri={user.avatarUrl} name={user.displayName} size="md" />
@@ -42,6 +45,11 @@ function UserRowBase({
         <AppText variant="callout" color="textSecondary" numberOfLines={1}>
           @{user.username}
         </AppText>
+        {detail ? (
+          <AppText variant="caption" color="textTertiary" numberOfLines={1}>
+            {detail}
+          </AppText>
+        ) : null}
       </View>
       {trailing ??
         (showFollow && user.id !== me ? (
