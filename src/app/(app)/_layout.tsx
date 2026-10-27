@@ -22,6 +22,15 @@ export default function AppLayout() {
         <Stack.Screen name="compose" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="edit-profile" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="collection/edit" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen
+          name="likes/[id]"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.6, 1],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+          }}
+        />
       </Stack>
       {/* Live activity banners (signed-in only). */}
       <NotificationBannerHost />

@@ -17,7 +17,8 @@ import {
 import { CategoryTiles } from '@/features/discover/components/CategoryTiles';
 import { DiscoverRow } from '@/features/discover/components/DiscoverRow';
 import { MostHatedRow } from '@/features/discover/components/MostHatedRow';
-import { SuggestedCooks } from '@/features/discover/components/SuggestedCooks';
+import { ForYourTaste } from '@/features/discover/components/ForYourTaste';
+import { SuggestedPeople } from '@/features/discover/components/SuggestedPeople';
 import { useDiscoverGrid, useTrending } from '@/features/discover/hooks';
 import { useTaxonomy } from '@/features/taxonomy/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -43,7 +44,9 @@ export default function DiscoverScreen() {
       qc.invalidateQueries({ queryKey: ['posts', 'discover'] }),
       qc.invalidateQueries({ queryKey: queryKeys.trending }),
       qc.invalidateQueries({ queryKey: queryKeys.mostHated }),
-      qc.invalidateQueries({ queryKey: queryKeys.suggestedCooks }),
+      qc.invalidateQueries({ queryKey: queryKeys.tasteTopics }),
+      qc.invalidateQueries({ queryKey: queryKeys.tastePosts }),
+      qc.invalidateQueries({ queryKey: ['users', 'suggested-friends'] }),
     ]),
   );
 
@@ -64,6 +67,8 @@ export default function DiscoverScreen() {
         </AppText>
       </PressableScale>
 
+      <ForYourTaste />
+      <SuggestedPeople />
       <CategoryTiles categories={taxonomy.data?.primaries ?? []} />
       <View style={styles.sectionsTop} />
 
@@ -108,7 +113,6 @@ export default function DiscoverScreen() {
           />
         );
       })}
-      <SuggestedCooks />
       {posts.length > 0 ? (
         <SectionHeader title="Just posted" subtitle="The latest from the community" />
       ) : null}

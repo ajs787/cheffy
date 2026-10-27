@@ -30,7 +30,8 @@ export const queryKeys = {
   profileStats: (id: string) => ['profile', id, 'stats'] as const,
   connections: (id: string, type: 'followers' | 'following') => ['connections', id, type] as const,
   userSearch: (q: string) => ['users', 'search', q] as const,
-  suggestedCooks: ['users', 'suggested'] as const,
+  /** Who liked a post (a user list, so follow buttons stay in sync). */
+  likers: (postId: string) => ['users', 'likers', postId] as const,
   followRequests: ['follow-requests'] as const,
   blocked: ['users', 'blocked'] as const,
 
@@ -58,6 +59,9 @@ export const queryKeys = {
   postCollections: (postId: string) => ['post-collections', postId] as const,
 
   trending: ['discover', 'trending'] as const,
+  tasteTopics: ['discover', 'taste-topics'] as const,
+  tastePosts: ['posts', 'taste'] as const,
+  tastePostsAll: ['posts', 'taste', 'all'] as const,
   mostHated: ['discover', 'most-hated'] as const,
   tagSuggestions: (q: string) => ['tags', q] as const,
 };

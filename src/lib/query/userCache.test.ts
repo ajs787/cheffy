@@ -19,14 +19,14 @@ describe('user list caches', () => {
   it('flips following everywhere the user appears and rolls back', () => {
     const qc = new QueryClient();
     qc.setQueryData(queryKeys.userSearch('au'), [user('a'), user('b')]);
-    qc.setQueryData(queryKeys.suggestedCooks, [user('a')]);
+    qc.setQueryData(queryKeys.likers('p1'), [user('a')]);
     const connections: InfiniteData<UserListItem[]> = { pages: [[user('a'), user('c')]], pageParams: [0] };
     qc.setQueryData(queryKeys.connections('x', 'followers'), connections);
 
     const snapshot = setFollowStateInUserCaches(qc, 'a', 'following');
     expect(qc.getQueryData<UserListItem[]>(queryKeys.userSearch('au'))![0]!.viewerIsFollowing).toBe(true);
     expect(qc.getQueryData<UserListItem[]>(queryKeys.userSearch('au'))![1]!.viewerIsFollowing).toBe(false);
-    expect(qc.getQueryData<UserListItem[]>(queryKeys.suggestedCooks)![0]!.viewerIsFollowing).toBe(true);
+    expect(qc.getQueryData<UserListItem[]>(queryKeys.likers('p1'))![0]!.viewerIsFollowing).toBe(true);
     const pages = qc.getQueryData<InfiniteData<UserListItem[]>>(queryKeys.connections('x', 'followers'))!;
     expect(pages.pages[0]![0]!.viewerIsFollowing).toBe(true);
 
@@ -35,7 +35,7 @@ describe('user list caches', () => {
     expect([b.viewerIsFollowing, b.viewerHasRequested]).toEqual([false, true]);
 
     restoreUserCaches(qc, snapshot);
-    expect(qc.getQueryData<UserListItem[]>(queryKeys.suggestedCooks)![0]!.viewerIsFollowing).toBe(false);
+    expect(qc.getQueryData<UserListItem[]>(queryKeys.likers('p1'))![0]!.viewerIsFollowing).toBe(false);
   });
 
   it('updates the actor of Activity rows and leaves the unread count alone', () => {

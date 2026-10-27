@@ -25,8 +25,9 @@ import {
   fetchBlockedUsers,
   fetchConnections,
   fetchFollowRequests,
+  fetchLikers,
+  LIKERS_PAGE,
   dismissSuggestion,
-  fetchSuggestedCooks,
   fetchSuggestedFriends,
   PEOPLE_PAGE,
   SUGGESTIONS_PAGE,
@@ -68,6 +69,20 @@ export function useToggleLike() {
       if (context) restorePostCaches(qc, context.snapshot);
       toast.error(toUserMessage(error, 'Couldn’t update your like.'));
     },
+    // An open likes list picks up the change.
+    onSettled: (_data, _error, { post }) => qc.invalidateQueries({ queryKey: queryKeys.likers(post.id) }),
+  });
+}
+
+/** Who liked a post, paged. Lives under ['users', …] so Follow buttons stay in sync. */
+export function useLikers(postId: string | undefined) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.likers(postId ?? ''),
+    queryFn: ({ pageParam }) => fetchLikers(postId ?? '', pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => (last.length === LIKERS_PAGE ? pages.length * LIKERS_PAGE : undefined),
+    enabled: !!postId,
+    staleTime: 30_000,
   });
 }
 
@@ -311,13 +326,6 @@ export function useDismissSuggestion() {
   });
 }
 
-export function useSuggestedCooks() {
-  return useQuery({
-    queryKey: queryKeys.suggestedCooks,
-    queryFn: fetchSuggestedCooks,
-    staleTime: 5 * 60_000,
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Comments

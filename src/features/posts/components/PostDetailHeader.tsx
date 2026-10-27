@@ -117,6 +117,7 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
               liked={post.viewerHasLiked}
               count={post.likeCount}
               onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
+              onPressCount={() => router.push({ pathname: '/likes/[id]', params: { id: post.id } })}
             />
             <Pressable
               onPress={onCommentPress}

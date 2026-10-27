@@ -45,3 +45,4 @@ example
 # Cheffy
 .env
 coverage/
+store-screenshots/

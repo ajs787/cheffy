@@ -45,6 +45,7 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
       pathname: '/post/[id]',
       params: focusComment ? { id: post.id, focus: 'comment' } : { id: post.id },
     });
+  const openLikes = () => router.push({ pathname: '/likes/[id]', params: { id: post.id } });
   const topComments = post.topComments ?? [];
   const likedBy = likedBySummary(post.recentLikers, post.likeCount, post.viewerHasLiked, me);
 
@@ -153,6 +154,7 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
             liked={post.viewerHasLiked}
             count={post.likeCount}
             onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
+            onPressCount={openLikes}
             style={styles.compactAction}
           />
           <Pressable
@@ -182,21 +184,31 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
           // Instagram order: actions, then likes, then a few comments.
           <View style={styles.social}>
             {likedBy ? (
-              <AppText variant="caption" color="textSecondary">
-                {likedBy.lead ? (
-                  <>
-                    Liked by{' '}
-                    <AppText variant="caption" style={styles.likedByName}>
-                      {likedBy.lead}
-                    </AppText>
-                    {likedBy.others > 0
-                      ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}`
-                      : ''}
-                  </>
-                ) : (
-                  `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
-                )}
-              </AppText>
+              // The whole line is the target, not just the name.
+              <Pressable
+                onPress={openLikes}
+                hitSlop={{ top: 6, bottom: 4 }}
+                style={styles.likedBy}
+                accessibilityRole="button"
+                accessibilityHint="Shows who liked this"
+                testID={`post-card-liked-by-${post.id}`}
+              >
+                <AppText variant="caption" color="textSecondary">
+                  {likedBy.lead ? (
+                    <>
+                      Liked by{' '}
+                      <AppText variant="caption" style={styles.likedByName}>
+                        {likedBy.lead}
+                      </AppText>
+                      {likedBy.others > 0
+                        ? ` and ${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'other' : 'others'}`
+                        : ''}
+                    </>
+                  ) : (
+                    `${formatCount(likedBy.others)} ${likedBy.others === 1 ? 'like' : 'likes'}`
+                  )}
+                </AppText>
+              </Pressable>
             ) : null}
             {topComments.length > 0 ? (
               <Pressable
@@ -254,6 +266,7 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
   // Likes and comment previews sit right under the actions.
   social: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.xs, paddingBottom: spacing.sm },
+  likedBy: { alignSelf: 'stretch' },
   likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
   comments: { gap: spacing.xs },
   // The entry's espresso rule, then its actions.

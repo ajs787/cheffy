@@ -1,9 +1,17 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { queryKeys, type DiscoverQueryParams } from '@/lib/query/keys';
-import type { Cursor } from '@/types/models';
 
-import { fetchDiscoverPage, fetchMostHated, fetchTrending, searchPosts, searchTags, type DiscoverPageParam } from './api';
+import {
+  fetchDiscoverPage,
+  fetchMostHated,
+  fetchTastePosts,
+  fetchTasteTopics,
+  fetchTrending,
+  searchPosts,
+  searchTags,
+  type DiscoverPageParam,
+} from './api';
 
 /** First page only — for horizontal Discover sections. */
 export function useDiscoverSection(params: DiscoverQueryParams, enabled = true) {
@@ -38,8 +46,8 @@ export function usePostSearch(query: string) {
   return useInfiniteQuery({
     queryKey: queryKeys.postSearch(q),
     queryFn: ({ pageParam }) => searchPosts(q, pageParam),
-    initialPageParam: null as Cursor | null,
-    getNextPageParam: (last) => last.nextCursor,
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
     enabled: q.length >= 2,
     staleTime: 60_000,
   });
@@ -52,5 +60,33 @@ export function useTagSearch(query: string) {
     queryFn: () => searchTags(q),
     enabled: q.length >= 1,
     staleTime: 60_000,
+  });
+}
+
+// For Your Taste changes slowly (and has a daily shuffle), so it isn't
+// refetched on every visit to Discover.
+const TASTE_STALE_MS = 10 * 60_000;
+
+export function useTasteTopics() {
+  return useQuery({ queryKey: queryKeys.tasteTopics, queryFn: () => fetchTasteTopics(), staleTime: TASTE_STALE_MS });
+}
+
+/** The Discover carousel: the first few picks. */
+export function useTasteSection() {
+  return useQuery({
+    queryKey: queryKeys.tastePosts,
+    queryFn: async () => (await fetchTastePosts(0, 10)).items,
+    staleTime: TASTE_STALE_MS,
+  });
+}
+
+/** "See all": every pick, paged. */
+export function useTasteGrid() {
+  return useInfiniteQuery({
+    queryKey: queryKeys.tastePostsAll,
+    queryFn: ({ pageParam }) => fetchTastePosts(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
+    staleTime: TASTE_STALE_MS,
   });
 }

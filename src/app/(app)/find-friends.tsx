@@ -5,7 +5,6 @@ import { memo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FollowButton } from '@/components/shared/FollowButton';
 import { UserRow } from '@/components/shared/UserRow';
 import {
   AppHeader,
@@ -18,7 +17,8 @@ import {
 } from '@/components/ui';
 import { contactsSupported } from '@/features/invite/deviceContacts';
 import { useMyProfile } from '@/features/profile/hooks';
-import type { SuggestedFriend } from '@/features/social/api';
+import { AlsoKnow } from '@/features/social/components/AlsoKnow';
+import { SuggestionCard } from '@/features/social/components/SuggestionCard';
 import { useDismissSuggestion, usePeopleSearch, useSuggestedFriends } from '@/features/social/hooks';
 import { useRecentPeople } from '@/features/social/recentPeople';
 import { useInviteCode } from '@/features/unlocks/hooks';
@@ -26,10 +26,8 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { toUserMessage } from '@/lib/errors';
 import { shareInvite } from '@/lib/share';
 import { toast } from '@/stores/toast';
-import { colors, HAIRLINE, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
-import { followStateOf, type ProfileSummary, type UserListItem } from '@/types/models';
-
-const CARD_WIDTH = 156;
+import { colors, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
+import type { ProfileSummary, UserListItem } from '@/types/models';
 
 /**
  * Find Friends: search people on Cheffy, jump back to people you recently
@@ -79,6 +77,7 @@ export default function FindFriendsScreen() {
             />
           ) : null}
           <Suggested onOpen={open} />
+          <PeopleYouMayKnow onOpen={recents.add} />
           <InviteCard />
         </ScrollView>
       )}
@@ -121,9 +120,12 @@ function SearchResults({
         />
       }
       ListFooterComponent={
-        <View style={styles.resultsFooter}>
-          <InviteRow />
-        </View>
+        <>
+          {people.length > 0 && !search.hasNextPage ? <AlsoKnow exclude={people} onOpen={onOpen} /> : null}
+          <View style={styles.resultsFooter}>
+            <InviteRow />
+          </View>
+        </>
       }
     />
   );
@@ -223,7 +225,7 @@ const RecentPerson = memo(function RecentPerson({
 function Suggested({ onOpen }: { onOpen: (p: ProfileSummary) => void }) {
   const suggested = useSuggestedFriends();
   const dismiss = useDismissSuggestion();
-  const people = suggested.data ?? [];
+  const people = (suggested.data ?? []).slice(0, SUGGESTION_CARDS);
 
   if (suggested.isPending) return <RowSkeleton count={2} />;
   if (people.length === 0) return null;
@@ -233,7 +235,7 @@ function Suggested({ onOpen }: { onOpen: (p: ProfileSummary) => void }) {
         <AppText variant="overline" color="textSecondary">
           Suggested for you
         </AppText>
-        {people.length > 3 ? (
+        {(suggested.data?.length ?? 0) > 3 ? (
           <Pressable
             onPress={() => router.push('/suggested')}
             hitSlop={10}
@@ -261,54 +263,32 @@ function Suggested({ onOpen }: { onOpen: (p: ProfileSummary) => void }) {
   );
 }
 
-const SuggestionCard = memo(function SuggestionCard({
-  person,
-  onOpen,
-  onDismiss,
-}: {
-  person: SuggestedFriend;
-  onOpen: (p: ProfileSummary) => void;
-  onDismiss: (id: string) => void;
-}) {
+// ---------------------------------------------------------------------------
+// People you may know: friends of friends beyond the top cards, as rows.
+// Same request as the cards (no extra fetch); shown only when real mutual
+// follows back it.
+// ---------------------------------------------------------------------------
+const SUGGESTION_CARDS = 10;
+
+function PeopleYouMayKnow({ onOpen }: { onOpen: (user: UserListItem) => void }) {
+  const suggested = useSuggestedFriends();
+  const people = (suggested.data ?? []).slice(SUGGESTION_CARDS).filter((p) => p.mutualCount > 0);
+  if (people.length === 0) return null;
   return (
-    <View style={styles.card}>
-      <Pressable
-        onPress={() => onDismiss(person.id)}
-        hitSlop={8}
-        style={styles.dismiss}
-        accessibilityRole="button"
-        accessibilityLabel={`Don’t suggest ${person.displayName}`}
-      >
-        <X size={14} color={colors.textTertiary} strokeWidth={strokes.bold} />
-      </Pressable>
-      <PressableScale
-        onPress={() => onOpen(person)}
-        activeScale={0.97}
-        accessibilityRole="link"
-        accessibilityLabel={`${person.displayName}, @${person.username}. ${person.reason}`}
-        style={styles.cardBody}
-      >
-        <Avatar uri={person.avatarUrl} name={person.displayName} size="lg" />
-        <AppText variant="calloutStrong" numberOfLines={1} align="center">
-          {person.displayName}
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <AppText variant="overline" color="textSecondary">
+          People you may know
         </AppText>
-        <AppText variant="caption" color="textSecondary" numberOfLines={1} align="center">
-          @{person.username}
-        </AppText>
-        <AppText
-          variant="caption"
-          color="textTertiary"
-          numberOfLines={2}
-          align="center"
-          style={styles.reason}
-        >
-          {person.reason}
-        </AppText>
-      </PressableScale>
-      <FollowButton userId={person.id} state={followStateOf(person)} isPrivate={person.isPrivate} />
+      </View>
+      <View>
+        {people.map((person) => (
+          <UserRow key={person.id} user={person} detail={person.reason} onOpen={onOpen} />
+        ))}
+      </View>
     </View>
   );
-});
+}
 
 // ---------------------------------------------------------------------------
 // Invite: one tap to the native share sheet with a working cheffy.me link.
@@ -423,20 +403,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.imageScrim,
   },
-  card: {
-    width: CARD_WIDTH,
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    paddingTop: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: HAIRLINE,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  cardBody: { alignItems: 'center', gap: 2, alignSelf: 'stretch' },
-  reason: { minHeight: 32, marginTop: 2 },
-  dismiss: { position: 'absolute', top: spacing.sm, right: spacing.sm, zIndex: 1 },
   invite: { gap: spacing.md, padding: spacing.xl, borderRadius: radii.lg, backgroundColor: colors.oxblood },
   ivory: { color: colors.ivory },
   rose: { color: '#E3C4C9' },
