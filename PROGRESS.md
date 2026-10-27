@@ -1043,8 +1043,8 @@ Detailed docs: [SECURITY_AUDIT.md](SECURITY_AUDIT.md), [APP_REVIEW_CHECKLIST.md]
   - Banners and following from Activity on a device.
   - Build 11.
   - Any destructive flow on real accounts (not allowed).
+- **Migrations live (2026-10-26):** both pushed after your approval. Live data was checked first (3 reports, 126 images, 0 violations). Afterwards, live privileges were confirmed read-only: no client profile delete, no theme insert, no snapshot read; 4 new policies and 3 constraints; @chefshin is a moderator.
 - **Owner approvals pending:**
-  - Push both migrations.
   - Merge to main (deploys the site).
   - Redeploy `delete-account`.
   - Deploy `moderation-alert` with its secrets.
