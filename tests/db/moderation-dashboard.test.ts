@@ -205,6 +205,32 @@ describe('review workflow', () => {
     expect(history.every((h) => h.moderator === 'moddy')).toBe(true);
   });
 
+  it('resolves and notes reports whose content was deleted, logged against the report', async () => {
+    const postId = await db.createPost(author.id);
+    const id = await report(reporter, 'post', postId);
+    await db.query(author.id, 'delete from public.posts where id = $1', [postId]);
+
+    await setStatus(mod, id, 'reviewed', 'open');
+    await db.query(mod.id, 'select public.admin_add_report_note($1, $2)', [id, 'post is gone']);
+    await setStatus(mod, id, 'actioned', 'reviewed', 'author deleted it');
+    expect(await statusOf(id)).toBe('actioned');
+    await expectDbError(
+      db.query(mod.id, "select public.admin_moderate_report($1, 'remove', 'actioned', '')", [id]),
+      /no longer exists/,
+    );
+
+    const history = (await detail(mod, id)).history as { action: string }[];
+    expect(history.map((h) => h.action)).toEqual(['review', 'note', 'resolve']);
+    // A log row must still point at something: its content or its report.
+    await expectDbError(
+      db.admin(
+        "insert into public.moderation_actions (moderator_id, target_type, target_id, action) values ($1, 'post', null, 'note')",
+        [mod.id],
+      ),
+      /moderation_actions_has_subject/,
+    );
+  });
+
   it('is idempotent and refuses to overwrite another moderator’s change', async () => {
     const postId = await db.createPost(author.id);
     const id = await report(reporter, 'post', postId);

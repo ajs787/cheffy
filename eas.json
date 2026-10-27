@@ -28,7 +28,9 @@
   },
   "submit": {
     "production": {
-      "ios": {}
+      "ios": {
+        "ascAppId": "6825135585"
+      }
     },
     "development-device": {
       "ios": {}
