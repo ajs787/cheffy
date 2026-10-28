@@ -40,7 +40,7 @@ img { display: block; max-width: 100%; }
   color: var(--oxblood);
   text-decoration: none;
 }
-.wordmark span { color: var(--espresso); }
+.wordmark span { color: var(--oxblood); }
 .nav { display: flex; flex-wrap: wrap; gap: 6px 0; justify-content: flex-end; }
 .nav a {
   font-family: var(--text);

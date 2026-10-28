@@ -1245,9 +1245,12 @@ the logo; the ruled box around Cook / Bake / Pour.
 as the review. The review stays Espresso. Feed and post screen share the component.
 
 **Not changed:** the display font is still DM Serif Display. `DESIGN_SYSTEM.md` names Bodoni
-Moda, but the logo was asked to keep its typography. The app icon, splash image and website
-wordmark still have an Espresso full stop (images and site CSS; a new build is needed for the
-icon and splash).
+Moda, but the logo was asked to keep its typography.
+
+**All-oxblood full stop everywhere (follow-up):** app icon, splash, Android foreground and
+favicon recoloured (anti-aliased edges kept). The website favicon, Apple touch icon and 512 px
+icon were regenerated from the new app icon (they were exact resizes of it). The website and
+admin `.wordmark span` are now oxblood. Build 12 carries the new icon and splash.
 
 **Checked:**
 - 441 tests pass; typecheck and lint are clean.

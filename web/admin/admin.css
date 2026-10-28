@@ -35,7 +35,7 @@ main.narrow { max-width: 420px; padding-top: 48px; }
   max-width: 1200px; margin: 0 auto; padding: 18px 20px; border-bottom: 1px solid var(--rule);
 }
 .wordmark { font-family: var(--display); font-size: 30px; color: var(--oxblood); text-decoration: none; line-height: 1; }
-.wordmark span { color: var(--espresso); }
+.wordmark span { color: var(--oxblood); }
 .wordmark small { font-family: var(--text); font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--espresso); margin-left: 6px; }
 .bar-right { display: flex; align-items: center; gap: 14px; font-size: 14px; }
 .pending-pill {

@@ -14,7 +14,7 @@ hairlines, one deep wine accent.
   (`Wordmark`): all oxblood, full stop included, on light grounds; ivory
   letters with a rose stop on dark. Lock-up adds "Club de cuisine" in tracked
   capitals.
-- **Monogram:** `c.`, the app icon (oxblood c, espresso stop on ivory) and
+- **Monogram:** `c.`, the app icon (oxblood c and stop on ivory) and
   the in-app `Monogram` tile (ivory c, rose stop on oxblood).
 - **Voice:** "Your kitchen has a fan club now." · "Cook. Rate. Share.
   Repeat." Small French touches (Membre, Depuis) are flourishes, not UI copy;
