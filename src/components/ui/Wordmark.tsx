@@ -5,8 +5,8 @@ import { colors, fonts, MAX_FONT_SCALE } from '@/theme';
 import { AppText } from './AppText';
 
 const TONES = {
-  /** Oxblood letters, espresso full stop: on Ivory or Crème. */
-  oxblood: { letters: colors.oxblood, stop: colors.espresso },
+  /** All oxblood, full stop included: on Ivory or Crème. */
+  oxblood: { letters: colors.oxblood, stop: colors.oxblood },
   /** Ivory letters, rose full stop: on Oxblood or Espresso. */
   ivory: { letters: colors.ivory, stop: colors.rose },
 } as const;

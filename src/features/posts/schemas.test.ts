@@ -11,6 +11,7 @@ const cat = (id: string, kind: Category['kind'], slug: string, parentId: string 
   parentId,
   sortOrder: 0,
   isCustom: false,
+  isActive: true,
 });
 
 const taxonomy = buildTaxonomy([
@@ -101,6 +102,20 @@ describe('toSavePayload', () => {
     });
     expect(p_tags).toEqual(['iced']);
     expect(p_categories).toEqual(['matcha']);
+  });
+
+  it('keeps a retired subtype an old post already has (Baking › Pizza) when edited', () => {
+    const withRetired = buildTaxonomy([
+      cat('baking', 'primary', 'baking'),
+      { ...cat('pizza', 'subcategory', 'pizza', 'baking'), isActive: false },
+    ]);
+    const { p_categories } = toSavePayload(
+      { ...base(), primaryCategoryId: 'baking', subcategoryIds: ['pizza'] },
+      'post-3',
+      'published',
+      withRetired,
+    );
+    expect(p_categories).toEqual(['pizza']);
   });
 
   it('clears fields that no longer apply after switching category', () => {

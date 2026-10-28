@@ -12,7 +12,7 @@ import Animated, {
 
 import { AppText, CategoryIcon } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
-import { spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export type PlayfulMotion = 'wiggle' | 'bounce' | 'tilt';
 
@@ -20,10 +20,14 @@ const quick = (toValue: number, duration = 70) =>
   withTiming(toValue, { duration, easing: Easing.out(Easing.quad) });
 const settle = { damping: 9, stiffness: 220, mass: 0.6 };
 
+/** Diameter of the crème disc behind each icon. */
+const DISC = 64;
+
 /**
  * A welcome-screen category that plays a small, characterful animation when
  * tapped: the pot wiggles, the cake hops, the cup tips as if pouring. Every
- * tap restarts it. With Reduce Motion on it only dims briefly.
+ * tap restarts it. With Reduce Motion on it only dims briefly. The soft disc
+ * (which deepens while pressed) says it can be touched.
  */
 export function PlayfulCategory({
   slug,
@@ -87,14 +91,30 @@ export function PlayfulCategory({
       accessibilityHint="Plays a little animation"
       testID={`welcome-${slug}`}
     >
-      <Animated.View style={iconStyle}>
-        <CategoryIcon slug={slug} size="lg" />
-      </Animated.View>
-      <AppText variant="overline">{label}</AppText>
+      {({ pressed }) => (
+        <>
+          <Animated.View style={[styles.disc, pressed && styles.discPressed, iconStyle]}>
+            <CategoryIcon slug={slug} size="xl" />
+          </Animated.View>
+          <AppText variant="overline" align="center">
+            {label}
+          </AppText>
+        </>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', gap: spacing.sm },
+  // Equal columns so the three labels share one optical baseline and rhythm.
+  container: { width: DISC + spacing.xxl, alignItems: 'center', gap: spacing.sm + 2 },
+  disc: {
+    width: DISC,
+    height: DISC,
+    borderRadius: DISC / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tint,
+  },
+  discPressed: { backgroundColor: colors.surfacePressed },
 });
