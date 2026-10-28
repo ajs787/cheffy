@@ -27,8 +27,9 @@ export default function ActivityScreen() {
     Promise.all([activity.refetch(), requests.refetch()]),
   );
 
-  // Featured, then Today / Yesterday / Last 7 days / Earlier by local day.
-  // Unread items keep their highlight in whichever section they land.
+  // Every notification, newest first, under Today / Yesterday / Last 7 Days /
+  // Earlier by local day. Rows that need an answer (follow requests, Co-Chef
+  // invitations) carry their own buttons; unread rows keep their highlight.
   const rows: Row[] = groupActivity(activity.data ?? []).flatMap((group) => [
     { type: 'heading' as const, label: group.section },
     ...group.items.map((item) => ({ type: 'item' as const, item })),

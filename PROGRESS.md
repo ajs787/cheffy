@@ -1153,3 +1153,26 @@ matches. Newest first within each tier.
   no-match query). Likely a brief lag right after the migration, but not proven. Watch for it.
 - Separately, the shared `GridSkeleton` loading grid draws tiny squares. That's existing
   behaviour, unchanged here.
+
+## Activity: chronological sections, no Featured (2026-10-28, branch `activity-chronological`, not pushed)
+
+**What changed:**
+- The Activity screen no longer has a Featured section. Every notification sits under Today,
+  Yesterday, Last 7 Days or Earlier, newest first. Empty sections are hidden.
+- Follow requests now appear in their date section too, with Confirm/Delete on the row
+  (they used to be left out of the list). The "Follow requests" shortcut row above the list
+  stays. Co-Chef invitations keep Accept/Decline on the row.
+- `src/features/activity/groups.ts`:
+  - days are counted as calendar days in the phone's time zone, so daylight-saving changes
+    don't shift a day;
+  - "Last 7 Days" is 2–7 calendar days ago (same boundary as before);
+  - a repeated id is listed once; a future timestamp counts as Today; an unreadable one goes
+    under Earlier instead of vanishing;
+  - an optional `timeZone` argument exists only so tests can pin a zone.
+- No database, migration or notification-data changes. Read/unread styling, tap targets,
+  the 100-item fetch limit and Realtime refresh are unchanged.
+
+**Checked:** `groups.test.ts` covers the midnight boundary, the 7-day boundary, Los Angeles vs
+Tokyo, a New York DST change, every notification type listed exactly once, duplicate ids, and
+newest-first order. 441 tests, `tsc --noEmit` and `expo lint` pass. Not checked in the
+Simulator.

@@ -1,63 +1,60 @@
-import type { ActivityItem, NotificationType } from './api';
+import type { ActivityItem } from './api';
 
-export type ActivitySection = 'Featured' | 'Today' | 'Yesterday' | 'Last 7 days' | 'Earlier';
+export const ACTIVITY_SECTIONS = ['Today', 'Yesterday', 'Last 7 Days', 'Earlier'] as const;
+export type ActivitySection = (typeof ACTIVITY_SECTIONS)[number];
 
-/** Types worth pinning to the top: collaborations and accepted follow requests. */
-export const FEATURED_TYPES: readonly NotificationType[] = [
-  'collab_invite',
-  'collab_accepted',
-  'follow_accepted',
-];
-const FEATURED_DAYS = 7;
-const FEATURED_MAX = 5;
+const DAY_MS = 86_400_000;
+const LAST_DAYS = 7;
 
-const startOfLocalDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const formatters = new Map<string, Intl.DateTimeFormat>();
 
 /**
- * Splits activity into sections by the phone's local calendar day, newest
- * first within each. Featured items (recent collaborations and accepted
- * follow requests) appear once, at the top, and not again below. Follow
- * requests are left out: they have their own row above the list.
+ * A calendar day as a whole number (days since 1970-01-01), so two days can
+ * be subtracted without daylight-saving surprises. With no time zone it uses
+ * the phone's own; the zone argument exists so tests can pin one.
+ */
+export function dayNumber(date: Date, timeZone?: string): number {
+  if (!timeZone) return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS;
+  let f = formatters.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: 'numeric', day: 'numeric' });
+    formatters.set(timeZone, f);
+  }
+  const part = (type: string) => Number(f.formatToParts(date).find((p) => p.type === type)?.value);
+  return Date.UTC(part('year'), part('month') - 1, part('day')) / DAY_MS;
+}
+
+/** Which section a notification belongs to, by calendar days before `now`. */
+export function sectionFor(at: Date, now: Date, timeZone?: string): ActivitySection {
+  const daysAgo = dayNumber(now, timeZone) - dayNumber(at, timeZone);
+  if (daysAgo <= 0) return 'Today'; // includes a slightly-ahead clock
+  if (daysAgo === 1) return 'Yesterday';
+  if (daysAgo <= LAST_DAYS) return 'Last 7 Days';
+  return 'Earlier';
+}
+
+/**
+ * Puts every notification, of every type, into exactly one date section —
+ * Today, Yesterday, Last 7 Days (2–7 calendar days ago), Earlier — newest
+ * first, by the phone's local calendar day. A repeated id is listed once.
+ * Empty sections are left out.
  */
 export function groupActivity(
   items: readonly ActivityItem[],
   now: Date = new Date(),
+  timeZone?: string,
 ): { section: ActivitySection; items: ActivityItem[] }[] {
-  const today = startOfLocalDay(now).getTime();
-  const yesterday = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)).getTime();
-  const weekStart = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)).getTime();
-  const featuredSince = now.getTime() - FEATURED_DAYS * 86_400_000;
-
+  const seen = new Set<string>();
   const sorted = items
-    .filter((i) => i.type !== 'follow_request')
-    .slice()
-    .sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
+    .filter((i) => !seen.has(i.id) && seen.add(i.id))
+    // An unreadable timestamp sorts last, under Earlier, rather than vanishing.
+    .map((item) => ({ item, t: Date.parse(item.at) || 0 }))
+    .sort((a, b) => b.t - a.t || b.item.id.localeCompare(a.item.id));
 
-  const featured = sorted
-    .filter((i) => FEATURED_TYPES.includes(i.type) && new Date(i.at).getTime() >= featuredSince)
-    .slice(0, FEATURED_MAX);
-  const featuredIds = new Set(featured.map((i) => i.id));
+  const buckets = new Map<ActivitySection, ActivityItem[]>(ACTIVITY_SECTIONS.map((s) => [s, []]));
+  for (const { item, t } of sorted) buckets.get(sectionFor(new Date(t), now, timeZone))!.push(item);
 
-  const buckets: Record<Exclude<ActivitySection, 'Featured'>, ActivityItem[]> = {
-    Today: [],
-    Yesterday: [],
-    'Last 7 days': [],
-    Earlier: [],
-  };
-  for (const item of sorted) {
-    if (featuredIds.has(item.id)) continue;
-    const t = new Date(item.at).getTime();
-    if (t >= today) buckets.Today.push(item);
-    else if (t >= yesterday) buckets.Yesterday.push(item);
-    else if (t >= weekStart) buckets['Last 7 days'].push(item);
-    else buckets.Earlier.push(item);
-  }
-
-  return [
-    { section: 'Featured' as const, items: featured },
-    ...(Object.keys(buckets) as (keyof typeof buckets)[]).map((section) => ({
-      section,
-      items: buckets[section],
-    })),
-  ].filter((g) => g.items.length > 0);
+  return ACTIVITY_SECTIONS.map((section) => ({ section, items: buckets.get(section)! })).filter(
+    (g) => g.items.length > 0,
+  );
 }
