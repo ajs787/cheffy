@@ -4,6 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText, Wordmark } from '@/components/ui';
+import { TAGLINE } from '@/constants/app';
 import { PlayfulCategory } from '@/features/auth/components/PlayfulCategory';
 import { colors, HAIRLINE, SCREEN_GUTTER, spacing } from '@/theme';
 
@@ -29,9 +30,14 @@ export default function WelcomeScreen() {
 
       <Animated.View entering={FadeInDown.duration(600)} style={styles.hero}>
         <Wordmark size={84} />
-        <AppText variant="body" color="textSecondary" align="center" style={styles.tagline}>
-          A private table for people who cook, bake, whisk, and keep notes.
-        </AppText>
+        <View style={styles.tagline}>
+          <AppText variant="title1" align="center">
+            {TAGLINE.headline}
+          </AppText>
+          <AppText variant="calloutStrong" color="accent" align="center" style={styles.subline}>
+            {TAGLINE.subline}
+          </AppText>
+        </View>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.categories}>
@@ -73,7 +79,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.rule,
   },
   hero: { alignItems: 'center', gap: spacing.lg },
-  tagline: { maxWidth: 280 },
+  tagline: { maxWidth: 300, gap: spacing.sm },
+  subline: { letterSpacing: 0.6 },
   categories: {
     flexDirection: 'row',
     borderTopWidth: HAIRLINE,

@@ -449,3 +449,19 @@ describe('accounts', () => {
     );
   });
 });
+
+describe('Most liked (discover sort "loved")', () => {
+  it('orders by number of likes, not rating, and leaves out unliked posts', async () => {
+    const fans = await Promise.all(['fanone', 'fantwo', 'fanthree'].map((n) => db.createUser(n)));
+    const like = (user: TestUser, post: string) =>
+      db.query(user.id, 'insert into public.likes (user_id, post_id) values ($1, $2)', [user.id, post]);
+    const highRatedOneLike = await db.createPost(alice.id, { title: 'Ten', rating: 10 });
+    const lowRatedThreeLikes = await db.createPost(alice.id, { title: 'Three', rating: 4 });
+    await db.createPost(alice.id, { title: 'None', rating: 9 });
+    await like(fans[0]!, highRatedOneLike);
+    for (const fan of fans) await like(fan, lowRatedThreeLikes);
+
+    const rows = await db.query<{ title: string }>(bob.id, "select title from public.discover_posts('loved')");
+    expect(rows.map((r) => r.title)).toEqual(['Three', 'Ten']);
+  });
+});

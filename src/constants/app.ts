@@ -24,3 +24,12 @@ export const WEB_URL = 'https://cheffy.me';
 /** Public policy pages, also used as the App Store privacy policy URL. */
 export const PRIVACY_URL = `${WEB_URL}/privacy`;
 export const TERMS_URL = `${WEB_URL}/terms`;
+
+/**
+ * The introductory tagline on the welcome screen. The cheffy.me hero
+ * (web/index.html) uses the same two lines; keep them in step.
+ */
+export const TAGLINE = {
+  headline: 'Your kitchen has a fan club now.',
+  subline: 'Cook it. Rate it. Share it.',
+} as const;

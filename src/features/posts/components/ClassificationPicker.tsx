@@ -32,12 +32,17 @@ export interface ClassificationPickerProps {
   pendingLabels: string[];
   onChange: (ids: string[], pendingLabels: string[]) => void;
   allowCustom?: boolean;
+  /** Retired choices this post already has (shown as selected, removable). */
+  kept?: Category[];
+  /** Retired choices for this list: never offered, and can't be re-added by typing. */
+  retired?: Category[];
 }
 
 type Row =
   | { type: 'heading'; key: string; label: string }
   | { type: 'option'; key: string; option: Category }
-  | { type: 'add'; key: string; label: string };
+  | { type: 'add'; key: string; label: string }
+  | { type: 'note'; key: string; label: string };
 
 /**
  * Searchable multi-select for cuisines and subtypes: common choices first,
@@ -55,6 +60,8 @@ export function ClassificationPicker({
   pendingLabels,
   onChange,
   allowCustom = true,
+  kept = [],
+  retired = [],
 }: ClassificationPickerProps) {
   const insets = useSafeAreaInsets();
   // Uncontrolled field (native owns the text, so fast typing never drops
@@ -78,11 +85,15 @@ export function ClassificationPicker({
       }));
       const pendingMatch = pendingLabels.some((l) => normalizeLabel(l) === normalizeLabel(query));
       const add =
-        allowCustom && !pendingMatch && canAddCustom(options, query)
+        allowCustom && !pendingMatch && canAddCustom([...options, ...retired], query)
           ? [{ type: 'add' as const, key: 'add', label: query.trim().replace(/\s+/g, ' ') }]
           : [];
+      const gone = retired.find((r) => r.slug === normalizeLabel(query));
+      const note = gone
+        ? [{ type: 'note' as const, key: 'note', label: `${gone.name} isn’t offered here any more.` }]
+        : [];
       // Existing matches first, so picking beats creating a near-duplicate.
-      return [...results, ...add];
+      return [...results, ...add, ...note];
     }
     const common = commonFirst(builtIns, usage, 8);
     return [
@@ -91,7 +102,7 @@ export function ClassificationPicker({
       { type: 'heading', key: 'h-all', label: 'All' },
       ...searchOptions(builtIns, '').map((option) => ({ type: 'option' as const, key: option.id, option })),
     ];
-  }, [options, usage, query, pendingLabels, allowCustom]);
+  }, [options, usage, query, pendingLabels, allowCustom, retired]);
 
   const toggle = (id: string) => {
     haptics.selection();
@@ -102,7 +113,7 @@ export function ClassificationPicker({
     onChange(selectedIds, [...pendingLabels, label]);
     setQuery('');
   };
-  const byId = Object.fromEntries(options.map((o) => [o.id, o]));
+  const byId = Object.fromEntries([...options, ...kept].map((o) => [o.id, o]));
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -173,6 +184,13 @@ export function ClassificationPicker({
             if (item.type === 'heading') {
               return (
                 <AppText variant="overline" color="textSecondary" style={styles.heading}>
+                  {item.label}
+                </AppText>
+              );
+            }
+            if (item.type === 'note') {
+              return (
+                <AppText variant="callout" color="textSecondary" style={styles.heading}>
                   {item.label}
                 </AppText>
               );

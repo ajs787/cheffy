@@ -5,11 +5,11 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
-import { StoryTeaser } from '@/features/posts/components/StoryTeaser';
+import { StorySection } from '@/features/posts/components/StorySection';
 import { likedBySummary } from '@/features/social/likedBy';
 import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
-import { colors, fonts, HAIRLINE, iconSizes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
+import { colors, fonts, iconSizes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import { madeByNames, type Post } from '@/types/models';
 import { formatEntryDate, formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
@@ -126,11 +126,8 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
               {post.review}
             </AppText>
           ) : null}
-          {post.story ? (
-            <Pressable onPress={() => openPost()} accessibilityRole="link">
-              <StoryTeaser story={post.story} />
-            </Pressable>
-          ) : null}
+          {/* Keyed by post so a recycled feed cell never keeps another post's state. */}
+          {post.story ? <StorySection key={post.id} story={post.story} /> : null}
           {post.tags.length > 0 ? (
             <View style={styles.tags}>
               {post.tags.slice(0, 5).map((tag) => (
@@ -269,15 +266,13 @@ const styles = StyleSheet.create({
   likedBy: { alignSelf: 'stretch' },
   likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
   comments: { gap: spacing.xs },
-  // The entry's espresso rule, then its actions.
+  // No rule above the actions: they belong to the entry. The feed's soft
+  // divider between posts marks where an entry ends.
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginHorizontal: SCREEN_GUTTER,
-    paddingTop: spacing.xxs,
-    borderTopWidth: HAIRLINE,
-    borderTopColor: colors.rule,
   },
   action: {
     flexDirection: 'row',

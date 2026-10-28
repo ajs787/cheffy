@@ -1153,3 +1153,66 @@ matches. Newest first within each tier.
   no-match query). Likely a brief lag right after the migration, but not proven. Watch for it.
 - Separately, the shared `GridSkeleton` loading grid draws tiny squares. That's existing
   behaviour, unchanged here.
+
+## UI polish, branding & content clarity (2026-10-28, branch `ui-polish-branding`)
+
+**1. Pizza moves from Baking to Cooking** (migration `20261028000001_pizza_to_cooking`, live since 2026-10-28, approved)
+- Cooking classifies by dish type (its quick pick is Cuisine), so Pizza is now a Cooking dish
+  type after Pasta. Giving Cooking a one-item "What kind?" list would have broken its flow.
+- Baking › Pizza is retired (`is_active = false`), not deleted. The 2 live posts tagged with it
+  keep their label. Pickers, quick picks and search no longer offer it, and typing "Pizza" as a
+  custom Baking label is refused (in the app and in `ensure_custom_category`).
+- Editing an old Baking › Pizza post shows the tag as selected and keeps it on save unless the
+  owner removes it. The app now loads retired rows (`Taxonomy.retired`) for this.
+
+**2. "Most loved" → "Most liked"** (Discover row, its See all title, Browse sort chip)
+- Sorting was already by like count (then newest) in `discover_posts` and the client
+  re-sort. A new DB test proves it ranks by likes, not rating, and leaves out unliked posts.
+
+**3. Wordmark period:** already Espresso #3B2A22 everywhere (app `Wordmark`, website CSS, app
+icon, splash), since 2026-10-20. No change needed; checked on screen in the simulator and the
+browser (computed `rgb(59, 42, 34)`).
+
+**4. Welcome screen and cheffy.me hero:** "Your kitchen has a fan club now." (display serif)
+over "Cook it. Rate it. Share it." (oxblood; semibold in the app, semibold italic on the
+site). The app reads `TAGLINE` in `src/constants/app.ts`; the static site can't import it, so
+`web/index.html` carries the same lines with a pointer. Buttons, motto and animations are
+unchanged. The native splash has no tagline and is untouched.
+
+**5. Feed divider:** the espresso rule above the heart/comment row is gone. The feed's soft
+divider between posts marks where an entry ends. Order and touch targets are unchanged; Co-Chef
+posts use the same card.
+
+**6. Review and story:** a shared `StorySection` replaces `StoryTeaser` (feed) and
+`StoryBody` (post screen). The review and story both use the `body` style (16/23); the story
+has an oxblood "The story" label and the existing thin oxblood left rule. Long stories (over 240
+characters or more than one paragraph) show "Read story · N min" / "Show less": collapsed to 3
+lines in the feed, open on the post screen. Paragraph breaks are kept.
+
+**Checked:**
+- 441 tests pass (new: retired taxonomy, edit keeps a retired tag, Pizza migration, custom
+  re-add refused, Most liked order, story length rule). Typecheck and lint are clean.
+- Website (local): hero at desktop and 375 pt widths, no sideways scroll.
+- Simulator (signed out): welcome screen on iPhone 16 Pro Max and iPhone 16e (390 pt, the
+  smallest available), no clipping.
+
+- Live DB after the push: Cooking dish type Pizza is active; Baking › Pizza is inactive with
+  its 2 posts unchanged; re-adding "Pizza" under Baking is refused (checked as @chefshin,
+  rolled back).
+- Simulator (iPhone 16e, signed in, read-only; nothing liked, saved or posted):
+  - feed: no rule above the actions; the soft divider sits under "Liked by"; a short story
+    shows in full with its line break;
+  - post screen ("Jalapeño cheddar bread", 428-character story): review and story in the
+    same type, paragraphs kept, "Show less" / "Read story · 1 min" toggle both ways;
+  - Discover shows "Most liked"; See all shows the "Most liked" chip, and its order matches the
+    live like counts (5, 5, 5, 5, then 4), not ratings;
+  - Create: Baking's "What kind?" has no Pizza, and typing "pizza" shows "Pizza isn't offered
+    here any more" with no Add; Cooking's dish types find Pizza; the entry was discarded and
+    no post was created;
+  - Edit of @chefshin's "mushroom arugula pizza" (Baking › Pizza) shows Pizza selected; closed
+    without saving.
+
+**Notes:**
+- Taps inside a list are ignored while it is still moving (after a scroll, or right after the
+  story changes height). That's standard iOS behaviour; a settled tap toggles first time.
+- The live site updates when this branch merges to main.

@@ -83,10 +83,10 @@ export default function DiscoverScreen() {
         onSeeAll={() => browse({ sort: 'top', sinceDays: '30', title: 'Top rated this month' })}
       />
       <DiscoverRow
-        title="Most loved"
-        subtitle="Most liked in the last two weeks"
+        title="Most liked"
+        subtitle="The most likes in the last two weeks"
         params={{ sort: 'loved', sinceDays: 14 }}
-        onSeeAll={() => browse({ sort: 'loved', sinceDays: '14', title: 'Most loved' })}
+        onSeeAll={() => browse({ sort: 'loved', sinceDays: '14', title: 'Most liked' })}
       />
       <MostHatedRow />
       <DiscoverRow
