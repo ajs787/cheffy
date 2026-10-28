@@ -26,10 +26,10 @@ export const PRIVACY_URL = `${WEB_URL}/privacy`;
 export const TERMS_URL = `${WEB_URL}/terms`;
 
 /**
- * The introductory tagline on the welcome screen. The cheffy.me hero
- * (web/index.html) uses the same two lines; keep them in step.
+ * The one line under the wordmark on the welcome screen. The cheffy.me hero
+ * (web/index.html) leads with the same line; keep them in step.
  */
 export const TAGLINE = {
-  headline: 'Your kitchen has a fan club now.',
-  subline: 'Cook it. Rate it. Share it.',
+  // A no-break space keeps "fan club" together when the line wraps.
+  headline: 'Your kitchen has a fan\u00A0club now.',
 } as const;

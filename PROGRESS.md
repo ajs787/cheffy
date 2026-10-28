@@ -1216,3 +1216,45 @@ lines in the feed, open on the post screen. Paragraph breaks are kept.
 - Taps inside a list are ignored while it is still moving (after a scroll, or right after the
   story changes height). That's standard iOS behaviour; a settled tap toggles first time.
 - The live site updates when this branch merges to main.
+
+## Welcome screen art direction & story color (2026-10-28, branch `ui-polish-branding`)
+
+**Removed:** "Club de cuisine" / "Est. MMXXVI" and their rule; "Cook it. Rate it. Share it." under
+the logo; the ruled box around Cook / Bake / Pour.
+
+**Welcome screen (`src/app/(auth)/welcome.tsx`):**
+- Two groups. The hero (wordmark, one line, Cook / Bake / Pour) is centered in the spare height
+  and lifted slightly above true center. The actions and sign-off are anchored at the bottom in
+  thumb reach. Spacing comes from flex and theme tokens, not fixed positions.
+- Wordmark: all Oxblood, full stop included (the `Wordmark` oxblood tone, so the Home header
+  matches). It scales with width (64–84 pt).
+- Headline: "Your kitchen has a fan club now." in the old subline's style (Newsreader
+  semibold, Oxblood, light tracking) at 17/24. It wraps as "…has a / fan club now.": a
+  no-break space keeps "fan club" together and `push-out` line breaking avoids a lone word.
+- Cook / Bake / Pour: they play an animation and a haptic, so each now sits on a 64 pt Crème
+  disc (deeper while pressed) to show it's tappable. 28 pt icons, equal columns, centered as a
+  group under the wordmark. The existing animations are kept, including the Reduce Motion
+  fallback.
+- Actions: "Create account" (filled) then "Sign in" (outlined), both 54 pt, 12 pt apart, same
+  destinations (`/sign-up`, `/sign-in`).
+- Sign-off: "Cook. Rate. Share. Repeat." in `textSecondary` (was tertiary) for contrast, kept
+  clear of the home indicator.
+- It's a non-bouncing scroll view that only scrolls when large text needs the room.
+
+**Story color:** in `StorySection` the story text is now Oxblood like its label, the same size
+as the review. The review stays Espresso. Feed and post screen share the component.
+
+**Not changed:** the display font is still DM Serif Display. `DESIGN_SYSTEM.md` names Bodoni
+Moda, but the logo was asked to keep its typography. The app icon, splash image and website
+wordmark still have an Espresso full stop (images and site CSS; a new build is needed for the
+icon and splash).
+
+**Checked:**
+- 441 tests pass; typecheck and lint are clean.
+- iPhone 16 Pro Max (signed out): default text, and the largest accessibility text size (text
+  grows up to the app's 1.3× cap, no clipping or overlap, buttons on screen; reset after).
+  Tapping Cook plays its wiggle.
+- iPhone 16e (signed in): the feed shows the review in Espresso and the story in Oxblood at
+  the same size; the Home wordmark is all Oxblood.
+- Not yet: the redesigned welcome screen on a small iPhone. The spare iPhone 16e simulator is
+  waiting for access in the simulator panel.

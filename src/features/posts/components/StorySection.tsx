@@ -21,9 +21,10 @@ export interface StorySectionProps {
 }
 
 /**
- * "The Story" under a post's review: same body type as the review, set apart
- * by an oxblood label and a thin oxblood rule. Long stories expand in place
- * ("Read story" / "Show less"); short ones always show in full.
+ * "The Story" under a post's review: same body type as the review, set in
+ * oxblood (the review stays espresso) with an oxblood label and thin rule.
+ * Long stories expand in place ("Read story" / "Show less"); short ones
+ * always show in full.
  */
 export function StorySection({ story, initiallyExpanded = false }: StorySectionProps) {
   const long = isLongStory(story);
@@ -59,13 +60,14 @@ export function StorySection({ story, initiallyExpanded = false }: StorySectionP
       </View>
       {open ? (
         parts.map((paragraph, i) => (
-          <AppText key={i} variant="body">
+          <AppText key={i} variant="body" color="accent">
             {paragraph}
           </AppText>
         ))
       ) : (
         <AppText
           variant="body"
+          color="accent"
           numberOfLines={COLLAPSED_LINES}
           onPress={() => setExpanded(true)}
           accessibilityHint="Shows the whole story"

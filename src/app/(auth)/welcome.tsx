@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText, Wordmark } from '@/components/ui';
 import { TAGLINE } from '@/constants/app';
 import { PlayfulCategory } from '@/features/auth/components/PlayfulCategory';
-import { colors, HAIRLINE, SCREEN_GUTTER, spacing } from '@/theme';
+import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 
 const CATEGORIES = [
   { slug: 'cooking', label: 'Cook', motion: 'wiggle' },
@@ -14,81 +14,85 @@ const CATEGORIES = [
   { slug: 'drinks', label: 'Pour', motion: 'tilt' },
 ] as const;
 
+/** The wordmark scales with the screen so it never crowds a small iPhone. */
+const wordmarkSize = (width: number) => Math.round(Math.min(84, Math.max(64, width * 0.21)));
+
+/**
+ * The first screen before signing in. Two groups: the hero (wordmark, one
+ * line, and the playful Cook / Bake / Pour row that says what Cheffy is for),
+ * centered in the spare height, and the actions with a small sign-off,
+ * anchored at the bottom in thumb reach. It scrolls only when large
+ * accessibility text needs the room.
+ */
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
-  return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.lg },
-      ]}
-    >
-      <View style={styles.masthead}>
-        <AppText variant="overline">Club de cuisine</AppText>
-        <AppText variant="overline">Est. MMXXVI</AppText>
-      </View>
+  const { width } = useWindowDimensions();
 
-      <Animated.View entering={FadeInDown.duration(600)} style={styles.hero}>
-        <Wordmark size={84} />
-        <View style={styles.tagline}>
-          <AppText variant="title1" align="center">
+  return (
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + spacing.xxxl, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.md },
+      ]}
+      bounces={false}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.hero}>
+        <Animated.View entering={FadeInDown.duration(600)} style={styles.brand}>
+          <Wordmark size={wordmarkSize(width)} />
+          <AppText
+            variant="title3"
+            color="accent"
+            align="center"
+            // Wraps as balanced lines ("…has a / fan club now."), never a lone "now."
+            lineBreakStrategyIOS="push-out"
+            style={styles.headline}
+          >
             {TAGLINE.headline}
           </AppText>
-          <AppText variant="calloutStrong" color="accent" align="center" style={styles.subline}>
-            {TAGLINE.subline}
-          </AppText>
-        </View>
-      </Animated.View>
+        </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.categories}>
-        {CATEGORIES.map((c, i) => (
-          <View key={c.slug} style={[styles.category, i > 0 && styles.categoryRule]}>
-            <PlayfulCategory slug={c.slug} label={c.label} motion={c.motion} />
-          </View>
-        ))}
-      </Animated.View>
+        <Animated.View entering={FadeInDown.delay(150).duration(600)} style={styles.categories}>
+          {CATEGORIES.map((c) => (
+            <PlayfulCategory key={c.slug} slug={c.slug} label={c.label} motion={c.motion} />
+          ))}
+        </Animated.View>
+      </View>
 
-      <Animated.View entering={FadeInDown.delay(350).duration(600)} style={styles.actions}>
-        <AppButton label="Join the table" size="lg" fullWidth onPress={() => router.push('/sign-up')} />
+      <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.actions}>
+        <AppButton label="Create account" size="lg" fullWidth onPress={() => router.push('/sign-up')} />
         <AppButton
-          label="I already have an account"
-          variant="ghost"
+          label="Sign in"
+          variant="secondary"
+          size="lg"
           fullWidth
           onPress={() => router.push('/sign-in')}
         />
-        <AppText variant="overline" color="textTertiary" align="center" style={styles.motto}>
-          Cook. Note. Share. Repeat.
+        <AppText variant="overline" color="textSecondary" align="center" style={styles.signoff}>
+          Cook. Rate. Share. Repeat.
         </AppText>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { flexGrow: 1, paddingHorizontal: SCREEN_GUTTER + spacing.sm },
+  // Takes the spare height. The bottom padding lifts the group a little above
+  // true center, where it reads as centered.
+  hero: {
     flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: SCREEN_GUTTER + spacing.sm,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: spacing.xxxl + spacing.lg,
+    paddingVertical: spacing.xxl,
+    paddingBottom: spacing.xxxl + spacing.xxl,
   },
-  masthead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.md,
-    borderBottomWidth: HAIRLINE,
-    borderBottomColor: colors.rule,
-  },
-  hero: { alignItems: 'center', gap: spacing.lg },
-  tagline: { maxWidth: 300, gap: spacing.sm },
-  subline: { letterSpacing: 0.6 },
-  categories: {
-    flexDirection: 'row',
-    borderTopWidth: HAIRLINE,
-    borderBottomWidth: HAIRLINE,
-    borderColor: colors.rule,
-  },
-  category: { flex: 1, alignItems: 'center', paddingVertical: spacing.lg },
-  categoryRule: { borderLeftWidth: HAIRLINE, borderLeftColor: colors.rule },
-  actions: { gap: spacing.xs },
-  motto: { marginTop: spacing.md },
+  brand: { alignItems: 'center', gap: spacing.md },
+  headline: { maxWidth: 280, lineHeight: 24, letterSpacing: 0.3 },
+  // Centered with an even gap, so the row sits under the wordmark, not edge to edge.
+  categories: { flexDirection: 'row', justifyContent: 'center', gap: spacing.md },
+  actions: { gap: spacing.md },
+  signoff: { marginTop: spacing.lg },
 });
