@@ -1258,3 +1258,51 @@ icon and splash).
   the same size; the Home wordmark is all Oxblood.
 - Not yet: the redesigned welcome screen on a small iPhone. The spare iPhone 16e simulator is
   waiting for access in the simulator panel.
+
+## Drafts: findable and safe (2026-10-29)
+
+**Recovery check first (read-only, live project).** Drafts are only ever stored
+as `posts` rows with `status = 'draft'`, written when "Save draft" is tapped.
+Nothing was kept on the phone before this change. @chefshin had **no drafts**
+(all 15 posts published), @simonshin007 had none either, and there were no
+photo uploads in @chefshin's storage folder without a post. So the missing
+entry was never saved (closed or discarded before Save draft) and can't be
+recovered. The Drafts screen existed but was reachable only from Settings and
+a "N drafts to finish" row on your own profile.
+
+What changed:
+- **Drafts button on Create** (new entries), with the number of saved drafts.
+- **Drafts screen**: reopen, edit, publish (as before), plus **delete** with a
+  confirmation. Also lists an unsaved entry kept on this phone.
+- **Leaving Create with changes always asks**: close button, swipe, Android
+  back, opening Drafts → "Save this entry as a draft?" with Save draft /
+  Discard / Keep editing (`usePreventRemove`). Editing a published post only
+  offers Discard / Keep editing.
+- **Safety copy on the phone** (`composeRecovery.ts`, AsyncStorage, one slot
+  per account): written as you type (500 ms), when the app goes to the
+  background and when Create closes for any other reason (e.g. sign-out).
+  Cleared after a successful save or a deliberate discard. Next time Create
+  (or that draft) opens: "Pick up where you left off?" Restore / Start fresh.
+  It keeps the same post id, so a retry after a half-finished save updates
+  instead of duplicating. Sign-out dialog says when an unsaved entry is kept.
+- **"Made with" people** on drafts are now remembered (on this phone, per
+  draft), since they're only invited once the entry is posted.
+- **Missing photos**: picked photos whose files are gone are dropped on
+  restore with a notice; at save time the check runs before any upload and
+  removes them with a clear message. Uploaded photos that can't be found show
+  as blank tiles; a draft can still be saved, but posting asks you to remove them.
+- **Failed saves** keep the entry on screen and on the phone; finished uploads
+  aren't redone on retry.
+
+No migrations; no change to existing drafts. Server-side, drafts were already
+author-only: `tests/db/drafts.test.ts` (11 tests) proves every field, photo,
+tag and category round-trips, and that a follower or stranger can't read the
+draft, its photos (rows or storage files), tags or categories, can't edit,
+publish, delete, like, comment on or save it, and doesn't see it in the diary.
+Unit tests: `composeRecovery.test.ts` (per-account copy, corrupt data,
+missing photos, Made with), `save.test.ts` (missing-photo stop before upload,
+full draft payload, retry reuses uploads).
+
+Not verified in the simulator (it's signed in to the real account and Metro
+serves another branch). Known limits: the safety copy holds one unsaved entry
+per account; "Made with" for drafts doesn't follow you to another phone.
