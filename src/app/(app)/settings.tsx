@@ -31,6 +31,7 @@ import { NotificationSettings } from '@/features/activity/components/Notificatio
 import { signOut } from '@/features/auth/api';
 import { DeleteAccountSheet } from '@/features/profile/components/DeleteAccountSheet';
 import { useSession } from '@/features/auth/store';
+import { useHasUnsavedEntry } from '@/features/posts/composeRecovery';
 import {
   useMyProfile,
   useSetAccountPrivacy,
@@ -59,6 +60,7 @@ export default function SettingsScreen() {
   const isPrivate = profile.data?.isPrivate ?? false;
   const pending = requests.data?.length ?? 0;
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const unsavedEntry = useHasUnsavedEntry(confirmSignOut);
   const [deleteOpen, setDeleteOpen] = useState(false);
   // Sign out only once the sheet has fully closed (see DeleteAccountSheet).
   const [signOutConfirmed, setSignOutConfirmed] = useState(false);
@@ -229,7 +231,11 @@ export default function SettingsScreen() {
       <ConfirmationDialog
         visible={confirmSignOut}
         title="Sign out?"
-        message="Your diary is saved to your account. Sign back in anytime."
+        message={
+          unsavedEntry
+            ? 'Your diary and drafts are saved to your account. An unsaved entry stays on this phone and comes back when you sign in again.'
+            : 'Your diary and drafts are saved to your account. Sign back in anytime.'
+        }
         confirmLabel="Sign out"
         onCancel={() => setConfirmSignOut(false)}
         onConfirm={() => {
