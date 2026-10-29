@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Hash, Search, SearchX, Users, X } from 'lucide-react-native';
+import { Search, SearchX, Users, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,11 @@ import {
   RowSkeleton,
   SegmentedControl,
 } from '@/components/ui';
+import {
+  CreationSuggestions,
+  TagRow,
+  TagSuggestionList,
+} from '@/features/discover/components/SearchSuggestions';
 import { usePostSearch, useTagSearch } from '@/features/discover/hooks';
 import { AlsoKnow } from '@/features/social/components/AlsoKnow';
 import { NewToCheffy } from '@/features/social/components/NewToCheffy';
@@ -103,16 +108,21 @@ export default function SearchScreen() {
   );
 }
 
+/**
+ * Creations: with no query, suggestions (For Your Taste, Trending, Newly
+ * Cooked); with a query, matches only, most relevant first and paged.
+ */
 function CreationResults({ q }: { q: string }) {
   const search = usePostSearch(q);
   const posts = search.data?.pages.flatMap((page) => page.items) ?? [];
 
+  if (q.length === 0) return <CreationSuggestions />;
   if (q.length < 2) {
     return (
       <EmptyState
         icon={Search}
         compact
-        title="Find something to make"
+        title="Keep typing"
         message="Search names like “focaccia”, categories like “matcha”, or tags like “weeknight”."
       />
     );
@@ -261,17 +271,10 @@ function RecentRow({ person, onOpen }: { person: ProfileSummary; onOpen: (p: Pro
   );
 }
 
+/** Tags: with no query, suggested, popular and new-to-you tags; with a query, matches only. */
 function TagResults({ q }: { q: string }) {
   const tags = useTagSearch(q);
-  if (q.length < 1)
-    return (
-      <EmptyState
-        icon={Hash}
-        compact
-        title="Browse by tag"
-        message="Try “iced”, “comfort food” or “brown butter”."
-      />
-    );
+  if (q.length < 1) return <TagSuggestionList />;
   if (tags.isPending) return <RowSkeleton count={4} />;
   if (tags.isError) return <ErrorState error={tags.error} onRetry={() => void tags.refetch()} />;
 
@@ -280,21 +283,8 @@ function TagResults({ q }: { q: string }) {
       data={tags.data ?? []}
       keyExtractor={(tag) => tag.id}
       keyboardShouldPersistTaps="handled"
-      renderItem={({ item }) => (
-        <PressableScale
-          onPress={() =>
-            router.push({ pathname: '/browse', params: { tagId: item.id, title: `#${item.name}` } })
-          }
-          activeScale={0.98}
-          accessibilityRole="link"
-          style={styles.tagRow}
-        >
-          <View style={styles.tagIcon}>
-            <Hash size={iconSizes.sm} color={colors.accent} strokeWidth={strokes.bold} />
-          </View>
-          <AppText variant="bodyStrong">{item.name}</AppText>
-        </PressableScale>
-      )}
+      keyboardDismissMode="on-drag"
+      renderItem={({ item }) => <TagRow tag={item} />}
       ListEmptyComponent={<EmptyState icon={SearchX} compact title={`No tags match “${q}”`} />}
       contentContainerStyle={styles.listContent}
     />
