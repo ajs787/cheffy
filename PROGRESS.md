@@ -1306,3 +1306,119 @@ full draft payload, retry reuses uploads).
 Not verified in the simulator (it's signed in to the real account and Metro
 serves another branch). Known limits: the safety copy holds one unsaved entry
 per account; "Made with" for drafts doesn't follow you to another phone.
+## New to Cheffy (2026-10-29, branch `new-to-cheffy`)
+
+**Database** (migration `20261029000002_new_members`, live since 2026-10-29, approved):
+- `new_members(limit, offset)` returns every eligible account, newest first (`profiles.created_at`),
+  paged and capped at 50. Eligible means:
+  - a verified email, not suspended or banned, `discoverable`;
+  - not blocked either way;
+  - not already followed, requested or dismissed by the viewer, and never the viewer.
+  - Deleted accounts have no profile, so they never appear. Private accounts can appear
+    (Follow becomes Requested).
+  - Security definer, authenticated only.
+- `suggested_friends()`:
+  - accounts that joined in the last 30 days now qualify on their own with the reason "New to
+    Cheffy", so a brand-new cook with no posts or mutual friends can still be suggested;
+  - stronger reasons still rank first;
+  - suggestions now also require a verified email.
+- Numbered `…000002` because the comment-media session had already pushed its own
+  `20261029000001` to the live DB. To push from this branch, a temporary copy of that file was
+  added and removed again (no `migration repair`).
+
+**App:**
+- `NewToCheffy` row of compact cards: photo, name, @username, "Joined today / yesterday /
+  Oct 27", a crème "NEW" tag for the last 14 days, Follow, tap opens the profile. It scrolls
+  sideways and has See all.
+- `/new-members` (See all) lists every eligible member, paged, with pull to refresh.
+- Where it appears:
+  - Discover, under Suggested for you;
+  - Find Friends, under Suggested;
+  - Search › People, above the suggestions;
+  - under the empty Following feed (fetched only when that empty state shows).
+- No one appears twice on a screen (`splitDiscoveryPeople`): someone suggested for a stronger
+  reason stays in Suggested; someone suggested only for being new moves to the New row.
+- Cached under `['users', …]`, so Follow / Following / Requested update everywhere at once.
+  It refreshes after a minute and on focus, so new sign-ups appear quickly.
+- `SuggestionCard` takes a `detail` line, an optional `badge` and an optional dismiss.
+
+**Checked:**
+- 465 tests pass (new: 11 DB tests for ordering, every exclusion rule, paging without repeats,
+  someone joining later, anon refused, the 30-day window and ranking; 4 unit tests for
+  de-duplication and labels). Typecheck and lint are clean.
+- Live data (@chefshin, read-only): suggestions went from 2 to 12, 7 of them "New to Cheffy";
+  `new_members` returns 13 eligible accounts.
+- Simulator (iPhone 16e, signed in, read-only; confirmed no follows, requests or dismissals
+  were made):
+  - Discover shows New to Cheffy with NEW tags; @eminmd14, who signed up during the check,
+    appeared first; the row scrolls sideways; nobody is in both rows;
+  - See all lists all 13, newest first, no repeats;
+  - Find Friends and Search › People show the row.
+- Not checked: the empty Following state (@chefshin's feed isn't empty), live paging past 20
+  (only 13 eligible; covered by the DB test), and tapping Follow on a real account.
+## Search suggestions for Creations and Tags (2026-10-29; migration not pushed)
+
+Search's Creations and Tags tabs now show personalized suggestions while the search box is
+empty, like the People tab already does. Typing shows search results only. Clearing the box
+brings the suggestions back from cache, without a reload. Discover's navigation is unchanged.
+
+**Creations tab, empty query** (`CreationSuggestions` in
+`src/features/discover/components/SearchSuggestions.tsx`):
+- **For Your Taste:** the existing `taste_posts` picks, built from what the viewer makes,
+  likes and saves, plus ratings and recency. See all opens `/taste`.
+- **Trending:** `trending_creations()`, public creations ranked by likes and comments from
+  the last 14 days. The last 7 days count double, and only one comment per person counts.
+  Lifetime likes don't count. See all opens the new `/trending` screen, which is paged and
+  shares the row's cache.
+- **Newly Cooked:** `newly_cooked()`, creations from the last 90 days by discoverable,
+  public, unsuspended accounts. Each cook's newest creation comes first, so a new cook isn't
+  buried by a prolific one. It's an endless paged grid under the two rows.
+- Each creation appears once, in the first section that has it (For Your Taste, then
+  Trending, then Newly Cooked). Empty sections are hidden. If every section is empty, the
+  screen shows the old "Find something to make" hint. A one-letter query shows "Keep typing".
+
+**Tags tab, empty query** (`TagSuggestionList`, backed by `tag_suggestions()` in one call):
+- **Suggested for you:** tags on the viewer's own posts (weight 3, or 5 when rated 8+), likes
+  and saves (2), comments (1), and recent posts by people they follow (1).
+- **Popular tags:** ranked by recent use. The last 14 days count most, then 60 days, then
+  all-time use and the number of different cooks.
+- **Explore something new:** a few popular tags (2+ posts) the viewer has no history with,
+  shuffled a little each day.
+- Each tag appears in one list only. Every tag has at least one other person's post the
+  viewer can browse, so Browse is never empty. Tapping a tag opens `/browse` with `tagId`.
+  Rows show the creation count. Typed tag results use the same `TagRow`.
+
+**Fallbacks for new users:** `taste_posts` already falls back to popular, well-rated recent
+posts. A viewer with no activity gets no "Suggested for you" tags (until they follow someone),
+but still sees Popular and Explore. Newly Cooked never depends on the viewer's activity.
+
+**Privacy:** all three new functions are SECURITY INVOKER, so the posts RLS policy applies.
+Private and followers-only posts the viewer can't open, people blocked either way, drafts and
+removed posts never show up. Trending and Newly Cooked also require public visibility, a
+public account and no suspension. Newly Cooked also requires `discoverable`. The viewer's own
+creations are never returned. All three are revoked from `anon`.
+
+**Migration:** `supabase/migrations/20261030000001_search_suggestions.sql` (read-only
+functions, no data changes). **Not pushed to the live database.** The app needs it live
+before the new sections fill in. Until then, the Trending, Newly Cooked and tag requests fail,
+those sections stay hidden, and For Your Taste still works.
+
+**Checked:**
+- `tests/db/search-suggestions.test.ts` (11 tests). Trending: ranks recent engagement over
+  lifetime likes, weights recent days higher, ignores the cook's own likes and comments,
+  leaves out own, private, followers-only, blocked (both ways), removed and photo-less posts,
+  caps each cook at two before anyone's third, and pages without repeats. Newly Cooked: same
+  exclusions, plus non-discoverable accounts and posts over 90 days old, and the
+  newest-per-cook order. Tags: section order and dedupe, ranking by recent use, learning from
+  likes, the follow and brand-new-user fallbacks, nothing from own, private, blocked, draft
+  or removed posts, and no anon access.
+- Full test suite, typecheck and lint pass.
+- **Migration live** (2026-10-30, approved). Live data for @chefshin (read-only): Trending
+  and Newly Cooked each fill a first page of 18 with none of their own posts; tags return 8
+  suggested and 12 popular. Explore is empty for this account because every popular tag
+  connects to something they made, liked, saved or follow, so it's correctly hidden.
+- Simulator (iPhone 16e, signed in, read-only): Creations shows For Your Taste, Trending and
+  Newly Cooked with real posts; Tags shows Suggested for you and Popular tags; tapping #matcha
+  opens Browse with its 2 creations.
+- The Trending subtitle reads "Getting the most likes and comments lately" (it said "Most
+  loved", which the app no longer uses).
