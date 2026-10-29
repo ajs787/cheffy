@@ -11,14 +11,14 @@ rather than a dashboard. High-contrast Didone display type, warm paper, ink
 hairlines, one deep wine accent.
 
 - **Wordmark:** lowercase `cheffy.` in Bodoni Moda with a signature full stop
-  (`Wordmark`): oxblood letters with an espresso stop on light grounds, ivory
+  (`Wordmark`): all oxblood, full stop included, on light grounds; ivory
   letters with a rose stop on dark. Lock-up adds "Club de cuisine" in tracked
   capitals.
 - **Monogram:** `c.`, the app icon (oxblood c, espresso stop on ivory) and
   the in-app `Monogram` tile (ivory c, rose stop on oxblood).
-- **Voice:** "A private table for people who cook, bake, whisk, and keep
-  notes." · "Cook. Note. Share. Repeat." Small French touches (Club de
-  cuisine, Membre, Depuis) are flourishes, not UI copy.
+- **Voice:** "Your kitchen has a fan club now." · "Cook. Rate. Share.
+  Repeat." Small French touches (Membre, Depuis) are flourishes, not UI copy;
+  the welcome screen carries none.
 
 ## Color — "The Cellar"
 

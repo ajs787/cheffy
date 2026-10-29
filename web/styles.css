@@ -72,6 +72,15 @@ img { display: block; max-width: 100%; }
   margin: 0 auto 24px;
   max-width: 13em;
 }
+/* Under the hero headline: the three-beat line, in oxblood italic. */
+.hero .subline {
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(20px, 2.2vw, 24px);
+  line-height: 1.3;
+  color: var(--oxblood);
+  margin: -8px auto 28px;
+}
 .kicker {
   font-weight: 600;
   font-size: 13px;

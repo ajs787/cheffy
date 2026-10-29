@@ -72,6 +72,8 @@ export interface Category {
   sortOrder: number;
   /** Added by someone through "Other / Add custom". */
   isCustom: boolean;
+  /** Retired choices stay readable on old posts but aren't offered in pickers. */
+  isActive: boolean;
 }
 
 export type CategoryRef = Pick<Category, 'id' | 'slug' | 'name'>;
@@ -86,6 +88,8 @@ export interface Taxonomy {
   dishTypes: Category[];
   /** Custom labels by kind (and subtype parent): searchable, not listed by default. */
   custom: Category[];
+  /** Retired choices (e.g. Baking › Pizza): kept for old posts, never offered. */
+  retired: Category[];
 }
 
 export interface Tag {

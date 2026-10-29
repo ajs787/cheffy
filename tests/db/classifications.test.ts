@@ -137,3 +137,34 @@ describe('usage', () => {
     expect(Number(rows.find((r) => r.category_id === uyghur[0]!.id)!.uses)).toBe(2);
   });
 });
+
+describe('Pizza moved to Cooking', () => {
+  it('offers Pizza as a Cooking dish type and retires Baking › Pizza without touching posts', async () => {
+    const dish = await db.admin<{ is_active: boolean }>(
+      "select is_active from public.categories where kind = 'dish_type' and slug = 'pizza'",
+    );
+    expect(dish).toEqual([{ is_active: true }]);
+    const baking = await db.admin<{ is_active: boolean }>(
+      `select c.is_active from public.categories c join public.categories p on p.id = c.parent_id
+       where p.slug = 'baking' and c.slug = 'pizza'`,
+    );
+    expect(baking).toEqual([{ is_active: false }]);
+  });
+
+  it('refuses to bring Baking › Pizza back as a custom label', async () => {
+    const me = await db.createUser('piebaker');
+    const bakingId = await db.categoryId('primary', 'baking');
+    await expectDbError(
+      db.query(me.id, "select public.ensure_custom_category('subcategory', $1, ' PIZZA ')", [bakingId]),
+      /isn’t offered here any more/,
+    );
+  });
+
+  it('keeps a post that already uses Baking › Pizza unchanged', async () => {
+    const me = await db.createUser('oldpost');
+    const pizza = await db.categoryId('subcategory', 'pizza', 'baking');
+    const post = await db.createPost(me.id, { primary_category_id: await db.categoryId('primary', 'baking') }, { categories: [pizza] });
+    const rows = await db.admin<{ category_id: string }>('select category_id from public.post_categories where post_id = $1', [post]);
+    expect(rows.map((r) => r.category_id)).toContain(pizza);
+  });
+});

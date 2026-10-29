@@ -1154,25 +1154,107 @@ matches. Newest first within each tier.
 - Separately, the shared `GridSkeleton` loading grid draws tiny squares. That's existing
   behaviour, unchanged here.
 
-## Activity: chronological sections, no Featured (2026-10-28, branch `activity-chronological`, not pushed)
+## UI polish, branding & content clarity (2026-10-28, branch `ui-polish-branding`)
 
-**What changed:**
-- The Activity screen no longer has a Featured section. Every notification sits under Today,
-  Yesterday, Last 7 Days or Earlier, newest first. Empty sections are hidden.
-- Follow requests now appear in their date section too, with Confirm/Delete on the row
-  (they used to be left out of the list). The "Follow requests" shortcut row above the list
-  stays. Co-Chef invitations keep Accept/Decline on the row.
-- `src/features/activity/groups.ts`:
-  - days are counted as calendar days in the phone's time zone, so daylight-saving changes
-    don't shift a day;
-  - "Last 7 Days" is 2–7 calendar days ago (same boundary as before);
-  - a repeated id is listed once; a future timestamp counts as Today; an unreadable one goes
-    under Earlier instead of vanishing;
-  - an optional `timeZone` argument exists only so tests can pin a zone.
-- No database, migration or notification-data changes. Read/unread styling, tap targets,
-  the 100-item fetch limit and Realtime refresh are unchanged.
+**1. Pizza moves from Baking to Cooking** (migration `20261028000001_pizza_to_cooking`, live since 2026-10-28, approved)
+- Cooking classifies by dish type (its quick pick is Cuisine), so Pizza is now a Cooking dish
+  type after Pasta. Giving Cooking a one-item "What kind?" list would have broken its flow.
+- Baking › Pizza is retired (`is_active = false`), not deleted. The 2 live posts tagged with it
+  keep their label. Pickers, quick picks and search no longer offer it, and typing "Pizza" as a
+  custom Baking label is refused (in the app and in `ensure_custom_category`).
+- Editing an old Baking › Pizza post shows the tag as selected and keeps it on save unless the
+  owner removes it. The app now loads retired rows (`Taxonomy.retired`) for this.
 
-**Checked:** `groups.test.ts` covers the midnight boundary, the 7-day boundary, Los Angeles vs
-Tokyo, a New York DST change, every notification type listed exactly once, duplicate ids, and
-newest-first order. 441 tests, `tsc --noEmit` and `expo lint` pass. Not checked in the
-Simulator.
+**2. "Most loved" → "Most liked"** (Discover row, its See all title, Browse sort chip)
+- Sorting was already by like count (then newest) in `discover_posts` and the client
+  re-sort. A new DB test proves it ranks by likes, not rating, and leaves out unliked posts.
+
+**3. Wordmark period:** already Espresso #3B2A22 everywhere (app `Wordmark`, website CSS, app
+icon, splash), since 2026-10-20. No change needed; checked on screen in the simulator and the
+browser (computed `rgb(59, 42, 34)`).
+
+**4. Welcome screen and cheffy.me hero:** "Your kitchen has a fan club now." (display serif)
+over "Cook it. Rate it. Share it." (oxblood; semibold in the app, semibold italic on the
+site). The app reads `TAGLINE` in `src/constants/app.ts`; the static site can't import it, so
+`web/index.html` carries the same lines with a pointer. Buttons, motto and animations are
+unchanged. The native splash has no tagline and is untouched.
+
+**5. Feed divider:** the espresso rule above the heart/comment row is gone. The feed's soft
+divider between posts marks where an entry ends. Order and touch targets are unchanged; Co-Chef
+posts use the same card.
+
+**6. Review and story:** a shared `StorySection` replaces `StoryTeaser` (feed) and
+`StoryBody` (post screen). The review and story both use the `body` style (16/23); the story
+has an oxblood "The story" label and the existing thin oxblood left rule. Long stories (over 240
+characters or more than one paragraph) show "Read story · N min" / "Show less": collapsed to 3
+lines in the feed, open on the post screen. Paragraph breaks are kept.
+
+**Checked:**
+- 441 tests pass (new: retired taxonomy, edit keeps a retired tag, Pizza migration, custom
+  re-add refused, Most liked order, story length rule). Typecheck and lint are clean.
+- Website (local): hero at desktop and 375 pt widths, no sideways scroll.
+- Simulator (signed out): welcome screen on iPhone 16 Pro Max and iPhone 16e (390 pt, the
+  smallest available), no clipping.
+
+- Live DB after the push: Cooking dish type Pizza is active; Baking › Pizza is inactive with
+  its 2 posts unchanged; re-adding "Pizza" under Baking is refused (checked as @chefshin,
+  rolled back).
+- Simulator (iPhone 16e, signed in, read-only; nothing liked, saved or posted):
+  - feed: no rule above the actions; the soft divider sits under "Liked by"; a short story
+    shows in full with its line break;
+  - post screen ("Jalapeño cheddar bread", 428-character story): review and story in the
+    same type, paragraphs kept, "Show less" / "Read story · 1 min" toggle both ways;
+  - Discover shows "Most liked"; See all shows the "Most liked" chip, and its order matches the
+    live like counts (5, 5, 5, 5, then 4), not ratings;
+  - Create: Baking's "What kind?" has no Pizza, and typing "pizza" shows "Pizza isn't offered
+    here any more" with no Add; Cooking's dish types find Pizza; the entry was discarded and
+    no post was created;
+  - Edit of @chefshin's "mushroom arugula pizza" (Baking › Pizza) shows Pizza selected; closed
+    without saving.
+
+**Notes:**
+- Taps inside a list are ignored while it is still moving (after a scroll, or right after the
+  story changes height). That's standard iOS behaviour; a settled tap toggles first time.
+- The live site updates when this branch merges to main.
+
+## Welcome screen art direction & story color (2026-10-28, branch `ui-polish-branding`)
+
+**Removed:** "Club de cuisine" / "Est. MMXXVI" and their rule; "Cook it. Rate it. Share it." under
+the logo; the ruled box around Cook / Bake / Pour.
+
+**Welcome screen (`src/app/(auth)/welcome.tsx`):**
+- Two groups. The hero (wordmark, one line, Cook / Bake / Pour) is centered in the spare height
+  and lifted slightly above true center. The actions and sign-off are anchored at the bottom in
+  thumb reach. Spacing comes from flex and theme tokens, not fixed positions.
+- Wordmark: all Oxblood, full stop included (the `Wordmark` oxblood tone, so the Home header
+  matches). It scales with width (64–84 pt).
+- Headline: "Your kitchen has a fan club now." in the old subline's style (Newsreader
+  semibold, Oxblood, light tracking) at 17/24. It wraps as "…has a / fan club now.": a
+  no-break space keeps "fan club" together and `push-out` line breaking avoids a lone word.
+- Cook / Bake / Pour: they play an animation and a haptic, so each now sits on a 64 pt Crème
+  disc (deeper while pressed) to show it's tappable. 28 pt icons, equal columns, centered as a
+  group under the wordmark. The existing animations are kept, including the Reduce Motion
+  fallback.
+- Actions: "Create account" (filled) then "Sign in" (outlined), both 54 pt, 12 pt apart, same
+  destinations (`/sign-up`, `/sign-in`).
+- Sign-off: "Cook. Rate. Share. Repeat." in `textSecondary` (was tertiary) for contrast, kept
+  clear of the home indicator.
+- It's a non-bouncing scroll view that only scrolls when large text needs the room.
+
+**Story color:** in `StorySection` the story text is now Oxblood like its label, the same size
+as the review. The review stays Espresso. Feed and post screen share the component.
+
+**Not changed:** the display font is still DM Serif Display. `DESIGN_SYSTEM.md` names Bodoni
+Moda, but the logo was asked to keep its typography. The app icon, splash image and website
+wordmark still have an Espresso full stop (images and site CSS; a new build is needed for the
+icon and splash).
+
+**Checked:**
+- 441 tests pass; typecheck and lint are clean.
+- iPhone 16 Pro Max (signed out): default text, and the largest accessibility text size (text
+  grows up to the app's 1.3× cap, no clipping or overlap, buttons on screen; reset after).
+  Tapping Cook plays its wiggle.
+- iPhone 16e (signed in): the feed shows the review in Espresso and the story in Oxblood at
+  the same size; the Home wordmark is all Oxblood.
+- Not yet: the redesigned welcome screen on a small iPhone. The spare iPhone 16e simulator is
+  waiting for access in the simulator panel.
