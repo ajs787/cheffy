@@ -1156,9 +1156,27 @@ matches. Newest first within each tier.
 
 ## Comments: @mentions, photos and personal stickers (2026-10-29, branch `comment-media`, not pushed)
 
-**Status:** built and tested locally. Migration `20261029000001_comment_media_mentions` is
-**not applied** to the live project, and the `comment-media` Edge Function is **not deployed**.
-Both need the owner's approval. A new dev/TestFlight build is needed for keyboard stickers.
+**Status:** built and tested locally. **Migration `20261029000001_comment_media_mentions` is
+live, and the `comment-media` Edge Function is deployed** (2026-10-29, approved by the owner;
+`delete-account` was redeployed too). A new dev/TestFlight build is still needed for this app
+code and for keyboard stickers.
+
+**Checked on live after the push (read-only, no test data written):**
+- `migration list` matched before the push: only this migration was pending. The live DB
+  also has `20261028000001_pizza_to_cooking`, which comes from `ui-polish-branding`. That file
+  was copied in only for the push and isn't in this branch.
+- All 9 new `comments` columns exist, along with `comment_mentions`, `comment_uploads` and the
+  `comment_mention` notification type. All 205 existing comments are intact.
+- Bucket `comment-media` is private with a 3 MB limit. Its only storage policy is
+  `comment_media_objects_select` (no client write policies).
+- Signed out:
+  - `comment-media` returns 401 (with no token, and with the anon key);
+  - `mention_suggestions`, `comment_uploads_to_sweep` and the `comment_uploads` table are
+    refused;
+  - listing the bucket returns nothing.
+- Builds already out (e.g. TestFlight) don't select the new columns and keep working.
+- Not run yet: a signed-in upload, mention or notification on live. That needs a test
+  account and the new build.
 
 ### Ship order (important)
 1. Apply the migration (`supabase db push`). The app's comment query selects the new columns,
@@ -1309,8 +1327,8 @@ Both need the owner's approval. A new dev/TestFlight build is needed for keyboar
   also has.
 
 ### Not verified (needs the owner or a device)
-- Nothing has run against the live DB, because the migration isn't applied. The Edge
-  Function hasn't run in Deno.
+- No signed-in flow has run on live yet: upload through the Edge Function, posting a picture
+  comment, a mention notification, a push.
 - Sticker-keyboard insertion, Genmoji, transparency and paste need a real iPhone on the new
   build (the Simulator has no personal stickers). Also: picking photos, the viewer, the
   keyboard on a small iPhone, a slow or interrupted network (airplane mode mid-post: the
