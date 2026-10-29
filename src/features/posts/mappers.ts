@@ -43,7 +43,7 @@ export const POST_SELECT = `
  */
 export const FEED_POST_SELECT = `${POST_SELECT},
   likers:likes(created_at, profile:profiles!likes_user_id_fkey(${PROFILE_SUMMARY_SELECT})),
-  top_comments:comments(id, body, like_count, created_at, parent_id, author:profiles!comments_author_id_fkey(${PROFILE_SUMMARY_SELECT}))
+  top_comments:comments(id, body, media_kind, like_count, created_at, parent_id, author:profiles!comments_author_id_fkey(${PROFILE_SUMMARY_SELECT}))
 `;
 
 /** How many comments a feed card previews. */
@@ -81,7 +81,15 @@ export function mapTopComments(rows: PostRow['top_comments']): CommentPreview[] 
   return (rows ?? [])
     .flatMap((c) =>
       c.author && !c.parent_id
-        ? [{ id: c.id, body: c.body, likeCount: c.like_count ?? 0, author: mapProfileSummary(c.author) }]
+        ? [
+            {
+              id: c.id,
+              body: c.body,
+              mediaKind: c.media_kind ?? null,
+              likeCount: c.like_count ?? 0,
+              author: mapProfileSummary(c.author),
+            },
+          ]
         : [],
     )
     .slice(0, PREVIEW_COMMENTS);
@@ -132,6 +140,7 @@ export interface PostRow {
   top_comments?: {
     id: string;
     body: string;
+    media_kind?: 'photo' | 'sticker' | null;
     like_count: number;
     parent_id: string | null;
     author: ProfileSummaryRow | null;

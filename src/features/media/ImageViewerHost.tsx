@@ -15,7 +15,7 @@ import Animated, { interpolate, useAnimatedStyle, useSharedValue } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, IconButton } from '@/components/ui';
-import { signPostImagePaths } from '@/lib/supabase/storage';
+import { BUCKETS, signPaths } from '@/lib/supabase/storage';
 import { useImageViewerStore, type ViewerImage } from '@/stores/imageViewer';
 import { colors, spacing } from '@/theme';
 
@@ -89,7 +89,17 @@ function Viewer({
   const missing = images.flatMap((image) => (!image.uri && image.storagePath ? [image.storagePath] : []));
   const signed = useQuery({
     queryKey: ['viewer-urls', ...missing],
-    queryFn: () => signPostImagePaths(missing),
+    queryFn: async () => {
+      // One batch per bucket (post photos, comment pictures).
+      const byBucket = new Map<'post-images' | 'comment-media', string[]>();
+      for (const image of images) {
+        if (image.uri || !image.storagePath) continue;
+        const bucket = image.bucket ?? BUCKETS.postImages;
+        byBucket.set(bucket, [...(byBucket.get(bucket) ?? []), image.storagePath]);
+      }
+      const results = await Promise.all([...byBucket].map(([bucket, paths]) => signPaths(bucket, paths)));
+      return Object.assign({}, ...results) as Record<string, string>;
+    },
     enabled: missing.length > 0,
     staleTime: 30 * 60 * 1000,
   });

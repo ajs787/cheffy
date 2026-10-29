@@ -29,6 +29,7 @@
     review: 'Started review', resolve: 'Resolved', dismiss: 'Dismissed', reopen: 'Reopened',
     note: 'Note', remove: 'Removed content', restore: 'Restored content', suspend: 'Suspended account',
     unsuspend: 'Unsuspended account', auto_hide: 'Hidden automatically',
+    remove_media: 'Removed picture', restore_media: 'Restored picture',
   };
 
   var session = null; // { access_token, refresh_token, expires_at, email }
@@ -171,11 +172,13 @@
     return typeof path === 'string' && path.length <= 300 && SAFE_PATH.test(path);
   }
 
-  // Short-lived (5 minute) links for private post photos.
-  function signedPhoto(path) {
-    if (!safePath(path)) return Promise.resolve(null);
+  // Short-lived (5 minute) links for private post photos and comment pictures.
+  var PRIVATE_BUCKETS = { 'post-images': true, 'comment-media': true };
+  function signedPhoto(path, bucket) {
+    bucket = bucket || 'post-images';
+    if (!safePath(path) || !PRIVATE_BUCKETS[bucket]) return Promise.resolve(null);
     return refreshIfNeeded().then(function () {
-      return fetch(API + '/storage/v1/object/sign/post-images/' + path.split('/').map(encodeURIComponent).join('/'), {
+      return fetch(API + '/storage/v1/object/sign/' + bucket + '/' + path.split('/').map(encodeURIComponent).join('/'), {
         method: 'POST',
         headers: { apikey: KEY, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ expiresIn: 300 }),
@@ -332,7 +335,7 @@
     var open = function () { location.hash = '#/report/' + r.id; };
     var statusCell = el('td', null, [pill(STATUS_LABEL[r.status] || r.status, r.status)]);
     if (r.overdue) statusCell.appendChild(el('div', null, [pill('Over 24h', 'overdue')]));
-    var preview = el('td', { class: 'preview' }, [r.preview || '—']);
+    var preview = el('td', { class: 'preview' }, [r.preview || (r.target_type === 'comment' ? 'Picture-only comment' : '—')]);
     if (r.is_hidden) preview.appendChild(el('div', null, [pill(r.target_type === 'user' ? 'Suspended' : 'Hidden', 'hidden-content')]));
     if (Number(r.target_reports) > 1) preview.appendChild(el('div', { class: 'muted small', text: r.target_reports + ' reports on this' }));
     return el('tr', {
@@ -412,7 +415,23 @@
       var s = quote(data.story); if (s) panel.appendChild(s);
       var p = photosFor(data.images); if (p) panel.appendChild(p);
     } else if (type === 'comment') {
-      panel.appendChild(quote(data.body || ''));
+      var body = quote(data.body || '');
+      if (body) panel.appendChild(body);
+      if (data.media) {
+        var m = data.media;
+        var holder = el('div', { class: 'photos' });
+        var img = el('img', { alt: 'Reported ' + (m.kind || 'picture'), loading: 'lazy', referrerpolicy: 'no-referrer' });
+        holder.appendChild(img);
+        panel.appendChild(holder);
+        signedPhoto(m.path, 'comment-media').then(function (url) {
+          if (url) img.src = url;
+          else img.replaceWith(el('div', { class: 'muted small', text: 'Picture no longer available' }));
+        });
+      }
+      panel.appendChild(facts([
+        ['Picture', data.media ? (data.media.kind === 'sticker' ? 'Sticker' : 'Photo') + (data.media.hidden ? ' — removed' + (data.media.hidden_reason ? ' (' + data.media.hidden_reason + ')' : '') : '') : ''],
+        ['Mentions', (data.mentions || []).map(function (u) { return '@' + u; }).join(', ')],
+      ]));
       if (!isSnapshot) {
         panel.appendChild(facts([
           ['On post', data.post_title || ''],
@@ -463,6 +482,9 @@
       if (cur.exists !== false && !hidden && r.target_type === 'user') {
         act('Suspend account', 'danger', function () { moderate(r, 'suspend'); });
       }
+      if (r.target_type === 'comment' && cur.media && !cur.media.hidden) {
+        act('Remove picture only', 'danger', function () { moderateMedia(r, 'remove_media'); });
+      }
       act('Resolve', 'secondary', function () { setStatus(r, 'actioned', true); });
       act('Dismiss', 'secondary', function () { setStatus(r, 'dismissed', true); });
     } else {
@@ -472,6 +494,9 @@
       act(r.target_type === 'user' ? 'Unsuspend account' : 'Restore content', 'secondary', function () {
         moderate(r, r.target_type === 'user' ? 'unsuspend' : 'restore');
       });
+    }
+    if (r.target_type === 'comment' && cur.media && cur.media.hidden) {
+      act('Restore picture', 'secondary', function () { moderateMedia(r, 'restore_media'); });
     }
     act('Add note', 'secondary', function () { addNote(r); });
     host.appendChild(actions);
@@ -620,6 +645,24 @@
     }).then(function (res) {
       if (!res) return;
       return rpc('admin_moderate_report', { p_report: r.id, p_action: action, p_expected: r.status, p_note: res.note })
+        .then(function () { return afterChange(r, 'Done.'); })
+        .catch(function (e) { onError(r, e); });
+    });
+  }
+
+  // A comment's photo or sticker, keeping its text.
+  function moderateMedia(r, action) {
+    var removing = action === 'remove_media';
+    return confirmDialog({
+      title: removing ? 'Remove this picture?' : 'Restore this picture?',
+      body: removing
+        ? 'The comment stays, without its picture. Nothing is deleted, and you can restore it. Open reports about the comment are resolved.'
+        : 'The picture becomes visible again to the people who can see the comment.',
+      note: true, noteRequired: removing, typeWord: removing ? 'REMOVE' : null, danger: removing,
+      okLabel: removing ? 'Remove picture' : 'Restore picture',
+    }).then(function (res) {
+      if (!res) return;
+      return rpc('admin_moderate_comment_media', { p_report: r.id, p_action: action, p_expected: r.status, p_note: res.note })
         .then(function () { return afterChange(r, 'Done.'); })
         .catch(function (e) { onError(r, e); });
     });

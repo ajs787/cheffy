@@ -17,6 +17,8 @@ const comment = (id: string, parentId: string | null = null): Comment => ({
   likeCount: 0,
   replyCount: 0,
   viewerHasLiked: false,
+  media: null,
+  mentions: [],
 });
 
 describe('comment caches', () => {
@@ -36,7 +38,10 @@ describe('comment caches', () => {
   it('updates a comment wherever it is cached', () => {
     const qc = new QueryClient();
     qc.setQueryData<CommentPages>(queryKeys.comments('p'), { pages: [[comment('a')]], pageParams: [null] });
-    qc.setQueryData<CommentPages>(queryKeys.replies('a'), { pages: [[comment('r', 'a')]], pageParams: [null] });
+    qc.setQueryData<CommentPages>(queryKeys.replies('a'), {
+      pages: [[comment('r', 'a')]],
+      pageParams: [null],
+    });
     updateCommentInCaches(qc, 'r', (c) => ({ ...c, likeCount: 3, viewerHasLiked: true }));
     updateCommentInCaches(qc, 'a', (c) => ({ ...c, replyCount: 1 }));
     expect(qc.getQueryData<CommentPages>(queryKeys.replies('a'))!.pages[0]![0]).toMatchObject({

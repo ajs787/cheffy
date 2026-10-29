@@ -72,6 +72,25 @@ describe('notifications', () => {
     });
   });
 
+  it('describe mentions and open the post at that comment', () => {
+    const actor = mapNotification(row('follow'))!.actor;
+    const p = { id: 'p', title: 'Iced Matcha', thumbPath: null, thumbUrl: null };
+    expect(describeItem({ type: 'comment_mention', post: p, commentBody: '@ana try it' })).toBe(
+      'mentioned you in a comment on Iced Matcha',
+    );
+    expect(activityTarget({ type: 'comment_mention', post: p, actor, commentId: 'c1' })).toEqual({
+      pathname: '/post/[id]',
+      params: { id: 'p', focus: 'comments', comment: 'c1' },
+    });
+    // A mention on a post the viewer can't see is dropped.
+    expect(mapNotification(row('comment_mention'))).toBeNull();
+  });
+
+  it('show picture-only comments as words', () => {
+    const item = mapNotification(row('comment', { post, comment: { body: '', media_kind: 'sticker' } }))!;
+    expect(item.commentBody).toBe('Sent a sticker');
+  });
+
   it('cap the badge', () => {
     expect(badgeLabel(3)).toBe('3');
     expect(badgeLabel(12)).toBe('9+');

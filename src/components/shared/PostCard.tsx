@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
+import { commentPreviewText } from '@/features/comments/preview';
 import { StoryTeaser } from '@/features/posts/components/StoryTeaser';
 import { likedBySummary } from '@/features/social/likedBy';
 import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
@@ -215,13 +216,20 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
                 onPress={() => openPost(true)}
                 style={styles.comments}
                 accessibilityRole="link"
-                accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${c.body}`).join('. ')}`}
+                accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${commentPreviewText(c.body, c.mediaKind)}`).join('. ')}`}
                 accessibilityHint="Opens all comments"
                 testID={`post-card-comments-${post.id}`}
               >
                 {topComments.map((comment) => (
                   <AppText key={comment.id} variant="callout" numberOfLines={4}>
-                    <AppText variant="calloutStrong">{comment.author.username}</AppText> {comment.body}
+                    <AppText variant="calloutStrong">{comment.author.username}</AppText>{' '}
+                    {comment.body.trim() ? (
+                      comment.body
+                    ) : (
+                      <AppText variant="callout" color="textSecondary">
+                        {commentPreviewText(comment.body, comment.mediaKind)}
+                      </AppText>
+                    )}
                   </AppText>
                 ))}
                 {post.commentCount > topComments.length ? (

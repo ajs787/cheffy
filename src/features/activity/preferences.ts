@@ -9,15 +9,21 @@ export interface PushPreferences {
   follows: boolean;
   likes: boolean;
   comments: boolean;
+  mentions: boolean;
 }
 
-export const DEFAULT_PREFERENCES: PushPreferences = { follows: true, likes: true, comments: true };
+export const DEFAULT_PREFERENCES: PushPreferences = {
+  follows: true,
+  likes: true,
+  comments: true,
+  mentions: true,
+};
 
 const preferencesKey = ['notification-preferences'] as const;
 
 export async function fetchPreferences(): Promise<PushPreferences> {
   const row = await fetchMaybe<PushPreferences>(
-    supabase.from('notification_preferences').select('follows, likes, comments').maybeSingle(),
+    supabase.from('notification_preferences').select('follows, likes, comments, mentions').maybeSingle(),
   );
   return row ?? DEFAULT_PREFERENCES;
 }

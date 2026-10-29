@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Heart } from 'lucide-react-native';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Avatar } from '@/components/ui';
@@ -9,10 +9,16 @@ import type { Comment } from '@/types/models';
 import { formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
+import { segmentBody } from '../mentions';
+import { commentPreviewText } from '../preview';
+import { CommentMediaView } from './CommentMediaView';
+
 export interface CommentRowProps {
   comment: Comment;
   /** Replies sit indented under their comment with a smaller avatar. */
   nested?: boolean;
+  /** Briefly tinted when opened from a notification. */
+  highlighted?: boolean;
   onLongPress?: (comment: Comment) => void;
   onReply?: (comment: Comment) => void;
   onToggleLike?: (comment: Comment) => void;
@@ -20,17 +26,35 @@ export interface CommentRowProps {
 
 const openProfile = (id: string) => router.push({ pathname: '/user/[id]', params: { id } });
 
-function CommentRowBase({ comment, nested = false, onLongPress, onReply, onToggleLike }: CommentRowProps) {
+function CommentRowBase({
+  comment,
+  nested = false,
+  highlighted = false,
+  onLongPress,
+  onReply,
+  onToggleLike,
+}: CommentRowProps) {
   const pending = comment.id.startsWith('pending-');
   const liked = comment.viewerHasLiked;
+  const segments = useMemo(
+    () => segmentBody(comment.body, comment.mentions),
+    [comment.body, comment.mentions],
+  );
+  const hasText = comment.body.trim().length > 0;
+  const spoken = commentPreviewText(comment.body, comment.media?.kind);
   return (
     <Pressable
       onLongPress={() => onLongPress?.(comment)}
       delayLongPress={350}
       disabled={pending}
-      style={[styles.row, nested && styles.nested, pending && styles.pending]}
+      style={[
+        styles.row,
+        nested && styles.nested,
+        pending && styles.pending,
+        highlighted && styles.highlighted,
+      ]}
       accessibilityHint={onLongPress ? 'Long press for options' : undefined}
-      accessibilityLabel={`${comment.author.displayName}${comment.replyTo ? `, replying to @${comment.replyTo.username}` : ''}: ${comment.body}`}
+      accessibilityLabel={`${comment.author.displayName}${comment.replyTo ? `, replying to @${comment.replyTo.username}` : ''}: ${spoken}`}
     >
       <Pressable
         onPress={() => openProfile(comment.author.id)}
@@ -51,14 +75,37 @@ function CommentRowBase({ comment, nested = false, onLongPress, onReply, onToggl
             {pending ? 'Posting…' : formatRelativeTime(comment.createdAt)}
           </AppText>
         </View>
-        <AppText variant="body">
-          {comment.replyTo ? (
-            <AppText variant="body" style={styles.mention} onPress={() => openProfile(comment.replyTo!.id)}>
-              @{comment.replyTo.username}{' '}
-            </AppText>
-          ) : null}
-          {comment.body}
-        </AppText>
+        {hasText || comment.replyTo ? (
+          <AppText variant="body">
+            {comment.replyTo ? (
+              <AppText variant="body" style={styles.mention} onPress={() => openProfile(comment.replyTo!.id)}>
+                @{comment.replyTo.username}{' '}
+              </AppText>
+            ) : null}
+            {segments.map((segment, i) =>
+              segment.kind === 'mention' ? (
+                <AppText
+                  key={i}
+                  variant="body"
+                  style={styles.mention}
+                  onPress={() => openProfile(segment.userId)}
+                  accessibilityRole="link"
+                >
+                  {segment.text}
+                </AppText>
+              ) : (
+                segment.text
+              ),
+            )}
+          </AppText>
+        ) : null}
+        {comment.media ? (
+          <CommentMediaView
+            media={comment.media}
+            commentId={comment.id}
+            label={`${comment.media.kind === 'sticker' ? 'Sticker' : 'Photo'} from ${comment.author.displayName}`}
+          />
+        ) : null}
         {!pending && onReply ? (
           <Pressable
             onPress={() => onReply(comment)}
@@ -113,6 +160,7 @@ const styles = StyleSheet.create({
   // Indent under the parent's avatar column; one level only.
   nested: { paddingLeft: SCREEN_GUTTER + 32 + spacing.md, paddingVertical: spacing.sm },
   pending: { opacity: 0.6 },
+  highlighted: { backgroundColor: colors.tint },
   body: { flex: 1, gap: 2 },
   meta: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   mention: { fontFamily: fonts.textSemiBold, color: colors.accent },

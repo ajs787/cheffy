@@ -9,8 +9,10 @@ export interface ViewerImage {
   uri: string | null;
   /** Small version shown instantly while the full one loads. */
   thumbUri: string | null;
-  /** Private post photos: signed on demand when `uri` is missing. */
+  /** Private photos: signed on demand when `uri` is missing. */
   storagePath?: string;
+  /** Which private bucket `storagePath` is in (post photos by default). */
+  bucket?: 'post-images' | 'comment-media';
   /** Stable disk-cache keys, shared with the feed so nothing re-downloads. */
   cacheKey?: string;
   thumbCacheKey?: string;

@@ -108,6 +108,8 @@ export interface PostImage {
 export interface CommentPreview {
   id: string;
   body: string;
+  /** Set when the comment has a photo or sticker (shown as a word in previews). */
+  mediaKind?: CommentMediaKind | null;
   likeCount: number;
   author: ProfileSummary;
 }
@@ -175,6 +177,35 @@ export interface Comment {
   likeCount: number;
   replyCount: number;
   viewerHasLiked: boolean;
+  /** One photo or sticker, or null. */
+  media: CommentMedia | null;
+  /** People the comment @mentions, by id (see features/comments/mentions). */
+  mentions: CommentMention[];
+}
+
+export type CommentMediaKind = 'photo' | 'sticker';
+
+export interface CommentMedia {
+  kind: CommentMediaKind;
+  /** Private storage paths (comment-media bucket); null while posting. */
+  path: string | null;
+  thumbPath: string | null;
+  /** Signed list-size URL, or a local file while posting. */
+  thumbUrl: string | null;
+  /** Local full-size file while posting; signed on demand otherwise. */
+  localUri?: string | null;
+  width: number;
+  height: number;
+  /** Taken down by moderators (the text stays). */
+  removed: boolean;
+}
+
+export interface CommentMention {
+  /** The name as written when posted. */
+  username: string;
+  userId: string;
+  /** Their username now; null when the viewer can't see them. */
+  currentUsername: string | null;
 }
 
 export type RankingSort = 'highest' | 'lowest' | 'recent' | 'oldest';

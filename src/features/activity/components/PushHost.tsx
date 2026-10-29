@@ -7,7 +7,14 @@ import { StyleSheet, View } from 'react-native';
 import { AppButton, AppText, BottomSheet } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
 import { toUserMessage } from '@/lib/errors';
-import { enablePush, getNotifications, getPushStatus, pushPath, refreshPushRegistration } from '@/lib/push';
+import {
+  enablePush,
+  getNotifications,
+  getPushStatus,
+  pushCommentId,
+  pushPath,
+  refreshPushRegistration,
+} from '@/lib/push';
 import { usePushPromptStore } from '@/stores/pushPrompt';
 import { toast } from '@/stores/toast';
 import { colors, iconSizes, spacing, strokes } from '@/theme';
@@ -64,7 +71,15 @@ export function PushHost() {
       void qc.invalidateQueries({ queryKey: activityKey });
       void qc.invalidateQueries({ queryKey: unreadKey });
       const path = pushPath(data);
-      if (path) router.push(path);
+      const commentId = pushCommentId(data);
+      if (path && commentId && path.startsWith('/post/')) {
+        router.push({
+          pathname: '/post/[id]',
+          params: { id: path.slice(6), focus: 'comments', comment: commentId },
+        });
+      } else if (path) {
+        router.push(path);
+      }
     };
     const subscription = Notifications.addNotificationResponseReceivedListener((response) =>
       open(response.notification.request.content.data),

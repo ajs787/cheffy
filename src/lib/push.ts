@@ -92,6 +92,12 @@ export async function unregisterPush(): Promise<void> {
 export const openSystemNotificationSettings = () => void Linking.openSettings();
 
 /** The in-app path a push carries (e.g. "/post/123"), validated. */
+/** The comment a push is about (mentions, replies…), when it names a valid id. */
+export function pushCommentId(data: unknown): string | null {
+  const id = (data as { commentId?: unknown } | null)?.commentId;
+  return typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id) ? id : null;
+}
+
 export function pushPath(data: unknown): `/post/${string}` | `/user/${string}` | null {
   const path = (data as { path?: unknown } | null)?.path;
   if (typeof path !== 'string') return null;

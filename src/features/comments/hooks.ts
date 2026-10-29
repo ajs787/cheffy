@@ -1,8 +1,15 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useRequiredUserId } from '@/features/auth/store';
 import { PREVIEW_COMMENTS } from '@/features/posts/mappers';
 import { useMyProfile } from '@/features/profile/hooks';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { toUserMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { updatePostInCaches } from '@/lib/query/cache';
@@ -15,6 +22,7 @@ import {
   COMMENTS_PAGE,
   deleteComment,
   fetchComments,
+  fetchMentionSuggestions,
   fetchReplies,
   likeComment,
   REPLIES_PAGE,
@@ -22,6 +30,7 @@ import {
   type CommentCursor,
   type ReplyTarget,
 } from './api';
+import { MediaUploadError, newUploadId, uploadMedia, type DraftMedia } from './media';
 import {
   appendComment,
   cacheKeyFor,
@@ -58,16 +67,67 @@ export function useReplies(parentId: string, enabled: boolean) {
   });
 }
 
-/** Posts a comment, or a reply when `reply` is set. Shows up immediately. */
+export interface SendComment {
+  body: string;
+  reply?: ReplyTarget | null;
+  mentionIds?: string[];
+  media?: DraftMedia | null;
+}
+
+/**
+ * Upload ids per picked file, so retrying a failed send (or a lost
+ * response) reuses the same upload instead of making another one.
+ */
+const uploadIds = new Map<string, string>();
+
+async function ensureUpload(media: DraftMedia): Promise<string> {
+  let id = uploadIds.get(media.uri);
+  if (!id) {
+    id = newUploadId();
+    uploadIds.set(media.uri, id);
+  }
+  await uploadMedia(id, media);
+  return id;
+}
+
+const isExpired = (error: unknown) => /attachment (expired|not found)/i.test((error as Error)?.message ?? '');
+
+/**
+ * Posts a comment, or a reply when `reply` is set. Shows up immediately.
+ * A picture is uploaded first (only on send); the comment row is written
+ * only after the upload succeeded, so a failed upload never leaves a broken
+ * comment, and the composer keeps the draft to retry.
+ */
 export function useAddComment(postId: string) {
   const qc = useQueryClient();
   const me = useRequiredUserId();
   const { data: profile } = useMyProfile();
 
   return useMutation({
-    mutationFn: ({ body, reply }: { body: string; reply?: ReplyTarget | null }) =>
-      addComment(me, postId, body, reply),
-    onMutate: async ({ body, reply }) => {
+    mutationFn: async ({ body, reply, mentionIds, media }: SendComment) => {
+      const send = async () =>
+        addComment(me, postId, {
+          body,
+          reply,
+          mentionIds,
+          uploadId: media ? await ensureUpload(media) : null,
+        });
+      try {
+        const comment = await send();
+        if (media) uploadIds.delete(media.uri);
+        return comment;
+      } catch (error) {
+        // The upload was swept (a very old retry): upload again once.
+        if (media && isExpired(error)) {
+          uploadIds.delete(media.uri);
+          const comment = await send();
+          uploadIds.delete(media.uri);
+          return comment;
+        }
+        throw error;
+      }
+    },
+    onMutate: async ({ body, reply, media }) => {
       const optimistic: Comment = {
         id: `pending-${Date.now()}`,
         postId,
@@ -84,6 +144,19 @@ export function useAddComment(postId: string) {
         likeCount: 0,
         replyCount: 0,
         viewerHasLiked: false,
+        media: media
+          ? {
+              kind: media.kind,
+              path: null,
+              thumbPath: null,
+              thumbUrl: media.uri,
+              localUri: media.uri,
+              width: media.width,
+              height: media.height,
+              removed: false,
+            }
+          : null,
+        mentions: [],
       };
       const key = cacheKeyFor(optimistic);
       await qc.cancelQueries({ queryKey: key });
@@ -106,7 +179,13 @@ export function useAddComment(postId: string) {
                 ...p,
                 topComments: [
                   ...p.topComments,
-                  { id: comment.id, body: comment.body, likeCount: 0, author: comment.author },
+                  {
+                    id: comment.id,
+                    body: comment.body,
+                    mediaKind: comment.media?.kind ?? null,
+                    likeCount: 0,
+                    author: comment.author,
+                  },
                 ],
               },
         );
@@ -120,8 +199,34 @@ export function useAddComment(postId: string) {
           replyCount: Math.max(0, c.replyCount - 1),
         }));
       updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: Math.max(0, p.commentCount - 1) }));
-      toast.error(toUserMessage(error, 'Couldn’t post your comment.'));
+      toast.error(commentErrorMessage(error));
     },
+  });
+}
+
+function commentErrorMessage(error: unknown): string {
+  if (error instanceof MediaUploadError) {
+    if (error.status === 429) return 'You’ve added a lot of pictures. Try again in a little while.';
+    if (error.status === 413 || error.status === 422)
+      return 'That picture can’t be used. Try a different one.';
+  }
+  const message = (error as Error)?.message ?? '';
+  if (/too many photo comments/i.test(message))
+    return 'You’ve posted a lot of pictures. Try again in a little while.';
+  if (/up to 5 mentions/i.test(message)) return 'You can mention up to 5 people in a comment.';
+  return toUserMessage(error, 'Couldn’t post your comment. Your draft is still here.');
+}
+
+/** @mention suggestions for what's typed after "@" (debounced, cached). */
+export function useMentionSuggestions(query: string | null, postId?: string) {
+  const debounced = useDebouncedValue(query, 150);
+  const me = useRequiredUserId();
+  return useQuery({
+    queryKey: ['mention-suggestions', me, postId ?? '', debounced ?? ''],
+    queryFn: () => fetchMentionSuggestions(debounced ?? '', postId),
+    enabled: debounced !== null,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 
