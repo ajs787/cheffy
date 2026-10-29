@@ -25,6 +25,8 @@ import { CookingLately } from '@/features/feed/components/CookingLately';
 import { TopRatedStrip } from '@/features/feed/components/TopRatedStrip';
 import { useFeed } from '@/features/feed/hooks';
 import { usePostMenu } from '@/features/posts/components/usePostMenu';
+import { NewToCheffy } from '@/features/social/components/NewToCheffy';
+import { useNewMembers } from '@/features/social/hooks';
 import { useProfileStats } from '@/features/profile/hooks';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useTabScrollToTop } from '@/hooks/useTabScrollToTop';
@@ -67,19 +69,22 @@ export default function HomeScreen() {
 
   const empty =
     mode === 'following' ? (
-      <EmptyState
-        icon={followsNobody ? UserPlus : ChefHat}
-        title={followsNobody ? 'Your table is empty' : 'Nothing new yet'}
-        message={
-          followsNobody
-            ? 'Follow friends to see what they’re cooking, baking and pouring here.'
-            : 'When the people you follow log something, it shows up here.'
-        }
-        actionLabel="Find friends"
-        onAction={() => router.push('/find-friends')}
-        secondaryLabel="See what everyone’s making"
-        onSecondary={() => setChosenMode('forYou')}
-      />
+      <View>
+        <EmptyState
+          icon={followsNobody ? UserPlus : ChefHat}
+          title={followsNobody ? 'Your table is empty' : 'Nothing new yet'}
+          message={
+            followsNobody
+              ? 'Follow friends to see what they’re cooking, baking and pouring here.'
+              : 'When the people you follow log something, it shows up here.'
+          }
+          actionLabel="Find friends"
+          onAction={() => router.push('/find-friends')}
+          secondaryLabel="See what everyone’s making"
+          onSecondary={() => setChosenMode('forYou')}
+        />
+        <NewMembersBelowEmpty />
+      </View>
     ) : (
       <EmptyState
         icon={Compass}
@@ -160,6 +165,12 @@ function FindFriendsBanner() {
       </View>
     </PressableScale>
   );
+}
+
+/** Under the empty Following feed: the newest members to follow (fetched only here). */
+function NewMembersBelowEmpty() {
+  const members = useNewMembers();
+  return <NewToCheffy people={members.data ?? []} />;
 }
 
 const styles = StyleSheet.create({

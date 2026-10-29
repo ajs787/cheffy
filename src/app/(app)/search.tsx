@@ -25,7 +25,8 @@ import {
 } from '@/features/discover/components/SearchSuggestions';
 import { usePostSearch, useTagSearch } from '@/features/discover/hooks';
 import { AlsoKnow } from '@/features/social/components/AlsoKnow';
-import { usePeopleSearch, useSuggestedFriends } from '@/features/social/hooks';
+import { NewToCheffy } from '@/features/social/components/NewToCheffy';
+import { useDiscoveryPeople, usePeopleSearch } from '@/features/social/hooks';
 import { useRecentPeople } from '@/features/social/recentPeople';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
@@ -144,18 +145,18 @@ function CreationResults({ q }: { q: string }) {
 }
 
 /**
- * People: with no query, people you looked at recently and suggestions
- * (each with its reason); with a query, matches only, best first and paged,
- * then a few "You might also know" below them.
+ * People: with no query, people you looked at recently, New to Cheffy, and
+ * suggestions (each with its reason; nobody twice); with a query, matches
+ * only, best first and paged, then a few "You might also know" below them.
  */
 function PeopleResults({ q }: { q: string }) {
   const search = usePeopleSearch(q);
-  const suggested = useSuggestedFriends();
+  const { suggested: suggestedPeople, newcomers, suggestedQuery: suggested } = useDiscoveryPeople();
   const recents = useRecentPeople();
   const searching = q.length > 0;
 
   if (!searching) {
-    const people = suggested.data ?? [];
+    const people = suggestedPeople;
     return (
       <FlashList
         data={people}
@@ -175,6 +176,18 @@ function PeopleResults({ q }: { q: string }) {
                 ))}
               </>
             ) : null}
+            {newcomers.length > 0 ? (
+              <View style={styles.newMembers}>
+                <NewToCheffy
+                  people={newcomers}
+                  header="label"
+                  onOpen={(person) => {
+                    recents.add(person);
+                    router.push({ pathname: '/user/[id]', params: { id: person.id } });
+                  }}
+                />
+              </View>
+            ) : null}
             {people.length > 0 ? (
               <AppText variant="overline" color="textSecondary" style={styles.listLabel}>
                 Suggested for you
@@ -185,7 +198,7 @@ function PeopleResults({ q }: { q: string }) {
         ListEmptyComponent={
           suggested.isPending ? (
             <RowSkeleton />
-          ) : recents.people.length === 0 ? (
+          ) : recents.people.length === 0 && newcomers.length === 0 ? (
             <EmptyState
               icon={Users}
               compact
@@ -312,4 +325,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   listLabel: { paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
+  newMembers: { paddingTop: spacing.sm, paddingBottom: spacing.md },
+  tagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: spacing.sm,
+  },
+  tagIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.tint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

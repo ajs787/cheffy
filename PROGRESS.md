@@ -1259,6 +1259,56 @@ icon and splash).
 - Not yet: the redesigned welcome screen on a small iPhone. The spare iPhone 16e simulator is
   waiting for access in the simulator panel.
 
+## New to Cheffy (2026-10-29, branch `new-to-cheffy`)
+
+**Database** (migration `20261029000002_new_members`, live since 2026-10-29, approved):
+- `new_members(limit, offset)` returns every eligible account, newest first (`profiles.created_at`),
+  paged and capped at 50. Eligible means:
+  - a verified email, not suspended or banned, `discoverable`;
+  - not blocked either way;
+  - not already followed, requested or dismissed by the viewer, and never the viewer.
+  - Deleted accounts have no profile, so they never appear. Private accounts can appear
+    (Follow becomes Requested).
+  - Security definer, authenticated only.
+- `suggested_friends()`:
+  - accounts that joined in the last 30 days now qualify on their own with the reason "New to
+    Cheffy", so a brand-new cook with no posts or mutual friends can still be suggested;
+  - stronger reasons still rank first;
+  - suggestions now also require a verified email.
+- Numbered `…000002` because the comment-media session had already pushed its own
+  `20261029000001` to the live DB. To push from this branch, a temporary copy of that file was
+  added and removed again (no `migration repair`).
+
+**App:**
+- `NewToCheffy` row of compact cards: photo, name, @username, "Joined today / yesterday /
+  Oct 27", a crème "NEW" tag for the last 14 days, Follow, tap opens the profile. It scrolls
+  sideways and has See all.
+- `/new-members` (See all) lists every eligible member, paged, with pull to refresh.
+- Where it appears:
+  - Discover, under Suggested for you;
+  - Find Friends, under Suggested;
+  - Search › People, above the suggestions;
+  - under the empty Following feed (fetched only when that empty state shows).
+- No one appears twice on a screen (`splitDiscoveryPeople`): someone suggested for a stronger
+  reason stays in Suggested; someone suggested only for being new moves to the New row.
+- Cached under `['users', …]`, so Follow / Following / Requested update everywhere at once.
+  It refreshes after a minute and on focus, so new sign-ups appear quickly.
+- `SuggestionCard` takes a `detail` line, an optional `badge` and an optional dismiss.
+
+**Checked:**
+- 465 tests pass (new: 11 DB tests for ordering, every exclusion rule, paging without repeats,
+  someone joining later, anon refused, the 30-day window and ranking; 4 unit tests for
+  de-duplication and labels). Typecheck and lint are clean.
+- Live data (@chefshin, read-only): suggestions went from 2 to 12, 7 of them "New to Cheffy";
+  `new_members` returns 13 eligible accounts.
+- Simulator (iPhone 16e, signed in, read-only; confirmed no follows, requests or dismissals
+  were made):
+  - Discover shows New to Cheffy with NEW tags; @eminmd14, who signed up during the check,
+    appeared first; the row scrolls sideways; nobody is in both rows;
+  - See all lists all 13, newest first, no repeats;
+  - Find Friends and Search › People show the row.
+- Not checked: the empty Following state (@chefshin's feed isn't empty), live paging past 20
+  (only 13 eligible; covered by the DB test), and tapping Follow on a real account.
 ## Search suggestions for Creations and Tags (2026-10-29; migration not pushed)
 
 Search's Creations and Tags tabs now show personalized suggestions while the search box is
