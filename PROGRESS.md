@@ -1316,4 +1316,12 @@ those sections stay hidden, and For Your Taste still works.
   likes, the follow and brand-new-user fallbacks, nothing from own, private, blocked, draft
   or removed posts, and no anon access.
 - Full test suite, typecheck and lint pass.
-- Not checked yet: the live database (the migration isn't pushed) and the simulator.
+- **Migration live** (2026-10-30, approved). Live data for @chefshin (read-only): Trending
+  and Newly Cooked each fill a first page of 18 with none of their own posts; tags return 8
+  suggested and 12 popular. Explore is empty for this account because every popular tag
+  connects to something they made, liked, saved or follow, so it's correctly hidden.
+- Simulator (iPhone 16e, signed in, read-only): Creations shows For Your Taste, Trending and
+  Newly Cooked with real posts; Tags shows Suggested for you and Popular tags; tapping #matcha
+  opens Browse with its 2 creations.
+- The Trending subtitle reads "Getting the most likes and comments lately" (it said "Most
+  loved", which the app no longer uses).

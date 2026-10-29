@@ -103,7 +103,7 @@ export function CreationSuggestions() {
       />
       <CardRow
         title="Trending"
-        subtitle="Most loved this week"
+        subtitle="Getting the most likes and comments lately"
         posts={trendingPosts}
         onSeeAll={() => router.push('/trending')}
       />
