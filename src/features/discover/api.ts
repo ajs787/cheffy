@@ -225,3 +225,78 @@ export async function fetchTastePosts(offset: number, limit = TASTE_PAGE): Promi
   const items = await attachImageUrls(mapPosts(rows), 'thumb');
   return { items, nextOffset: picks.length === limit ? offset + limit : null };
 }
+
+// ---------------------------------------------------------------------------
+// Search suggestions (the Search screen before anything is typed)
+// ---------------------------------------------------------------------------
+export const SUGGESTION_PAGE = 18;
+
+/** Loads posts by id, keeping the ranked order, with thumbnails signed in one batch. */
+async function fetchPostsInOrder(ids: string[]): Promise<Post[]> {
+  if (ids.length === 0) return [];
+  const rows = await fetchRows<PostRow>(supabase.from('posts').select(POST_SELECT).in('id', ids));
+  const order = new Map(ids.map((id, i) => [id, i]));
+  rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  return attachImageUrls(mapPosts(rows), 'thumb');
+}
+
+export interface PostPage {
+  items: Post[];
+  nextOffset: number | null;
+}
+
+async function fetchRankedPage(
+  fn: 'trending_creations' | 'newly_cooked',
+  offset: number,
+  limit: number,
+): Promise<PostPage> {
+  const picks = await fetchRows<{ post_id: string }>(supabase.rpc(fn, { p_limit: limit, p_offset: offset }));
+  const items = await fetchPostsInOrder(picks.map((p) => p.post_id));
+  return { items, nextOffset: picks.length === limit ? offset + limit : null };
+}
+
+/** Public creations ranked by likes and comments in the last two weeks. */
+export function fetchTrendingCreations(offset: number, limit = SUGGESTION_PAGE): Promise<PostPage> {
+  return fetchRankedPage('trending_creations', offset, limit);
+}
+
+/** Recent creations from discoverable cooks, each cook's newest first. */
+export function fetchNewlyCooked(offset: number, limit = SUGGESTION_PAGE): Promise<PostPage> {
+  return fetchRankedPage('newly_cooked', offset, limit);
+}
+
+export interface SuggestedTag extends TagResult {
+  /** Other people's posts the viewer can browse with this tag. */
+  postCount: number;
+  /** True when it comes from what the viewer makes, likes, saves or follows. */
+  personal: boolean;
+}
+
+export interface TagSuggestions {
+  suggested: SuggestedTag[];
+  popular: SuggestedTag[];
+  explore: SuggestedTag[];
+}
+
+/** Three lists for the Tags tab; the database keeps each tag in one list only. */
+export async function fetchTagSuggestions(): Promise<TagSuggestions> {
+  const rows = await fetchRows<{
+    section: keyof TagSuggestions;
+    id: string;
+    slug: string;
+    name: string;
+    post_count: number | string;
+    personal: boolean;
+  }>(supabase.rpc('tag_suggestions', { p_suggested: 8, p_popular: 12, p_explore: 6 }));
+  const result: TagSuggestions = { suggested: [], popular: [], explore: [] };
+  for (const r of rows) {
+    result[r.section]?.push({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      postCount: Number(r.post_count),
+      personal: r.personal,
+    });
+  }
+  return result;
+}
