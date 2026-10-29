@@ -1258,3 +1258,62 @@ icon and splash).
   the same size; the Home wordmark is all Oxblood.
 - Not yet: the redesigned welcome screen on a small iPhone. The spare iPhone 16e simulator is
   waiting for access in the simulator panel.
+
+## Search suggestions for Creations and Tags (2026-10-29; migration not pushed)
+
+Search's Creations and Tags tabs now show personalized suggestions while the search box is
+empty, like the People tab already does. Typing shows search results only. Clearing the box
+brings the suggestions back from cache, without a reload. Discover's navigation is unchanged.
+
+**Creations tab, empty query** (`CreationSuggestions` in
+`src/features/discover/components/SearchSuggestions.tsx`):
+- **For Your Taste:** the existing `taste_posts` picks, built from what the viewer makes,
+  likes and saves, plus ratings and recency. See all opens `/taste`.
+- **Trending:** `trending_creations()`, public creations ranked by likes and comments from
+  the last 14 days. The last 7 days count double, and only one comment per person counts.
+  Lifetime likes don't count. See all opens the new `/trending` screen, which is paged and
+  shares the row's cache.
+- **Newly Cooked:** `newly_cooked()`, creations from the last 90 days by discoverable,
+  public, unsuspended accounts. Each cook's newest creation comes first, so a new cook isn't
+  buried by a prolific one. It's an endless paged grid under the two rows.
+- Each creation appears once, in the first section that has it (For Your Taste, then
+  Trending, then Newly Cooked). Empty sections are hidden. If every section is empty, the
+  screen shows the old "Find something to make" hint. A one-letter query shows "Keep typing".
+
+**Tags tab, empty query** (`TagSuggestionList`, backed by `tag_suggestions()` in one call):
+- **Suggested for you:** tags on the viewer's own posts (weight 3, or 5 when rated 8+), likes
+  and saves (2), comments (1), and recent posts by people they follow (1).
+- **Popular tags:** ranked by recent use. The last 14 days count most, then 60 days, then
+  all-time use and the number of different cooks.
+- **Explore something new:** a few popular tags (2+ posts) the viewer has no history with,
+  shuffled a little each day.
+- Each tag appears in one list only. Every tag has at least one other person's post the
+  viewer can browse, so Browse is never empty. Tapping a tag opens `/browse` with `tagId`.
+  Rows show the creation count. Typed tag results use the same `TagRow`.
+
+**Fallbacks for new users:** `taste_posts` already falls back to popular, well-rated recent
+posts. A viewer with no activity gets no "Suggested for you" tags (until they follow someone),
+but still sees Popular and Explore. Newly Cooked never depends on the viewer's activity.
+
+**Privacy:** all three new functions are SECURITY INVOKER, so the posts RLS policy applies.
+Private and followers-only posts the viewer can't open, people blocked either way, drafts and
+removed posts never show up. Trending and Newly Cooked also require public visibility, a
+public account and no suspension. Newly Cooked also requires `discoverable`. The viewer's own
+creations are never returned. All three are revoked from `anon`.
+
+**Migration:** `supabase/migrations/20261030000001_search_suggestions.sql` (read-only
+functions, no data changes). **Not pushed to the live database.** The app needs it live
+before the new sections fill in. Until then, the Trending, Newly Cooked and tag requests fail,
+those sections stay hidden, and For Your Taste still works.
+
+**Checked:**
+- `tests/db/search-suggestions.test.ts` (11 tests). Trending: ranks recent engagement over
+  lifetime likes, weights recent days higher, ignores the cook's own likes and comments,
+  leaves out own, private, followers-only, blocked (both ways), removed and photo-less posts,
+  caps each cook at two before anyone's third, and pages without repeats. Newly Cooked: same
+  exclusions, plus non-discoverable accounts and posts over 90 days old, and the
+  newest-per-cook order. Tags: section order and dedupe, ranking by recent use, learning from
+  likes, the follow and brand-new-user fallbacks, nothing from own, private, blocked, draft
+  or removed posts, and no anon access.
+- Full test suite, typecheck and lint pass.
+- Not checked yet: the live database (the migration isn't pushed) and the simulator.

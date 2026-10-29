@@ -5,9 +5,12 @@ import { queryKeys, type DiscoverQueryParams } from '@/lib/query/keys';
 import {
   fetchDiscoverPage,
   fetchMostHated,
+  fetchNewlyCooked,
+  fetchTagSuggestions,
   fetchTastePosts,
   fetchTasteTopics,
   fetchTrending,
+  fetchTrendingCreations,
   searchPosts,
   searchTags,
   type DiscoverPageParam,
@@ -88,5 +91,44 @@ export function useTasteGrid() {
     initialPageParam: 0,
     getNextPageParam: (last) => last.nextOffset ?? undefined,
     staleTime: TASTE_STALE_MS,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Search suggestions. Cached for a few minutes so flipping between tabs, or
+// clearing the search box, shows them again instantly.
+// ---------------------------------------------------------------------------
+const SUGGESTION_STALE_MS = 5 * 60_000;
+
+/** Trending creations, paged (Search row and its See all screen share the cache). */
+export function useTrendingCreations(enabled = true) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.trendingCreations,
+    queryFn: ({ pageParam }) => fetchTrendingCreations(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
+    enabled,
+    staleTime: SUGGESTION_STALE_MS,
+  });
+}
+
+/** Newly Cooked, paged. */
+export function useNewlyCooked(enabled = true) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.newlyCooked,
+    queryFn: ({ pageParam }) => fetchNewlyCooked(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
+    enabled,
+    staleTime: SUGGESTION_STALE_MS,
+  });
+}
+
+export function useTagSuggestions(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.tagSuggestionLists,
+    queryFn: fetchTagSuggestions,
+    enabled,
+    staleTime: SUGGESTION_STALE_MS,
   });
 }
