@@ -1422,3 +1422,29 @@ those sections stay hidden, and For Your Taste still works.
   opens Browse with its 2 creations.
 - The Trending subtitle reads "Getting the most likes and comments lately" (it said "Most
   loved", which the app no longer uses).
+
+## Discovery query speed (2026-10-30, branch `discovery-indexes`)
+
+Measured on the live DB as @chefshin (`explain analyze`, 3 runs each; 37 profiles, 120 posts,
+303 likes, 208 comments):
+
+| Function | Before | After |
+| --- | --- | --- |
+| `trending_creations` | ~237 ms | ~15 ms |
+| `newly_cooked` | ~90 ms | ~11 ms |
+| `new_members` | ~8 ms | ~8 ms (now indexed) |
+
+- **Cause:** both functions ran with the caller's rights, so every post, like and comment they
+  read re-ran the posts visibility policy (~0.4 ms a row). Indexes alone wouldn't have helped.
+- **Fix** (migration `20261030000002_discovery_speed`, live since 2026-10-30, approved):
+  - both functions only return public posts from public accounts, so they now apply that rule
+    once, explicitly (published, public, public unsuspended author, not blocked either way,
+    not the viewer's own), as `new_members` already did;
+  - Trending starts from the last 14 days of likes and comments instead of every post;
+  - indexes on `profiles(created_at desc, id desc)`, `likes(created_at)` and
+    `comments(created_at)`.
+- **Same results:** the existing privacy tests (22 in `search-suggestions` and `new-members`)
+  pass unchanged. Live check: no own or non-public posts returned. 498 tests pass.
+- **Still slow, not changed:** `tag_suggestions` (~375 ms) and `taste_posts` (~275 ms), for
+  the same reason. They include followers-only posts the viewer may see, so a correct fix
+  needs the follower rule applied once per post rather than dropped. That's a follow-up.
