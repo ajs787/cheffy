@@ -17,7 +17,9 @@ import { queryKeys } from '@/lib/query/keys';
 import { toast } from '@/stores/toast';
 import type { Comment } from '@/types/models';
 
+import { anonymousTakesKey } from './anonymous';
 import {
+  addAnonymousTake,
   addComment,
   COMMENTS_PAGE,
   deleteComment,
@@ -72,6 +74,10 @@ export interface SendComment {
   reply?: ReplyTarget | null;
   mentionIds?: string[];
   media?: DraftMedia | null;
+  /** Post as this post's anonymous chef (text only). */
+  anonymous?: boolean;
+  /** The viewer's Chef number here, when they already have one (shown while posting). */
+  anonNumber?: number | null;
 }
 
 /**
@@ -104,7 +110,8 @@ export function useAddComment(postId: string) {
   const { data: profile } = useMyProfile();
 
   return useMutation({
-    mutationFn: async ({ body, reply, mentionIds, media }: SendComment) => {
+    mutationFn: async ({ body, reply, mentionIds, media, anonymous }: SendComment) => {
+      if (anonymous) return addAnonymousTake(postId, { body, reply });
       const send = async () =>
         addComment(me, postId, {
           body,
@@ -127,20 +134,25 @@ export function useAddComment(postId: string) {
         throw error;
       }
     },
-    onMutate: async ({ body, reply, media }) => {
+    onMutate: async ({ body, reply, media, anonymous, anonNumber }) => {
       const optimistic: Comment = {
         id: `pending-${Date.now()}`,
         postId,
         parentId: reply?.parentId ?? null,
         replyTo: reply?.user ?? null,
+        replyToAnonNumber: reply?.user ? null : (reply?.anonNumber ?? null),
         body: body.trim(),
         createdAt: new Date().toISOString(),
-        author: {
-          id: me,
-          username: profile?.username ?? '',
-          displayName: profile?.displayName ?? '',
-          avatarUrl: profile?.avatarUrl ?? null,
-        },
+        author: anonymous
+          ? null
+          : {
+              id: me,
+              username: profile?.username ?? '',
+              displayName: profile?.displayName ?? '',
+              avatarUrl: profile?.avatarUrl ?? null,
+            },
+        anonNumber: anonymous ? (anonNumber ?? 0) : null,
+        isMine: true,
         likeCount: 0,
         replyCount: 0,
         viewerHasLiked: false,
@@ -166,10 +178,12 @@ export function useAddComment(postId: string) {
       updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: p.commentCount + 1 }));
       return { previous, key, optimisticId: optimistic.id };
     },
-    onSuccess: (comment, _vars, context) => {
+    onSuccess: (comment, { anonymous }, context) => {
       qc.setQueryData<CommentPages>(context.key, (data) =>
         replaceComment(data, context.optimisticId, comment),
       );
+      // The first anonymous take here hands out a Chef number: show it next time.
+      if (anonymous) void qc.invalidateQueries({ queryKey: anonymousTakesKey(me, postId) });
       // Feed cards preview the top comments; fill an empty slot with this one.
       if (!comment.parentId) {
         updatePostInCaches(qc, postId, (p) =>
@@ -185,6 +199,7 @@ export function useAddComment(postId: string) {
                     mediaKind: comment.media?.kind ?? null,
                     likeCount: 0,
                     author: comment.author,
+                    anonNumber: comment.anonNumber,
                   },
                 ],
               },
@@ -214,6 +229,11 @@ function commentErrorMessage(error: unknown): string {
   if (/too many photo comments/i.test(message))
     return 'You’ve posted a lot of pictures. Try again in a little while.';
   if (/up to 5 mentions/i.test(message)) return 'You can mention up to 5 people in a comment.';
+  if (/anonymous takes aren’t open/i.test(message))
+    return 'Anonymous takes are off for this post now. Your draft is still here.';
+  if (/commenting a lot|too many anonymous takes|a lot of takes on one post/i.test(message))
+    return 'You’re commenting a lot. Take a short break and try again.';
+  if (/already posted that/i.test(message)) return 'You already posted that.';
   return toUserMessage(error, 'Couldn’t post your comment. Your draft is still here.');
 }
 
@@ -234,7 +254,7 @@ export function useMentionSuggestions(query: string | null, postId?: string) {
 export function useDeleteComment(postId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (comment: Comment) => deleteComment(comment.id),
+    mutationFn: (comment: Comment) => deleteComment(comment),
     onMutate: async (comment) => {
       const key = cacheKeyFor(comment);
       await qc.cancelQueries({ queryKey: key });

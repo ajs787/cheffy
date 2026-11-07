@@ -22,7 +22,8 @@
   var PRIORITY_LABEL = { urgent: 'Urgent', normal: 'Normal', low: 'Low' };
   var TYPE_LABEL = { post: 'Post', comment: 'Comment', user: 'Profile' };
   var REASON_LABEL = {
-    inappropriate: 'Inappropriate', harassment: 'Harassment', spam: 'Spam',
+    inappropriate: 'Sexual or inappropriate', harassment: 'Harassment', hate: 'Hate or discrimination',
+    threats: 'Threats', spam: 'Spam',
     not_homemade: 'Not homemade', intellectual_property: 'Intellectual property', other: 'Other',
   };
   var ACTION_LABEL = {
@@ -30,6 +31,7 @@
     note: 'Note', remove: 'Removed content', restore: 'Restored content', suspend: 'Suspended account',
     unsuspend: 'Unsuspended account', auto_hide: 'Hidden automatically',
     remove_media: 'Removed picture', restore_media: 'Restored picture',
+    reveal_identity: 'Revealed anonymous author',
   };
 
   var session = null; // { access_token, refresh_token, expires_at, email }
@@ -432,11 +434,26 @@
         ['Picture', data.media ? (data.media.kind === 'sticker' ? 'Sticker' : 'Photo') + (data.media.hidden ? ' — removed' + (data.media.hidden_reason ? ' (' + data.media.hidden_reason + ')' : '') : '') : ''],
         ['Mentions', (data.mentions || []).map(function (u) { return '@' + u; }).join(', ')],
       ]));
+      if (data.anonymous_name) {
+        panel.appendChild(facts([['Posted as', data.anonymous_name + ' (Anonymous Take)']]));
+      }
       if (!isSnapshot) {
         panel.appendChild(facts([
           ['On post', data.post_title || ''],
           ['Status', data.hidden ? 'Hidden' + (data.hidden_reason ? ' — ' + data.hidden_reason : '') : 'Visible'],
         ]));
+        // The thread as the public sees it (Chef names stay Chef names).
+        if (data.thread && data.thread.length > 1) {
+          var ul = el('ul', { class: 'timeline' });
+          data.thread.forEach(function (t) {
+            ul.appendChild(el('li', null, [
+              el(t.is_reported ? 'b' : 'span', { text: t.name || '(unknown)' }), ' · ', fmtDate(t.created_at),
+              el('div', { class: 'quote', text: t.body || '(picture only)' }),
+            ]));
+          });
+          panel.appendChild(el('p', { class: 'muted small', text: 'Thread around it:' }));
+          panel.appendChild(ul);
+        }
       }
     } else {
       if (data.avatar_path && avatarUrl(data.avatar_path)) panel.appendChild(el('img', { src: avatarUrl(data.avatar_path), alt: 'Profile photo', class: 'avatar', width: '96', height: '96', referrerpolicy: 'no-referrer' }));
@@ -482,6 +499,11 @@
       if (cur.exists !== false && !hidden && r.target_type === 'user') {
         act('Suspend account', 'danger', function () { moderate(r, 'suspend'); });
       }
+      // The author of a reported post or comment (for an anonymous comment,
+      // only once a moderator has revealed and recorded who it is).
+      if (r.target_type !== 'user' && d.author && !d.author.suspended) {
+        act('Suspend author', 'danger', function () { moderate(r, 'suspend_author'); });
+      }
       if (r.target_type === 'comment' && cur.media && !cur.media.hidden) {
         act('Remove picture only', 'danger', function () { moderateMedia(r, 'remove_media'); });
       }
@@ -518,9 +540,17 @@
       quote(r.details),
     ]));
 
-    if (d.author) {
+    if (r.anonymous && !d.author) {
       right.appendChild(el('section', { class: 'panel' }, [
         el('h3', { text: 'Author' }),
+        el('p', { text: (cur.anonymous_name || (d.snapshot && d.snapshot.anonymous_name) || 'Anonymous chef') + ' — an Anonymous Take.' }),
+        el('p', { class: 'muted small', text: 'Who wrote it stays hidden unless it’s needed to act on this report. Revealing it is recorded in the history with your name and reason.' }),
+        el('button', { type: 'button', class: 'secondary', text: 'Reveal who wrote it', onclick: function () { reveal(r); } }),
+      ]));
+    }
+    if (d.author) {
+      var authorPanel = el('section', { class: 'panel' }, [
+        el('h3', { text: r.anonymous ? 'Author (revealed)' : 'Author' }),
         facts([
           ['Account', '@' + d.author.username + (d.author.display_name ? ' (' + d.author.display_name + ')' : '')],
           ['Joined', fmtDate(d.author.joined)],
@@ -528,7 +558,20 @@
           ['Reports about them', String(d.author.reports_against)],
           ['Status', d.author.suspended ? 'Suspended' : 'Active'],
         ]),
-      ]));
+      ]);
+      var recent = (d.author.recent_reports || []).filter(function (x) { return x.id !== r.id; });
+      if (recent.length) {
+        var rl = el('ul', { class: 'timeline' });
+        recent.forEach(function (x) {
+          rl.appendChild(el('li', null, [
+            el('a', { href: '#/report/' + x.id, text: (TYPE_LABEL[x.target_type] || x.target_type) + (x.anonymous ? ' (anonymous)' : '') + ': ' + (REASON_LABEL[x.reason] || x.reason) }),
+            ' · ', STATUS_LABEL[x.status] || x.status, ' · ', fmtDate(x.created_at),
+          ]));
+        });
+        authorPanel.appendChild(el('p', { class: 'muted small', text: 'Their other reports:' }));
+        authorPanel.appendChild(rl);
+      }
+      right.appendChild(authorPanel);
     }
 
     var related = el('section', { class: 'panel' }, [el('h3', { text: 'Other reports on this (' + d.related.length + ')' })]);
@@ -638,6 +681,8 @@
       suspend: ['Suspend this account?',
         'They are signed out and can’t sign in, and all their posts and comments are hidden. Reversible with Unsuspend.', 'SUSPEND', true],
       unsuspend: ['Unsuspend this account?', 'They can sign in again and the posts hidden by the suspension come back.', null, false],
+      suspend_author: ['Suspend the author’s account?',
+        'They are signed out and can’t sign in, and all their posts and comments (anonymous ones too) are hidden. This report is resolved. Reversible from a report about their profile.', 'SUSPEND', true],
     }[action];
     return confirmDialog({
       title: copy[0], body: copy[1], note: true, noteRequired: copy[3], typeWord: copy[2], danger: copy[3],
@@ -646,6 +691,20 @@
       if (!res) return;
       return rpc('admin_moderate_report', { p_report: r.id, p_action: action, p_expected: r.status, p_note: res.note })
         .then(function () { return afterChange(r, 'Done.'); })
+        .catch(function (e) { onError(r, e); });
+    });
+  }
+
+  // Who wrote an anonymous comment: needs a reason, and is recorded.
+  function reveal(r) {
+    return confirmDialog({
+      title: 'Reveal who wrote this?',
+      body: 'Only do this when you need it to act on the report (for example, to check repeat abuse or to suspend). Your name and reason are kept in the history. The author is never told, and nobody else can see it.',
+      note: true, noteRequired: true, okLabel: 'Reveal',
+    }).then(function (res) {
+      if (!res) return;
+      return rpc('admin_reveal_anonymous_author', { p_report: r.id, p_reason: res.note })
+        .then(function () { return afterChange(r, 'Revealed and recorded.'); })
         .catch(function (e) { onError(r, e); });
     });
   }

@@ -9,8 +9,10 @@ import { useReport } from '../hooks';
 
 const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'spam', label: 'Spam' },
-  { value: 'inappropriate', label: 'Inappropriate' },
-  { value: 'harassment', label: 'Harassment' },
+  { value: 'inappropriate', label: 'Sexual or inappropriate' },
+  { value: 'harassment', label: 'Harassment or bullying' },
+  { value: 'hate', label: 'Hate or discrimination' },
+  { value: 'threats', label: 'Threats' },
   { value: 'not_homemade', label: 'Not homemade' },
   { value: 'intellectual_property', label: 'Stolen content' },
   { value: 'other', label: 'Something else' },
@@ -41,7 +43,12 @@ export function ReportSheet({ target, onClose }: ReportSheetProps) {
       </AppText>
       <View style={styles.reasons}>
         {REASONS.map((r) => (
-          <Chip key={r.value} label={r.label} selected={reason === r.value} onPress={() => setReason(r.value)} />
+          <Chip
+            key={r.value}
+            label={r.label}
+            selected={reason === r.value}
+            onPress={() => setReason(r.value)}
+          />
         ))}
       </View>
       <AppInput

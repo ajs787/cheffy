@@ -113,7 +113,12 @@ export default function PostScreen() {
 
   const startReply = useCallback((comment: Comment) => {
     // Replies always join the top-level comment's thread.
-    setReplyTo({ parentId: comment.parentId ?? comment.id, user: comment.author });
+    setReplyTo({
+      parentId: comment.parentId ?? comment.id,
+      commentId: comment.id,
+      user: comment.author,
+      anonNumber: comment.anonNumber,
+    });
     inputRef.current?.focus();
   }, []);
   const onToggleLike = useCallback(
@@ -157,27 +162,35 @@ export default function PostScreen() {
 
   const p = post.data;
   const published = p.status === 'published';
-  const canModerate = (comment: Comment) => comment.author.id === me || p.author.id === me;
+  // Yours (named or anonymous), or any comment on your own post.
+  const canModerate = (comment: Comment) => comment.isMine || p.author.id === me;
 
   const commentActions: SheetAction[] = !commentMenu
     ? []
-    : canModerate(commentMenu)
-      ? [
-          {
-            key: 'delete',
-            label: commentMenu.parentId ? 'Delete reply' : 'Delete comment',
-            destructive: true,
-            onPress: () => deleteComment.mutate(commentMenu),
-          },
-        ]
-      : [
-          {
-            key: 'report',
-            label: 'Report comment',
-            destructive: true,
-            onPress: () => setReportTarget({ type: 'comment', commentId: commentMenu.id }),
-          },
-        ];
+    : [
+        ...(canModerate(commentMenu)
+          ? [
+              {
+                key: 'delete',
+                label: commentMenu.parentId ? 'Delete reply' : 'Delete comment',
+                destructive: true,
+                onPress: () => deleteComment.mutate(commentMenu),
+              },
+            ]
+          : []),
+        // Anyone but its writer can report it — including the creator, so an
+        // anonymous take on your post can be reported, not just deleted.
+        ...(commentMenu.isMine
+          ? []
+          : [
+              {
+                key: 'report',
+                label: 'Report comment',
+                destructive: true,
+                onPress: () => setReportTarget({ type: 'comment', commentId: commentMenu.id }),
+              },
+            ]),
+      ];
 
   return (
     <View style={styles.screen}>

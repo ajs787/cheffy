@@ -115,7 +115,10 @@ export interface CommentPreview {
   /** Set when the comment has a photo or sticker (shown as a word in previews). */
   mediaKind?: CommentMediaKind | null;
   likeCount: number;
-  author: ProfileSummary;
+  /** Null for an anonymous take (see `anonNumber`). */
+  author: ProfileSummary | null;
+  /** Anonymous Takes: this post's Chef number ("Chef #01"); null when named. */
+  anonNumber?: number | null;
 }
 
 export interface Post {
@@ -137,6 +140,8 @@ export interface Post {
   /** Budget Eats tag and optional estimated cost per serving (USD cents). */
   isBudget: boolean;
   budgetCostCents: number | null;
+  /** Anonymous Takes: the creator lets people comment as "Chef #01" (default on). */
+  allowAnonymousTakes: boolean;
   /** Why moderators removed it (shown to the author only). */
   removedReason: string | null;
   madeOn: string;
@@ -173,11 +178,21 @@ export interface Comment {
   postId: string;
   body: string;
   createdAt: string;
-  author: ProfileSummary;
+  /** Null for an anonymous take: the API never says who wrote it. */
+  author: ProfileSummary | null;
+  /**
+   * Anonymous Takes: the writer's Chef number on this post ("Chef #01"),
+   * null for a named comment. 0 while an anonymous take is still posting.
+   */
+  anonNumber: number | null;
+  /** The viewer wrote it (named or anonymous), so they can delete it. */
+  isMine: boolean;
   /** Set on replies: the top-level comment they belong to. */
   parentId: string | null;
-  /** Who a reply answers, shown as "@name". */
+  /** Who a reply answers, shown as "@name"… */
   replyTo: ProfileSummary | null;
+  /** …or the anonymous chef it answers ("@Chef #01"). */
+  replyToAnonNumber: number | null;
   likeCount: number;
   replyCount: number;
   viewerHasLiked: boolean;
@@ -260,7 +275,14 @@ export interface Page<T> {
 }
 
 export type ReportReason =
-  'spam' | 'inappropriate' | 'harassment' | 'not_homemade' | 'intellectual_property' | 'other';
+  | 'spam'
+  | 'inappropriate'
+  | 'harassment'
+  | 'hate'
+  | 'threats'
+  | 'not_homemade'
+  | 'intellectual_property'
+  | 'other';
 
 export type ReportTarget =
   | { type: 'user'; userId: string }

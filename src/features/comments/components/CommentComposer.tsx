@@ -30,6 +30,7 @@ import {
   strokes,
 } from '@/theme';
 
+import { anonymousName, useAnonymousTakesStatus } from '../anonymous';
 import type { MentionSuggestion, ReplyTarget } from '../api';
 import { useAddComment, useMentionSuggestions } from '../hooks';
 import { draftFromInsertedFile, fitWithin, imageFromClipboard, type DraftMedia } from '../media';
@@ -40,6 +41,8 @@ import {
   MAX_MENTIONS,
   mentionIdsFor,
 } from '../mentions';
+import { AnonymousAvatar } from './AnonymousAvatar';
+import { IdentityToggle } from './IdentityToggle';
 import { MentionSuggestions } from './MentionSuggestions';
 import { KEYBOARD_STICKERS_SUPPORTED, StickerAwareInput } from './StickerAwareInput';
 
@@ -59,7 +62,8 @@ export interface CommentComposerProps {
 
 /**
  * The "Add a comment…" bar pinned under a post's comments; also writes
- * replies. Text, @mentions, and one photo or sticker.
+ * replies. Text, @mentions, and one photo or sticker — or, where the
+ * creator allows Anonymous Takes, text posted as this post's Chef #NN.
  */
 export function CommentComposer({
   postId,
@@ -83,13 +87,32 @@ export function CommentComposer({
   const [menuOpen, setMenuOpen] = useState(false);
   const sending = useRef(false);
   const [pending, setPending] = useState(false);
+  const [focused, setFocused] = useState(false);
+
+  // Anonymous Takes. Starts as you on every post (this composer lives with
+  // the post screen), and stays as picked while you're in this thread.
+  const anon = useAnonymousTakesStatus(postId);
+  const [asAnon, setAsAnon] = useState(false);
+  const anonymous = asAnon && anon.open;
+  // Picked anonymous, but the creator has since turned it off: never fall
+  // back to posting under your name without you choosing that.
+  const anonClosed = asAnon && !anon.open;
+  const myAnonNumber = anon.name ? Number(anon.name.replace(/\D/g, '')) || null : null;
+  const setIdentity = (next: boolean) => {
+    if (next && media) {
+      setMedia(null);
+      toast.show('Anonymous takes are text only, so the picture was removed.');
+    }
+    setAsAnon(next);
+  };
 
   const trimmed = body.trim();
-  const canSend = (trimmed.length > 0 || !!media) && trimmed.length <= MAX_COMMENT && !pending;
+  const canSend = (trimmed.length > 0 || !!media) && trimmed.length <= MAX_COMMENT && !pending && !anonClosed;
 
   const mention = selection.start === selection.end ? activeMentionQuery(body, selection.start) : null;
   const suggestions = useMentionSuggestions(mention ? mention.query : null, postId);
-  const showSuggestions = !!mention && !pending;
+  // No @mentions when anonymous: a mention would tell that person who wrote it.
+  const showSuggestions = !!mention && !pending && !anonymous;
 
   const pickMention = useCallback(
     (user: MentionSuggestion) => {
@@ -165,12 +188,11 @@ export function CommentComposer({
     setPending(true);
     const reply = replyTo;
     try {
-      await addComment.mutateAsync({
-        body,
-        reply,
-        mentionIds: mentionIdsFor(body, picked.current, me?.id),
-        media,
-      });
+      await addComment.mutateAsync(
+        anonymous
+          ? { body, reply, anonymous: true, anonNumber: myAnonNumber }
+          : { body, reply, mentionIds: mentionIdsFor(body, picked.current, me?.id), media },
+      );
       setBody('');
       setSelection({ start: 0, end: 0 });
       setForcedSelection(undefined);
@@ -201,6 +223,12 @@ export function CommentComposer({
   ];
 
   const preview = media ? fitWithin(media.width, media.height, PREVIEW_BOX, PREVIEW_BOX) : null;
+  const replyName = replyTo
+    ? replyTo.user
+      ? `@${replyTo.user.username}`
+      : `@${anonymousName(replyTo.anonNumber ?? 0)}`
+    : null;
+  const showIdentity = anon.open && (focused || body.length > 0 || asAnon || !!replyTo);
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
@@ -216,7 +244,7 @@ export function CommentComposer({
           <AppText variant="caption" color="textSecondary" style={styles.flex}>
             Replying to{' '}
             <AppText variant="caption" style={styles.replyName}>
-              @{replyTo.user.username}
+              {replyName}
             </AppText>
           </AppText>
           <Pressable
@@ -268,8 +296,39 @@ export function CommentComposer({
           </Pressable>
         </View>
       ) : null}
+      {anonClosed ? (
+        <View style={styles.replying}>
+          <AppText variant="caption" color="textSecondary" style={styles.flex}>
+            Anonymous takes are off for this post now.
+          </AppText>
+          <Pressable
+            onPress={() => setAsAnon(false)}
+            hitSlop={10}
+            accessibilityRole="button"
+            testID="comment-as-me-instead"
+          >
+            <AppText variant="caption" style={styles.replyName}>
+              Comment as @{me?.username ?? 'you'}
+            </AppText>
+          </Pressable>
+        </View>
+      ) : null}
+      {showIdentity && me ? (
+        <IdentityToggle
+          username={me.username}
+          displayName={me.displayName}
+          avatarUrl={me.avatarUrl}
+          anonymous={anonymous}
+          anonymousName={anon.name}
+          onChange={setIdentity}
+        />
+      ) : null}
       <View style={styles.composer}>
-        <Avatar uri={me?.avatarUrl} name={me?.displayName ?? ''} size="sm" />
+        {anonymous ? (
+          <AnonymousAvatar size="sm" />
+        ) : (
+          <Avatar uri={me?.avatarUrl} name={me?.displayName ?? ''} size="sm" />
+        )}
         <StickerAwareInput
           onImages={onInsertedImages}
           onUnsupported={() => toast.show('That can’t be added to a comment.')}
@@ -283,49 +342,62 @@ export function CommentComposer({
               setSelection(e.nativeEvent.selection);
               if (forcedSelection) setForcedSelection(undefined);
             }}
-            placeholder={replyTo ? `Reply to @${replyTo.user.username}…` : 'Add a comment…'}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={
+              replyTo
+                ? `${anonymous ? 'Reply anonymously to' : 'Reply to'} ${replyName}…`
+                : anonymous
+                  ? 'Add an anonymous take…'
+                  : 'Add a comment…'
+            }
             placeholderTextColor={colors.textTertiary}
             multiline
             maxLength={MAX_COMMENT}
             autoFocus={autoFocus}
             autoCorrect
             maxFontSizeMultiplier={MAX_FONT_SCALE}
-            accessibilityLabel={replyTo ? `Write a reply to @${replyTo.user.username}` : 'Write a comment'}
+            accessibilityLabel={
+              (replyTo ? `Write a reply to ${replyName}` : 'Write a comment') +
+              (anonymous ? ', anonymously' : '')
+            }
             style={styles.input}
             testID="comment-input"
           />
         </StickerAwareInput>
-        <Pressable
-          onPress={() => {
-            haptics.selection();
-            setMenuOpen(true);
-          }}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={media ? 'Change picture' : 'Add a photo or sticker'}
-          accessibilityHint={
-            KEYBOARD_STICKERS_SUPPORTED ? 'Stickers can also be added from the emoji keyboard' : undefined
-          }
-          disabled={pending}
-          testID="comment-attach"
-          style={styles.attach}
-        >
-          {media?.kind === 'sticker' ? (
-            <Sticker size={iconSizes.md} color={colors.accent} strokeWidth={strokes.regular} />
-          ) : (
-            <ImagePlus
-              size={iconSizes.md}
-              color={media ? colors.accent : colors.textSecondary}
-              strokeWidth={strokes.regular}
-            />
-          )}
-        </Pressable>
+        {anonymous ? null : (
+          <Pressable
+            onPress={() => {
+              haptics.selection();
+              setMenuOpen(true);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={media ? 'Change picture' : 'Add a photo or sticker'}
+            accessibilityHint={
+              KEYBOARD_STICKERS_SUPPORTED ? 'Stickers can also be added from the emoji keyboard' : undefined
+            }
+            disabled={pending}
+            testID="comment-attach"
+            style={styles.attach}
+          >
+            {media?.kind === 'sticker' ? (
+              <Sticker size={iconSizes.md} color={colors.accent} strokeWidth={strokes.regular} />
+            ) : (
+              <ImagePlus
+                size={iconSizes.md}
+                color={media ? colors.accent : colors.textSecondary}
+                strokeWidth={strokes.regular}
+              />
+            )}
+          </Pressable>
+        )}
         <Pressable
           onPress={() => void send()}
           disabled={!canSend}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel={pending ? 'Posting comment' : 'Post comment'}
+          accessibilityLabel={pending ? 'Posting comment' : anonymous ? 'Post anonymously' : 'Post comment'}
           accessibilityState={{ disabled: !canSend, busy: pending }}
           testID="comment-send"
           style={styles.send}

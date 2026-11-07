@@ -10,9 +10,10 @@ import { avatarUrl, BUCKETS, signPaths } from '@/lib/supabase/storage';
 import type { Comment, CommentMediaKind, ProfileSummary } from '@/types/models';
 
 const COMMENT_SELECT = `
-  id, post_id, parent_id, body, created_at, like_count, reply_count,
+  id, post_id, parent_id, body, created_at, like_count, reply_count, anon_number, reply_to_anon_number,
   media_kind, media_path, media_thumb_path, media_width, media_height, media_hidden_at,
   viewer_has_liked:viewer_has_liked_comment,
+  is_mine:viewer_owns_comment,
   author:profiles!comments_author_id_fkey(${PROFILE_SUMMARY_SELECT}),
   reply_to:profiles!comments_reply_to_user_id_fkey(${PROFILE_SUMMARY_SELECT}),
   mentions:comment_mentions(username, user_id, user:profiles!comment_mentions_user_id_fkey(username))
@@ -26,6 +27,9 @@ export interface CommentRow {
   created_at: string;
   like_count: number;
   reply_count: number;
+  anon_number?: number | null;
+  reply_to_anon_number?: number | null;
+  is_mine?: boolean | null;
   media_kind?: CommentMediaKind | null;
   media_path?: string | null;
   media_thumb_path?: string | null;
@@ -38,17 +42,24 @@ export interface CommentRow {
   mentions?: { username: string; user_id: string; user: { username: string } | null }[] | null;
 }
 
-/** Null when the author is hidden (blocked). Thumb URLs are filled in by `withSignedThumbs`. */
+/**
+ * Null when the author is hidden (blocked). An anonymous take has no author
+ * and a Chef number instead. Thumb URLs are filled in by `withSignedThumbs`.
+ */
 export function mapComment(row: CommentRow): Comment | null {
-  if (!row.author) return null;
+  const anonNumber = row.anon_number ?? null;
+  if (!row.author && anonNumber === null) return null;
   return {
     id: row.id,
     postId: row.post_id,
     parentId: row.parent_id,
     body: row.body,
     createdAt: row.created_at,
-    author: mapProfileSummary(row.author),
+    author: anonNumber === null && row.author ? mapProfileSummary(row.author) : null,
+    anonNumber,
+    isMine: row.is_mine === true,
     replyTo: row.reply_to ? mapProfileSummary(row.reply_to) : null,
+    replyToAnonNumber: row.reply_to_anon_number ?? null,
     likeCount: row.like_count ?? 0,
     replyCount: row.reply_count ?? 0,
     viewerHasLiked: row.viewer_has_liked ?? false,
@@ -140,8 +151,12 @@ export async function fetchCommentThread(
 export interface ReplyTarget {
   /** The top-level comment the reply joins. */
   parentId: string;
-  /** Who it answers. */
+  /** The comment being answered. */
+  commentId: string;
+  /** Who it answers: a person… */
   user: Comment['author'];
+  /** …or an anonymous chef on this post. */
+  anonNumber: number | null;
 }
 
 export interface NewComment {
@@ -162,7 +177,8 @@ export async function addComment(me: string, postId: string, input: NewComment):
         author_id: me,
         body: input.body.trim(),
         parent_id: input.reply?.parentId ?? null,
-        reply_to_user_id: input.reply?.user.id ?? null,
+        reply_to_user_id: input.reply?.user?.id ?? null,
+        reply_to_anon_number: input.reply?.user ? null : (input.reply?.anonNumber ?? null),
         mention_ids: input.mentionIds ?? [],
         media_upload_id: input.uploadId ?? null,
       })
@@ -194,9 +210,39 @@ export async function addComment(me: string, postId: string, input: NewComment):
   return (await withSignedThumbs([comment]))[0]!;
 }
 
-export async function deleteComment(commentId: string): Promise<void> {
+/**
+ * Anonymous take: text only, through the database function that assigns
+ * this post's Chef number (the app never says who's writing it).
+ */
+export async function addAnonymousTake(
+  postId: string,
+  input: Pick<NewComment, 'body' | 'reply'>,
+): Promise<Comment> {
+  const row = await fetchOne<CommentRow>(
+    supabase
+      .rpc('post_anonymous_take', {
+        p_post: postId,
+        p_body: input.body.trim(),
+        p_parent: input.reply?.parentId ?? null,
+        p_reply_to: input.reply?.commentId ?? null,
+      })
+      .select(COMMENT_SELECT)
+      .single(),
+  );
+  const comment = mapComment(row);
+  if (!comment) throw new Error('Comment missing');
+  return comment;
+}
+
+export async function deleteComment(comment: Pick<Comment, 'id' | 'anonNumber' | 'isMine'>): Promise<void> {
+  // Your own anonymous take is deleted by the database function that knows
+  // it's yours; anything else (yours, or on your post) goes through RLS.
+  if (comment.anonNumber !== null && comment.isMine) {
+    unwrap(await supabase.rpc('delete_anonymous_take', { p_comment: comment.id }));
+    return;
+  }
   const rows = await fetchRows<{ id: string }>(
-    supabase.from('comments').delete().eq('id', commentId).select('id'),
+    supabase.from('comments').delete().eq('id', comment.id).select('id'),
   );
   if (rows.length === 0) throw new Error('permission denied');
 }

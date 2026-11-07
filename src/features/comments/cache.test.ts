@@ -17,6 +17,9 @@ const comment = (id: string, parentId: string | null = null): Comment => ({
   likeCount: 0,
   replyCount: 0,
   viewerHasLiked: false,
+  anonNumber: null,
+  isMine: false,
+  replyToAnonNumber: null,
   media: null,
   mentions: [],
 });

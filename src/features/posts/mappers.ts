@@ -21,7 +21,7 @@ const CATEGORY_FIELDS = 'id, slug, name';
 
 /** One select string for every post-shaped query, so all lists share a mapper. */
 export const POST_SELECT = `
-  id, title, rating, review, story, visibility, status, removed_reason, is_budget, budget_cost_cents, made_on, would_make_again, recipe_url,
+  id, title, rating, review, story, visibility, status, removed_reason, is_budget, budget_cost_cents, allow_anonymous_takes, made_on, would_make_again, recipe_url,
   ingredients, prep_notes, next_time_notes, cook_time_minutes, temperature, milk, sweetener,
   like_count, comment_count, published_at, created_at, updated_at,
   author:profiles!posts_author_id_fkey(${PROFILE_SUMMARY_SELECT}),
@@ -43,7 +43,7 @@ export const POST_SELECT = `
  */
 export const FEED_POST_SELECT = `${POST_SELECT},
   likers:likes(created_at, profile:profiles!likes_user_id_fkey(${PROFILE_SUMMARY_SELECT})),
-  top_comments:comments(id, body, media_kind, like_count, created_at, parent_id, author:profiles!comments_author_id_fkey(${PROFILE_SUMMARY_SELECT}))
+  top_comments:comments(id, body, media_kind, like_count, created_at, parent_id, anon_number, author:profiles!comments_author_id_fkey(${PROFILE_SUMMARY_SELECT}))
 `;
 
 /** How many comments a feed card previews. */
@@ -76,22 +76,27 @@ export function withFeedExtras<
     .limit(PREVIEW_CANDIDATES, { referencedTable: 'top_comments' });
 }
 
-/** The preview: top-level comments only; a hidden (blocked) author's is left out. */
+/**
+ * The preview: top-level comments only; a hidden (blocked) author's is left
+ * out. Anonymous takes show as their Chef name.
+ */
 export function mapTopComments(rows: PostRow['top_comments']): CommentPreview[] {
   return (rows ?? [])
-    .flatMap((c) =>
-      c.author && !c.parent_id
+    .flatMap((c) => {
+      const anonNumber = c.anon_number ?? null;
+      return (c.author || anonNumber !== null) && !c.parent_id
         ? [
             {
               id: c.id,
               body: c.body,
               mediaKind: c.media_kind ?? null,
               likeCount: c.like_count ?? 0,
-              author: mapProfileSummary(c.author),
+              author: anonNumber === null && c.author ? mapProfileSummary(c.author) : null,
+              anonNumber,
             },
           ]
-        : [],
-    )
+        : [];
+    })
     .slice(0, PREVIEW_COMMENTS);
 }
 
@@ -105,6 +110,7 @@ export interface PostRow {
   status: PostStatus;
   removed_reason?: string | null;
   is_budget?: boolean;
+  allow_anonymous_takes?: boolean;
   budget_cost_cents?: number | null;
   made_on: string;
   would_make_again: boolean | null;
@@ -143,6 +149,7 @@ export interface PostRow {
     media_kind?: 'photo' | 'sticker' | null;
     like_count: number;
     parent_id: string | null;
+    anon_number?: number | null;
     author: ProfileSummaryRow | null;
   }[];
   collaborators?: { status: CollaborationStatus; user: ProfileSummaryRow | null }[];
@@ -212,6 +219,7 @@ export function mapPost(row: PostRow): Post | null {
     status: row.status,
     removedReason: row.removed_reason ?? null,
     isBudget: row.is_budget ?? false,
+    allowAnonymousTakes: row.allow_anonymous_takes ?? true,
     budgetCostCents: row.budget_cost_cents ?? null,
     madeOn: row.made_on,
     wouldMakeAgain: row.would_make_again,

@@ -9,8 +9,10 @@ import type { Comment } from '@/types/models';
 import { formatRelativeTime } from '@/utils/dates';
 import { formatCount } from '@/utils/format';
 
+import { anonymousName } from '../anonymous';
 import { segmentBody } from '../mentions';
 import { commentPreviewText } from '../preview';
+import { AnonymousAvatar } from './AnonymousAvatar';
 import { CommentMediaView } from './CommentMediaView';
 
 export interface CommentRowProps {
@@ -42,6 +44,16 @@ function CommentRowBase({
   );
   const hasText = comment.body.trim().length > 0;
   const spoken = commentPreviewText(comment.body, comment.media?.kind);
+  // Anonymous takes show a Chef name and a shared chef-hat avatar, and lead
+  // nowhere: there's no profile behind them in the app.
+  const author = comment.author;
+  const name = author ? author.username : anonymousName(comment.anonNumber ?? 0);
+  const spokenName = author ? author.displayName : `${name}, anonymous`;
+  const replyName = comment.replyTo
+    ? `@${comment.replyTo.username}`
+    : comment.replyToAnonNumber
+      ? `@${anonymousName(comment.replyToAnonNumber)}`
+      : null;
   return (
     <Pressable
       onLongPress={() => onLongPress?.(comment)}
@@ -54,32 +66,39 @@ function CommentRowBase({
         highlighted && styles.highlighted,
       ]}
       accessibilityHint={onLongPress ? 'Long press for options' : undefined}
-      accessibilityLabel={`${comment.author.displayName}${comment.replyTo ? `, replying to @${comment.replyTo.username}` : ''}: ${spoken}`}
+      accessibilityLabel={`${spokenName}${replyName ? `, replying to ${replyName}` : ''}: ${spoken}`}
     >
-      <Pressable
-        onPress={() => openProfile(comment.author.id)}
-        accessibilityRole="link"
-        accessibilityLabel={`${comment.author.displayName}'s profile`}
-      >
-        <Avatar
-          uri={comment.author.avatarUrl}
-          name={comment.author.displayName}
-          size={nested ? 'xs' : 'sm'}
-        />
-      </Pressable>
+      {author ? (
+        <Pressable
+          onPress={() => openProfile(author.id)}
+          accessibilityRole="link"
+          accessibilityLabel={`${author.displayName}'s profile`}
+        >
+          <Avatar uri={author.avatarUrl} name={author.displayName} size={nested ? 'xs' : 'sm'} />
+        </Pressable>
+      ) : (
+        <AnonymousAvatar size={nested ? 'xs' : 'sm'} />
+      )}
 
       <View style={styles.body}>
         <View style={styles.meta}>
-          <AppText variant="calloutStrong">{comment.author.username}</AppText>
+          <AppText variant="calloutStrong" style={author ? undefined : styles.anonName}>
+            {name}
+          </AppText>
           <AppText variant="caption" color="textTertiary">
+            {author ? '' : comment.isMine ? 'you · anonymous · ' : 'anonymous · '}
             {pending ? 'Posting…' : formatRelativeTime(comment.createdAt)}
           </AppText>
         </View>
-        {hasText || comment.replyTo ? (
+        {hasText || replyName ? (
           <AppText variant="body">
             {comment.replyTo ? (
               <AppText variant="body" style={styles.mention} onPress={() => openProfile(comment.replyTo!.id)}>
-                @{comment.replyTo.username}{' '}
+                {replyName}{' '}
+              </AppText>
+            ) : replyName ? (
+              <AppText variant="body" style={styles.mention}>
+                {replyName}{' '}
               </AppText>
             ) : null}
             {segments.map((segment, i) =>
@@ -103,7 +122,7 @@ function CommentRowBase({
           <CommentMediaView
             media={comment.media}
             commentId={comment.id}
-            label={`${comment.media.kind === 'sticker' ? 'Sticker' : 'Photo'} from ${comment.author.displayName}`}
+            label={`${comment.media.kind === 'sticker' ? 'Sticker' : 'Photo'} from ${spokenName}`}
           />
         ) : null}
         {!pending && onReply ? (
@@ -112,7 +131,7 @@ function CommentRowBase({
             hitSlop={8}
             style={styles.reply}
             accessibilityRole="button"
-            accessibilityLabel={`Reply to ${comment.author.username}`}
+            accessibilityLabel={`Reply to ${name}`}
           >
             <AppText variant="caption" color="textSecondary" style={styles.replyText}>
               Reply
@@ -163,6 +182,7 @@ const styles = StyleSheet.create({
   highlighted: { backgroundColor: colors.tint },
   body: { flex: 1, gap: 2 },
   meta: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  anonName: { color: colors.accent },
   mention: { fontFamily: fonts.textSemiBold, color: colors.accent },
   reply: { alignSelf: 'flex-start', marginTop: 2 },
   replyText: { fontFamily: fonts.textSemiBold },

@@ -1,5 +1,5 @@
 import { badgeLabel } from './components/ActivityBell';
-import { activityTarget, describe as describeItem, mapNotification } from './api';
+import { activityTarget, actorName, describe as describeItem, mapNotification } from './api';
 
 jest.mock('@/lib/supabase/client', () => ({ supabase: {} }));
 
@@ -43,6 +43,17 @@ describe('notifications', () => {
     expect(mapNotification(row('follow', { actor: null }))).toBeNull();
     expect(mapNotification(row('comment'))).toBeNull();
     expect(mapNotification(row('follow'))).not.toBeNull();
+  });
+
+  it('show an anonymous take by its Chef name, never an account', () => {
+    const item = mapNotification(
+      row('comment', { actor: null, post, comment: { body: 'needs salt', anon_number: 3 } }),
+    )!;
+    expect(item).toMatchObject({ actor: null, anonymousName: 'Chef #03', commentBody: 'needs salt' });
+    expect(actorName(item)).toBe('Chef #03');
+    expect(activityTarget({ ...item, commentId: 'c' })).toMatchObject({ pathname: '/post/[id]' });
+    // No actor and no anonymous comment: still dropped.
+    expect(mapNotification(row('comment', { actor: null, post, comment: { body: 'x' } }))).toBeNull();
   });
 
   it('read as sentences', () => {

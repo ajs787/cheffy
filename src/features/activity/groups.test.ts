@@ -14,6 +14,7 @@ const item = (type: NotificationType, when: string, read = true, id = `n${++n}`)
     at: when,
     read,
     actor: {} as never,
+    anonymousName: null,
     post: null,
     commentId: null,
     commentBody: null,
