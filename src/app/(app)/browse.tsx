@@ -15,7 +15,7 @@ type Sort = DiscoverQueryParams['sort'];
 const SORTS: { value: Sort; label: string }[] = [
   { value: 'recent', label: 'Latest' },
   { value: 'top', label: 'Top rated' },
-  { value: 'loved', label: 'Most loved' },
+  { value: 'loved', label: 'Most liked' },
 ];
 
 // Budget Eats: price caps use the stored cost per serving (cents).

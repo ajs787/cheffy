@@ -6,7 +6,20 @@ import { supabase } from '@/lib/supabase/client';
 import { BUCKETS, removeFiles, uploadImageFile } from '@/lib/supabase/storage';
 import type { Taxonomy } from '@/types/models';
 
+import { localPhotoExists } from './composeRecovery';
 import { toSavePayload, type ComposeImage, type PostFormValues } from './schemas';
+
+/** A picked photo's file is no longer on the phone (the system can clear it). */
+export class MissingPhotoError extends Error {
+  constructor(readonly keys: string[]) {
+    super(
+      keys.length === 1
+        ? 'One photo is no longer on this phone. Remove it or pick it again, then save.'
+        : `${keys.length} photos are no longer on this phone. Remove them or pick them again, then save.`,
+    );
+    this.name = 'MissingPhotoError';
+  }
+}
 
 export interface UploadedImage {
   id: string;
@@ -38,6 +51,8 @@ export interface SavePostArgs {
    */
   uploadCache: Map<string, UploadedImage>;
   onProgress?: (progress: SaveProgress) => void;
+  /** Injected in tests. */
+  photoExists?: (uri: string) => boolean;
 }
 
 async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
@@ -82,11 +97,15 @@ export async function savePost({
   previousImages = [],
   uploadCache,
   onProgress,
+  photoExists = localPhotoExists,
 }: SavePostArgs): Promise<string> {
   const pending = values.images.filter(
     (image): image is Extract<ComposeImage, { kind: 'local' }> =>
       image.kind === 'local' && !uploadCache.has(image.key),
   );
+  // Check before uploading anything, so nothing is half-saved.
+  const gone = pending.filter((image) => !photoExists(image.uri)).map((image) => image.key);
+  if (gone.length > 0) throw new MissingPhotoError(gone);
   const total = pending.length;
   onProgress?.({ done: 0, total, stage: total > 0 ? 'uploading' : 'saving' });
 

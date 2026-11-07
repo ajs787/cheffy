@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import { useRequiredUserId, useUserId } from '@/features/auth/store';
 import { toUserMessage } from '@/lib/errors';
@@ -28,7 +29,9 @@ import {
   fetchLikers,
   LIKERS_PAGE,
   dismissSuggestion,
+  fetchNewMembers,
   fetchSuggestedFriends,
+  NEW_MEMBERS_PAGE,
   PEOPLE_PAGE,
   SUGGESTIONS_PAGE,
   searchPeople,
@@ -44,6 +47,7 @@ import {
   unlikePost,
   unsavePost,
 } from './api';
+import { splitDiscoveryPeople } from './newMembers';
 
 // ---------------------------------------------------------------------------
 // Likes & saves — optimistic across every cached copy of the post
@@ -296,6 +300,50 @@ export function useAllSuggestedFriends() {
   });
 }
 
+const newMembersKey = ['users', 'new-members'] as const;
+const newMembersAllKey = ['users', 'new-members-all'] as const;
+// New people should show up soon after they join: a minute, plus every focus.
+const NEW_MEMBERS_STALE_MS = 60_000;
+
+/** The New to Cheffy row: the newest eligible members. */
+export function useNewMembers() {
+  const me = useUserId();
+  return useQuery({
+    queryKey: newMembersKey,
+    queryFn: () => fetchNewMembers(NEW_MEMBERS_PAGE, 0),
+    enabled: !!me,
+    staleTime: NEW_MEMBERS_STALE_MS,
+  });
+}
+
+/** Every eligible member, newest first, paged ("See all"). */
+export function useAllNewMembers() {
+  const me = useUserId();
+  return useInfiniteQuery({
+    queryKey: newMembersAllKey,
+    queryFn: ({ pageParam }) => fetchNewMembers(NEW_MEMBERS_PAGE, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) =>
+      last.length === NEW_MEMBERS_PAGE ? pages.length * NEW_MEMBERS_PAGE : undefined,
+    enabled: !!me,
+    staleTime: NEW_MEMBERS_STALE_MS,
+  });
+}
+
+/**
+ * Suggestions and new members for a screen that shows both, without anyone
+ * appearing twice (see splitDiscoveryPeople).
+ */
+export function useDiscoveryPeople() {
+  const suggested = useSuggestedFriends();
+  const newMembers = useNewMembers();
+  const split = useMemo(
+    () => splitDiscoveryPeople(suggested.data ?? [], newMembers.data ?? []),
+    [suggested.data, newMembers.data],
+  );
+  return { suggestedQuery: suggested, newMembersQuery: newMembers, ...split };
+}
+
 type SuggestionCache = SuggestedFriend[] | { pages: SuggestedFriend[][]; pageParams: unknown[] } | undefined;
 const withoutUser = (data: SuggestionCache, userId: string): SuggestionCache => {
   if (!data) return data;
@@ -325,7 +373,6 @@ export function useDismissSuggestion() {
     },
   });
 }
-
 
 // ---------------------------------------------------------------------------
 // Comments

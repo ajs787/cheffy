@@ -18,8 +18,14 @@ import {
 import { contactsSupported } from '@/features/invite/deviceContacts';
 import { useMyProfile } from '@/features/profile/hooks';
 import { AlsoKnow } from '@/features/social/components/AlsoKnow';
+import { NewToCheffy } from '@/features/social/components/NewToCheffy';
 import { SuggestionCard } from '@/features/social/components/SuggestionCard';
-import { useDismissSuggestion, usePeopleSearch, useSuggestedFriends } from '@/features/social/hooks';
+import {
+  useDiscoveryPeople,
+  useDismissSuggestion,
+  usePeopleSearch,
+  useSuggestedFriends,
+} from '@/features/social/hooks';
 import { useRecentPeople } from '@/features/social/recentPeople';
 import { useInviteCode } from '@/features/unlocks/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -223,43 +229,51 @@ const RecentPerson = memo(function RecentPerson({
 // Suggested for you: horizontal cards, each with its reason and a dismiss X.
 // ---------------------------------------------------------------------------
 function Suggested({ onOpen }: { onOpen: (p: ProfileSummary) => void }) {
-  const suggested = useSuggestedFriends();
+  const { suggested: all, newcomers, suggestedQuery: suggested } = useDiscoveryPeople();
   const dismiss = useDismissSuggestion();
-  const people = (suggested.data ?? []).slice(0, SUGGESTION_CARDS);
+  const people = all.slice(0, SUGGESTION_CARDS);
 
   if (suggested.isPending) return <RowSkeleton count={2} />;
-  if (people.length === 0) return null;
+  if (people.length === 0) return <NewToCheffy people={newcomers} header="label" onOpen={onOpen} />;
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <AppText variant="overline" color="textSecondary">
-          Suggested for you
-        </AppText>
-        {(suggested.data?.length ?? 0) > 3 ? (
-          <Pressable
-            onPress={() => router.push('/suggested')}
-            hitSlop={10}
-            accessibilityRole="link"
-            accessibilityLabel="See all suggestions"
-          >
-            <AppText variant="caption" color="accent">
-              See all
-            </AppText>
-          </Pressable>
-        ) : null}
+    <>
+      <View style={styles.section}>
+        <View style={styles.sectionHead}>
+          <AppText variant="overline" color="textSecondary">
+            Suggested for you
+          </AppText>
+          {(suggested.data?.length ?? 0) > 3 ? (
+            <Pressable
+              onPress={() => router.push('/suggested')}
+              hitSlop={10}
+              accessibilityRole="link"
+              accessibilityLabel="See all suggestions"
+            >
+              <AppText variant="caption" color="accent">
+                See all
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+        <FlatList
+          horizontal
+          data={people}
+          keyExtractor={(p) => p.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.hRow}
+          initialNumToRender={4}
+          renderItem={({ item }) => (
+            <SuggestionCard
+              person={item}
+              detail={item.reason}
+              onOpen={onOpen}
+              onDismiss={(id) => dismiss.mutate(id)}
+            />
+          )}
+        />
       </View>
-      <FlatList
-        horizontal
-        data={people}
-        keyExtractor={(p) => p.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.hRow}
-        initialNumToRender={4}
-        renderItem={({ item }) => (
-          <SuggestionCard person={item} onOpen={onOpen} onDismiss={(id) => dismiss.mutate(id)} />
-        )}
-      />
-    </View>
+      <NewToCheffy people={newcomers} header="label" onOpen={onOpen} />
+    </>
   );
 }
 

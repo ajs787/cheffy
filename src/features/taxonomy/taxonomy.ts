@@ -8,6 +8,7 @@ export interface CategoryRow {
   name: string;
   sort_order: number;
   is_custom?: boolean;
+  is_active?: boolean;
 }
 
 export function mapCategory(row: CategoryRow): Category {
@@ -19,6 +20,7 @@ export function mapCategory(row: CategoryRow): Category {
     name: row.name,
     sortOrder: row.sort_order,
     isCustom: row.is_custom ?? false,
+    isActive: row.is_active ?? true,
   };
 }
 
@@ -30,12 +32,14 @@ export function buildTaxonomy(categories: Category[]): Taxonomy {
   const subcategoriesByPrimary: Record<string, Category[]> = {};
   for (const category of sorted) {
     byId[category.id] = category;
-    if (category.kind === 'subcategory' && category.parentId && !category.isCustom) {
+    if (category.kind === 'subcategory' && category.parentId && !category.isCustom && category.isActive) {
       (subcategoriesByPrimary[category.parentId] ??= []).push(category);
     }
   }
   // Default lists show built-in choices; custom labels are found by search.
-  const ofKind = (kind: CategoryKind) => sorted.filter((c) => c.kind === kind && !c.isCustom);
+  // Retired choices are in byId (for posts that use them) and nowhere else.
+  const offered = sorted.filter((c) => c.isActive);
+  const ofKind = (kind: CategoryKind) => offered.filter((c) => c.kind === kind && !c.isCustom);
   return {
     all: sorted,
     byId,
@@ -44,7 +48,8 @@ export function buildTaxonomy(categories: Category[]): Taxonomy {
     cuisines: ofKind('cuisine'),
     mealTypes: ofKind('meal_type'),
     dishTypes: ofKind('dish_type'),
-    custom: sorted.filter((c) => c.isCustom),
+    custom: offered.filter((c) => c.isCustom),
+    retired: sorted.filter((c) => !c.isActive),
   };
 }
 

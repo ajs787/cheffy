@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Crypto from 'expo-crypto';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useRef, useState, type ComponentRef } from 'react';
+import { router, Stack, useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Controller, useForm, useWatch, type FieldPath } from 'react-hook-form';
 import {
   ActivityIndicator,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -24,6 +25,19 @@ import {
   RatingInput,
 } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
+import {
+  clearComposeRecovery,
+  hasContent,
+  readComposeRecovery,
+  readDraftMadeWith,
+  refreshRemoteImages,
+  withoutMissingLocalPhotos,
+  writeComposeRecovery,
+  writeDraftMadeWith,
+  type ComposeRecovery,
+} from '@/features/posts/composeRecovery';
+import { DraftsButton } from '@/features/posts/components/DraftsButton';
+import { LeaveComposeSheet } from '@/features/posts/components/LeaveComposeSheet';
 import { CategorySelector } from '@/features/posts/components/CategorySelector';
 import { ComposeFooter } from '@/features/posts/components/ComposeFooter';
 import { DetailsSection } from '@/features/posts/components/DetailsSection';
@@ -37,8 +51,8 @@ import { StoryField } from '@/features/posts/components/StoryField';
 import { useRevealOnFocus } from '@/hooks/useRevealOnFocus';
 import { TagInput } from '@/features/posts/components/TagInput';
 import { VisibilitySelector } from '@/features/posts/components/VisibilitySelector';
-import { usePost, useSavePost } from '@/features/posts/hooks';
-import type { SaveProgress, UploadedImage } from '@/features/posts/save';
+import { useDrafts, usePost, useSavePost } from '@/features/posts/hooks';
+import { MissingPhotoError, type SaveProgress, type UploadedImage } from '@/features/posts/save';
 import {
   emptyPostForm,
   MAX_TAGS,
@@ -59,14 +73,85 @@ import { toast } from '@/stores/toast';
 import { colors, fonts, HAIRLINE, MAX_FONT_SCALE, SCREEN_GUTTER, spacing } from '@/theme';
 import type { Post, ProfileSummary } from '@/types/models';
 
+interface ComposeStart {
+  /** The on-phone safety copy for this entry, if one is waiting. */
+  recovery: ComposeRecovery | null;
+  /** "Made with" people remembered for this draft. */
+  madeWith: ProfileSummary[];
+}
+
+/** Loads what Create needs from this phone before the form is built. */
+function useComposeStart(me: string | null | undefined, editId: string | undefined) {
+  const [start, setStart] = useState<ComposeStart | null>(null);
+  useEffect(() => {
+    if (!me) return;
+    let active = true;
+    void Promise.all([readComposeRecovery(me), editId ? readDraftMadeWith(me, editId) : []]).then(
+      ([saved, madeWith]) => {
+        const matches =
+          saved &&
+          hasContent(saved.values) &&
+          (editId ? saved.mode === 'edit' && saved.postId === editId : saved.mode === 'new');
+        if (active) setStart({ recovery: matches ? saved : null, madeWith });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [me, editId]);
+  return start;
+}
+
 export default function ComposeScreen() {
   const { postId: editId } = useLocalSearchParams<{ postId?: string }>();
   const me = useUserId();
   const existing = usePost(editId);
   const defaultVisibility = usePreferencesStore((s) => s.defaultVisibility);
+  const start = useComposeStart(me, editId);
+  const [restored, setRestored] = useState<ComposeRecovery | null>(null);
+  const [declined, setDeclined] = useState(false);
+
+  const offer = !restored && !declined ? (start?.recovery ?? null) : null;
+  const restore = (recovery: ComposeRecovery) => {
+    const { images, missing } = withoutMissingLocalPhotos(
+      existing.data ? refreshRemoteImages(recovery.values.images, existing.data.images) : recovery.values.images,
+    );
+    if (missing > 0) {
+      toast.error(
+        missing === 1
+          ? 'One photo is no longer on this phone. Add it again if you still have it.'
+          : `${missing} photos are no longer on this phone. Add them again if you still have them.`,
+      );
+    }
+    setRestored({ ...recovery, values: { ...recovery.values, images } });
+  };
+  const decline = () => {
+    setDeclined(true);
+    if (me && start?.recovery) void clearComposeRecovery(me, start.recovery.postId);
+  };
 
   if (!editId) {
-    return <ComposeForm initial={emptyPostForm({ visibility: defaultVisibility })} />;
+    if (!start) return <ComposeLoading />;
+    const blank = emptyPostForm({ visibility: defaultVisibility });
+    return restored ? (
+      <ComposeForm
+        key="restored"
+        postId={restored.postId}
+        baseline={blank}
+        initial={restored.values}
+        initialMadeWith={restored.madeWith}
+        restored
+      />
+    ) : (
+      <ComposeForm
+        key="new"
+        initial={blank}
+        initialMadeWith={[]}
+        offer={offer}
+        onRestore={restore}
+        onDecline={decline}
+      />
+    );
   }
 
   // Editing: wait for the full post (not a list placeholder) before building the form.
@@ -86,28 +171,83 @@ export default function ComposeScreen() {
       </View>
     );
   }
-  if (!existing.data || existing.isPlaceholderData) {
-    return (
-      <View style={styles.screen}>
-        <AppHeader leading="close" />
-        <ActivityIndicator color={colors.textTertiary} style={styles.loading} />
-      </View>
-    );
-  }
-  return <ComposeForm key={existing.data.id} post={existing.data} initial={postToForm(existing.data)} />;
+  if (!existing.data || existing.isPlaceholderData || !start) return <ComposeLoading />;
+  const baseline = postToForm(existing.data);
+  return restored ? (
+    <ComposeForm
+      key={`${existing.data.id}-restored`}
+      post={existing.data}
+      baseline={baseline}
+      initial={restored.values}
+      initialMadeWith={restored.madeWith}
+      restored
+    />
+  ) : (
+    <ComposeForm
+      key={existing.data.id}
+      post={existing.data}
+      initial={baseline}
+      initialMadeWith={start.madeWith}
+      offer={offer}
+      onRestore={restore}
+      onDecline={decline}
+    />
+  );
 }
 
-function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }) {
+function ComposeLoading() {
+  return (
+    <View style={styles.screen}>
+      <AppHeader leading="close" />
+      <ActivityIndicator color={colors.textTertiary} style={styles.loading} />
+    </View>
+  );
+}
+
+const photosMissingMessage = (count: number) =>
+  count === 1
+    ? 'One photo couldn’t be found. Remove it (tap ⋯ on the photo) to post.'
+    : `${count} photos couldn’t be found. Remove them (tap ⋯ on each photo) to post.`;
+
+function ComposeForm({
+  post,
+  postId: givenPostId,
+  initial,
+  baseline,
+  initialMadeWith,
+  restored = false,
+  offer = null,
+  onRestore,
+  onDecline,
+}: {
+  post?: Post;
+  /** A restored new entry keeps the id it had. */
+  postId?: string;
+  /** What the form shows when it opens. */
+  initial: PostFormValues;
+  /** What counts as "no changes" (defaults to `initial`). */
+  baseline?: PostFormValues;
+  initialMadeWith: ProfileSummary[];
+  /** Opened from the on-phone safety copy: starts with unsaved changes. */
+  restored?: boolean;
+  offer?: ComposeRecovery | null;
+  onRestore?: (recovery: ComposeRecovery) => void;
+  onDecline?: () => void;
+}) {
+  const me = useUserId();
   const taxonomy = useTaxonomy();
   const setDefaultVisibility = usePreferencesStore((s) => s.setDefaultVisibility);
   const savePost = useSavePost();
+  const drafts = useDrafts(!post);
+  const draftCount = drafts.data?.length ?? 0;
+  const navigation = useNavigation();
 
   // New posts get their id up front so photos upload into the post's folder.
-  const [postId] = useState(() => post?.id ?? Crypto.randomUUID());
+  const [postId] = useState(() => post?.id ?? givenPostId ?? Crypto.randomUUID());
   const uploadCache = useRef(new Map<string, UploadedImage>());
   const [progress, setProgress] = useState<SaveProgress | null>(null);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [madeWith, setMadeWith] = useState<ProfileSummary[]>([]);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [madeWith, setMadeWith] = useState<ProfileSummary[]>(initialMadeWith);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const revealOnFocus = useRevealOnFocus(scrollRef);
   // Tag text typed but not yet committed; included on submit so it isn't lost.
@@ -115,19 +255,94 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
 
   const form = useForm<PostFormValues>({
     resolver: zodResolver(postFormSchema),
-    defaultValues: initial,
+    defaultValues: baseline ?? initial,
   });
-  const { control, formState, setValue, setError, getValues, reset, clearErrors } = form;
+  const { control, formState, setValue, setError, getValues, reset, clearErrors, subscribe } = form;
+
+  // A restored entry opens with its unsaved changes still counting as changes.
+  useEffect(() => {
+    if (restored) reset(initial, { keepDefaultValues: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
+  }, []);
 
   const primaryId = useWatch({ control, name: 'primaryCategoryId' });
   const customLabels = useWatch({ control, name: 'customLabels' });
+  const imagesError = formState.errors.images?.message;
   const saving = savePost.isPending;
-  const dirty = formState.isDirty;
+  const changed = formState.isDirty || restored || madeWith !== initialMadeWith;
   const editingPublished = post?.status === 'published';
+
+  // --- Safety copy on this phone (survives closing the app or signing out) ---
+  const changedRef = useRef(changed);
+  const madeWithRef = useRef(madeWith);
+  useEffect(() => {
+    changedRef.current = changed;
+    madeWithRef.current = madeWith;
+  });
+  const settled = useRef(false); // saved or discarded: nothing left to keep
+  const persist = useCallback(() => {
+    if (!me || settled.current || !changedRef.current) return;
+    void writeComposeRecovery(me, {
+      postId,
+      mode: post ? 'edit' : 'new',
+      values: getValues(),
+      madeWith: madeWithRef.current,
+      savedAt: Date.now(),
+    });
+  }, [me, post, postId, getValues]);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      clearTimeout(timer);
+      timer = setTimeout(persist, 500);
+    };
+    const unsubscribe = subscribe({ formState: { values: true }, callback: schedule });
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') persist();
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+      appState.remove();
+      persist(); // closing for any other reason (e.g. signed out) keeps a copy
+    };
+  }, [subscribe, persist]);
+  useEffect(() => {
+    if (madeWith !== initialMadeWith) persist();
+  }, [madeWith, initialMadeWith, persist]);
+
+  // --- Leaving with unsaved changes always asks first ---
+  const [released, setReleased] = useState(false);
+  const proceed = useRef<(() => void) | null>(null);
+  usePreventRemove(changed && !released, ({ data }) => {
+    if (saving) return;
+    proceed.current = () => navigation.dispatch(data.action);
+    setLeaveOpen(true);
+  });
+  // Navigation runs once prevention is off (the render after `released`).
+  useEffect(() => {
+    if (!released) return;
+    const go = proceed.current;
+    proceed.current = null;
+    go?.();
+  }, [released]);
+  const leaveThen = (go: () => void) => {
+    proceed.current = go;
+    setReleased(true);
+  };
+  const openDrafts = () => {
+    if (changed) {
+      proceed.current = () => router.replace('/drafts');
+      setLeaveOpen(true);
+    } else {
+      router.replace('/drafts');
+    }
+  };
 
   // Blocks a second tap synchronously, before `saving` re-renders.
   const submitting = useRef(false);
-  const submit = async (status: 'draft' | 'published') => {
+  const submit = async (status: 'draft' | 'published', then?: () => void) => {
     if (submitting.current) return;
     clearErrors();
     const current = getValues();
@@ -138,7 +353,16 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
         }
       : current;
     const parsed = (status === 'published' ? publishSchema : postFormSchema).safeParse(values);
+    // Uploaded photos whose files are gone can stay in a draft, not a post.
+    const missingRemote = values.images.filter((image) => image.kind === 'remote' && !image.uri).length;
+    if (status === 'published' && missingRemote > 0 && parsed.success) {
+      setError('images', { message: photosMissingMessage(missingRemote) });
+      haptics.error();
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     if (!parsed.success) {
+      setLeaveOpen(false);
       for (const issue of parsed.error.issues) {
         setError(issue.path[0] as FieldPath<PostFormValues>, { message: issue.message });
       }
@@ -174,29 +398,64 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
           ),
         );
       }
+      settled.current = true;
+      if (me) {
+        void clearComposeRecovery(me, postId);
+        void writeDraftMadeWith(me, postId, status === 'draft' ? madeWith : []);
+      }
       haptics.success();
       toast.success(
         status === 'draft' ? 'Draft saved' : editingPublished ? 'Changes saved' : 'Logged to your diary',
       );
       reset(parsed.data);
-      router.back();
-      if (status === 'published' && !editingPublished) {
-        // Where it landed in their rankings (and an optional comparison);
-        // otherwise a good moment to offer notifications (offered once).
-        void showRankingMoment(postId, parsed.data.title, parsed.data.rating ?? 0).then((shown) => {
-          if (!shown) usePushPromptStore.getState().offerOnce();
-        });
-      }
+      setLeaveOpen(false);
+      leaveThen(() => {
+        if (then) then();
+        else router.back();
+        if (status === 'published' && !editingPublished) {
+          // Where it landed in their rankings (and an optional comparison);
+          // otherwise a good moment to offer notifications (offered once).
+          void showRankingMoment(postId, parsed.data.title, parsed.data.rating ?? 0).then((shown) => {
+            if (!shown) usePushPromptStore.getState().offerOnce();
+          });
+        }
+      });
     } catch (error) {
       haptics.error();
-      toast.error(toUserMessage(error, 'Couldn’t save. Your entry is still here — try again.'));
+      setLeaveOpen(false);
+      persist();
+      if (error instanceof MissingPhotoError) {
+        const gone = new Set(error.keys);
+        setValue(
+          'images',
+          getValues('images').filter((image) => !gone.has(image.key)),
+          { shouldDirty: true },
+        );
+        setError('images', { message: error.message });
+        toast.error(error.message);
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      } else {
+        toast.error(
+          toUserMessage(error, 'Couldn’t save. Your entry is still here and kept on this phone — try again.'),
+        );
+      }
     } finally {
       submitting.current = false;
       setProgress(null);
     }
   };
 
-  const close = () => (dirty && !saving ? setConfirmDiscard(true) : router.back());
+  // Unsaved changes are caught by usePreventRemove, which asks first.
+  const close = () => {
+    if (!saving) router.back();
+  };
+  const discard = () => {
+    settled.current = true;
+    if (me) void clearComposeRecovery(me, postId);
+    setLeaveOpen(false);
+    reset();
+    leaveThen(proceed.current ?? (() => router.back()));
+  };
 
   const tags = useWatch({ control, name: 'tags' });
   const tagsSummary =
@@ -207,7 +466,7 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
   return (
     <View style={styles.screen}>
       {/* Block swipe-to-dismiss while there are unsaved changes. */}
-      <Stack.Screen options={{ gestureEnabled: !dirty && !saving }} />
+      <Stack.Screen options={{ gestureEnabled: !changed && !saving }} />
       <AppHeader
         title={title}
         leading="close"
@@ -238,11 +497,26 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
           onScroll={revealOnFocus.onScroll}
           scrollEventThrottle={32}
         >
+          {!post ? <DraftsButton count={draftCount} onPress={openDrafts} /> : null}
+
           <Controller
             control={control}
             name="images"
-            render={({ field }) => <PhotoStrip images={field.value} onChange={field.onChange} />}
+            render={({ field }) => (
+              <PhotoStrip
+                images={field.value}
+                onChange={(images) => {
+                  field.onChange(images);
+                  if (imagesError) clearErrors('images');
+                }}
+              />
+            )}
           />
+          {imagesError ? (
+            <AppText variant="caption" color="danger" style={styles.padded} accessibilityLiveRegion="polite">
+              {imagesError}
+            </AppText>
+          ) : null}
 
           <Controller
             control={control}
@@ -449,19 +723,33 @@ function ComposeForm({ post, initial }: { post?: Post; initial: PostFormValues }
         />
       </KeyboardAvoidingView>
 
-      <ConfirmationDialog
-        visible={confirmDiscard}
-        title="Discard this entry?"
-        message="Your photos and notes won’t be saved. Use Save draft to keep it for later."
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
-        destructive
-        onCancel={() => setConfirmDiscard(false)}
-        onConfirm={() => {
-          setConfirmDiscard(false);
-          reset();
-          router.back();
+      <LeaveComposeSheet
+        visible={leaveOpen}
+        canSaveDraft={!editingPublished}
+        // Offline, a save waits for the connection; don't trap them in the sheet.
+        saving={saving && !savePost.isPaused}
+        onSaveDraft={() => void submit('draft', proceed.current ?? undefined)}
+        onDiscard={discard}
+        onCancel={() => {
+          proceed.current = null;
+          setLeaveOpen(false);
         }}
+      />
+
+      <ConfirmationDialog
+        visible={!!offer}
+        title="Pick up where you left off?"
+        message={
+          offer
+            ? `“${offer.values.title.trim() || 'Untitled entry'}” wasn’t saved before Cheffy closed. It’s been kept on this phone.`
+            : undefined
+        }
+        confirmLabel="Restore it"
+        cancelLabel="Start fresh"
+        onConfirm={() => {
+          if (offer) onRestore?.(offer);
+        }}
+        onCancel={() => onDecline?.()}
       />
     </View>
   );

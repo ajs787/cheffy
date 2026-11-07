@@ -83,6 +83,8 @@ describe('suggested_friends', () => {
     await db.createPost(baker.id, { primary_category_id: baking });
     await db.createPost(baker.id, { primary_category_id: baking });
     await db.createPost(busy.id);
+    // Long-standing accounts, so "New to Cheffy" doesn't apply here.
+    await db.admin("update public.profiles set created_at = now() - interval '60 days'");
     const list = await suggestions(me);
     expect(list.map((s) => s.username)).toEqual(['popular', 'fof', 'fan', 'baker', 'busy']);
     expect(list[0]!.reason).toMatch(/^Followed by @friend_[ab] and 1 other$/);
@@ -112,6 +114,9 @@ describe('suggested_friends', () => {
     await db.createPost(me.id, { primary_category_id: baking });
     await db.createPost(secret.id, { primary_category_id: baking });
     await db.createPost(secret.id, { primary_category_id: baking });
+    // Not new (a new private account may be suggested as "New to Cheffy",
+    // which says nothing about what it makes).
+    await db.admin("update public.profiles set created_at = now() - interval '60 days'");
     expect(await suggestions(me)).toEqual([]);
   });
 

@@ -18,7 +18,7 @@ import { formatCount } from '@/utils/format';
 import { CollaborationPanel } from '@/features/collaboration/components/CollaborationPanel';
 
 import { PostDetails } from './PostDetails';
-import { StoryBody } from './StoryBody';
+import { StorySection } from './StorySection';
 
 export interface PostDetailHeaderProps {
   post: Post;
@@ -142,12 +142,10 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
         ) : null}
 
         {post.review ? (
-          <AppText variant="body" style={styles.review}>
-            {post.review}
-          </AppText>
+          <AppText variant="body">{post.review}</AppText>
         ) : null}
 
-        {post.story ? <StoryBody story={post.story} /> : null}
+        {post.story ? <StorySection key={post.id} story={post.story} initiallyExpanded /> : null}
 
         {post.tags.length > 0 ? (
           <View style={styles.tags}>
@@ -201,7 +199,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: spacing.xs,
   },
-  review: { fontSize: 16, lineHeight: 24 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
   commentsTitle: { marginTop: spacing.md },
 });

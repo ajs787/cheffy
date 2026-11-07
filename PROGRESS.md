@@ -1333,3 +1333,271 @@ code and for keyboard stickers.
   build (the Simulator has no personal stickers). Also: picking photos, the viewer, the
   keyboard on a small iPhone, a slow or interrupted network (airplane mode mid-post: the
   draft should stay, and retrying reuses the upload), and push taps opening the comment.
+## UI polish, branding & content clarity (2026-10-28, branch `ui-polish-branding`)
+
+**1. Pizza moves from Baking to Cooking** (migration `20261028000001_pizza_to_cooking`, live since 2026-10-28, approved)
+- Cooking classifies by dish type (its quick pick is Cuisine), so Pizza is now a Cooking dish
+  type after Pasta. Giving Cooking a one-item "What kind?" list would have broken its flow.
+- Baking › Pizza is retired (`is_active = false`), not deleted. The 2 live posts tagged with it
+  keep their label. Pickers, quick picks and search no longer offer it, and typing "Pizza" as a
+  custom Baking label is refused (in the app and in `ensure_custom_category`).
+- Editing an old Baking › Pizza post shows the tag as selected and keeps it on save unless the
+  owner removes it. The app now loads retired rows (`Taxonomy.retired`) for this.
+
+**2. "Most loved" → "Most liked"** (Discover row, its See all title, Browse sort chip)
+- Sorting was already by like count (then newest) in `discover_posts` and the client
+  re-sort. A new DB test proves it ranks by likes, not rating, and leaves out unliked posts.
+
+**3. Wordmark period:** already Espresso #3B2A22 everywhere (app `Wordmark`, website CSS, app
+icon, splash), since 2026-10-20. No change needed; checked on screen in the simulator and the
+browser (computed `rgb(59, 42, 34)`).
+
+**4. Welcome screen and cheffy.me hero:** "Your kitchen has a fan club now." (display serif)
+over "Cook it. Rate it. Share it." (oxblood; semibold in the app, semibold italic on the
+site). The app reads `TAGLINE` in `src/constants/app.ts`; the static site can't import it, so
+`web/index.html` carries the same lines with a pointer. Buttons, motto and animations are
+unchanged. The native splash has no tagline and is untouched.
+
+**5. Feed divider:** the espresso rule above the heart/comment row is gone. The feed's soft
+divider between posts marks where an entry ends. Order and touch targets are unchanged; Co-Chef
+posts use the same card.
+
+**6. Review and story:** a shared `StorySection` replaces `StoryTeaser` (feed) and
+`StoryBody` (post screen). The review and story both use the `body` style (16/23); the story
+has an oxblood "The story" label and the existing thin oxblood left rule. Long stories (over 240
+characters or more than one paragraph) show "Read story · N min" / "Show less": collapsed to 3
+lines in the feed, open on the post screen. Paragraph breaks are kept.
+
+**Checked:**
+- 441 tests pass (new: retired taxonomy, edit keeps a retired tag, Pizza migration, custom
+  re-add refused, Most liked order, story length rule). Typecheck and lint are clean.
+- Website (local): hero at desktop and 375 pt widths, no sideways scroll.
+- Simulator (signed out): welcome screen on iPhone 16 Pro Max and iPhone 16e (390 pt, the
+  smallest available), no clipping.
+
+- Live DB after the push: Cooking dish type Pizza is active; Baking › Pizza is inactive with
+  its 2 posts unchanged; re-adding "Pizza" under Baking is refused (checked as @chefshin,
+  rolled back).
+- Simulator (iPhone 16e, signed in, read-only; nothing liked, saved or posted):
+  - feed: no rule above the actions; the soft divider sits under "Liked by"; a short story
+    shows in full with its line break;
+  - post screen ("Jalapeño cheddar bread", 428-character story): review and story in the
+    same type, paragraphs kept, "Show less" / "Read story · 1 min" toggle both ways;
+  - Discover shows "Most liked"; See all shows the "Most liked" chip, and its order matches the
+    live like counts (5, 5, 5, 5, then 4), not ratings;
+  - Create: Baking's "What kind?" has no Pizza, and typing "pizza" shows "Pizza isn't offered
+    here any more" with no Add; Cooking's dish types find Pizza; the entry was discarded and
+    no post was created;
+  - Edit of @chefshin's "mushroom arugula pizza" (Baking › Pizza) shows Pizza selected; closed
+    without saving.
+
+**Notes:**
+- Taps inside a list are ignored while it is still moving (after a scroll, or right after the
+  story changes height). That's standard iOS behaviour; a settled tap toggles first time.
+- The live site updates when this branch merges to main.
+
+## Welcome screen art direction & story color (2026-10-28, branch `ui-polish-branding`)
+
+**Removed:** "Club de cuisine" / "Est. MMXXVI" and their rule; "Cook it. Rate it. Share it." under
+the logo; the ruled box around Cook / Bake / Pour.
+
+**Welcome screen (`src/app/(auth)/welcome.tsx`):**
+- Two groups. The hero (wordmark, one line, Cook / Bake / Pour) is centered in the spare height
+  and lifted slightly above true center. The actions and sign-off are anchored at the bottom in
+  thumb reach. Spacing comes from flex and theme tokens, not fixed positions.
+- Wordmark: all Oxblood, full stop included (the `Wordmark` oxblood tone, so the Home header
+  matches). It scales with width (64–84 pt).
+- Headline: "Your kitchen has a fan club now." in the old subline's style (Newsreader
+  semibold, Oxblood, light tracking) at 17/24. It wraps as "…has a / fan club now.": a
+  no-break space keeps "fan club" together and `push-out` line breaking avoids a lone word.
+- Cook / Bake / Pour: they play an animation and a haptic, so each now sits on a 64 pt Crème
+  disc (deeper while pressed) to show it's tappable. 28 pt icons, equal columns, centered as a
+  group under the wordmark. The existing animations are kept, including the Reduce Motion
+  fallback.
+- Actions: "Create account" (filled) then "Sign in" (outlined), both 54 pt, 12 pt apart, same
+  destinations (`/sign-up`, `/sign-in`).
+- Sign-off: "Cook. Rate. Share. Repeat." in `textSecondary` (was tertiary) for contrast, kept
+  clear of the home indicator.
+- It's a non-bouncing scroll view that only scrolls when large text needs the room.
+
+**Story color:** in `StorySection` the story text is now Oxblood like its label, the same size
+as the review. The review stays Espresso. Feed and post screen share the component.
+
+**Not changed:** the display font is still DM Serif Display. `DESIGN_SYSTEM.md` names Bodoni
+Moda, but the logo was asked to keep its typography. The app icon, splash image and website
+wordmark still have an Espresso full stop (images and site CSS; a new build is needed for the
+icon and splash).
+
+**Checked:**
+- 441 tests pass; typecheck and lint are clean.
+- iPhone 16 Pro Max (signed out): default text, and the largest accessibility text size (text
+  grows up to the app's 1.3× cap, no clipping or overlap, buttons on screen; reset after).
+  Tapping Cook plays its wiggle.
+- iPhone 16e (signed in): the feed shows the review in Espresso and the story in Oxblood at
+  the same size; the Home wordmark is all Oxblood.
+- Not yet: the redesigned welcome screen on a small iPhone. The spare iPhone 16e simulator is
+  waiting for access in the simulator panel.
+
+## Drafts: findable and safe (2026-10-29)
+
+**Recovery check first (read-only, live project).** Drafts are only ever stored
+as `posts` rows with `status = 'draft'`, written when "Save draft" is tapped.
+Nothing was kept on the phone before this change. @chefshin had **no drafts**
+(all 15 posts published), @simonshin007 had none either, and there were no
+photo uploads in @chefshin's storage folder without a post. So the missing
+entry was never saved (closed or discarded before Save draft) and can't be
+recovered. The Drafts screen existed but was reachable only from Settings and
+a "N drafts to finish" row on your own profile.
+
+What changed:
+- **Drafts button on Create** (new entries), with the number of saved drafts.
+- **Drafts screen**: reopen, edit, publish (as before), plus **delete** with a
+  confirmation. Also lists an unsaved entry kept on this phone.
+- **Leaving Create with changes always asks**: close button, swipe, Android
+  back, opening Drafts → "Save this entry as a draft?" with Save draft /
+  Discard / Keep editing (`usePreventRemove`). Editing a published post only
+  offers Discard / Keep editing.
+- **Safety copy on the phone** (`composeRecovery.ts`, AsyncStorage, one slot
+  per account): written as you type (500 ms), when the app goes to the
+  background and when Create closes for any other reason (e.g. sign-out).
+  Cleared after a successful save or a deliberate discard. Next time Create
+  (or that draft) opens: "Pick up where you left off?" Restore / Start fresh.
+  It keeps the same post id, so a retry after a half-finished save updates
+  instead of duplicating. Sign-out dialog says when an unsaved entry is kept.
+- **"Made with" people** on drafts are now remembered (on this phone, per
+  draft), since they're only invited once the entry is posted.
+- **Missing photos**: picked photos whose files are gone are dropped on
+  restore with a notice; at save time the check runs before any upload and
+  removes them with a clear message. Uploaded photos that can't be found show
+  as blank tiles; a draft can still be saved, but posting asks you to remove them.
+- **Failed saves** keep the entry on screen and on the phone; finished uploads
+  aren't redone on retry.
+
+No migrations; no change to existing drafts. Server-side, drafts were already
+author-only: `tests/db/drafts.test.ts` (11 tests) proves every field, photo,
+tag and category round-trips, and that a follower or stranger can't read the
+draft, its photos (rows or storage files), tags or categories, can't edit,
+publish, delete, like, comment on or save it, and doesn't see it in the diary.
+Unit tests: `composeRecovery.test.ts` (per-account copy, corrupt data,
+missing photos, Made with), `save.test.ts` (missing-photo stop before upload,
+full draft payload, retry reuses uploads).
+
+Not verified in the simulator (it's signed in to the real account and Metro
+serves another branch). Known limits: the safety copy holds one unsaved entry
+per account; "Made with" for drafts doesn't follow you to another phone.
+## New to Cheffy (2026-10-29, branch `new-to-cheffy`)
+
+**Database** (migration `20261029000002_new_members`, live since 2026-10-29, approved):
+- `new_members(limit, offset)` returns every eligible account, newest first (`profiles.created_at`),
+  paged and capped at 50. Eligible means:
+  - a verified email, not suspended or banned, `discoverable`;
+  - not blocked either way;
+  - not already followed, requested or dismissed by the viewer, and never the viewer.
+  - Deleted accounts have no profile, so they never appear. Private accounts can appear
+    (Follow becomes Requested).
+  - Security definer, authenticated only.
+- `suggested_friends()`:
+  - accounts that joined in the last 30 days now qualify on their own with the reason "New to
+    Cheffy", so a brand-new cook with no posts or mutual friends can still be suggested;
+  - stronger reasons still rank first;
+  - suggestions now also require a verified email.
+- Numbered `…000002` because the comment-media session had already pushed its own
+  `20261029000001` to the live DB. To push from this branch, a temporary copy of that file was
+  added and removed again (no `migration repair`).
+
+**App:**
+- `NewToCheffy` row of compact cards: photo, name, @username, "Joined today / yesterday /
+  Oct 27", a crème "NEW" tag for the last 14 days, Follow, tap opens the profile. It scrolls
+  sideways and has See all.
+- `/new-members` (See all) lists every eligible member, paged, with pull to refresh.
+- Where it appears:
+  - Discover, under Suggested for you;
+  - Find Friends, under Suggested;
+  - Search › People, above the suggestions;
+  - under the empty Following feed (fetched only when that empty state shows).
+- No one appears twice on a screen (`splitDiscoveryPeople`): someone suggested for a stronger
+  reason stays in Suggested; someone suggested only for being new moves to the New row.
+- Cached under `['users', …]`, so Follow / Following / Requested update everywhere at once.
+  It refreshes after a minute and on focus, so new sign-ups appear quickly.
+- `SuggestionCard` takes a `detail` line, an optional `badge` and an optional dismiss.
+
+**Checked:**
+- 465 tests pass (new: 11 DB tests for ordering, every exclusion rule, paging without repeats,
+  someone joining later, anon refused, the 30-day window and ranking; 4 unit tests for
+  de-duplication and labels). Typecheck and lint are clean.
+- Live data (@chefshin, read-only): suggestions went from 2 to 12, 7 of them "New to Cheffy";
+  `new_members` returns 13 eligible accounts.
+- Simulator (iPhone 16e, signed in, read-only; confirmed no follows, requests or dismissals
+  were made):
+  - Discover shows New to Cheffy with NEW tags; @eminmd14, who signed up during the check,
+    appeared first; the row scrolls sideways; nobody is in both rows;
+  - See all lists all 13, newest first, no repeats;
+  - Find Friends and Search › People show the row.
+- Not checked: the empty Following state (@chefshin's feed isn't empty), live paging past 20
+  (only 13 eligible; covered by the DB test), and tapping Follow on a real account.
+## Search suggestions for Creations and Tags (2026-10-29; migration not pushed)
+
+Search's Creations and Tags tabs now show personalized suggestions while the search box is
+empty, like the People tab already does. Typing shows search results only. Clearing the box
+brings the suggestions back from cache, without a reload. Discover's navigation is unchanged.
+
+**Creations tab, empty query** (`CreationSuggestions` in
+`src/features/discover/components/SearchSuggestions.tsx`):
+- **For Your Taste:** the existing `taste_posts` picks, built from what the viewer makes,
+  likes and saves, plus ratings and recency. See all opens `/taste`.
+- **Trending:** `trending_creations()`, public creations ranked by likes and comments from
+  the last 14 days. The last 7 days count double, and only one comment per person counts.
+  Lifetime likes don't count. See all opens the new `/trending` screen, which is paged and
+  shares the row's cache.
+- **Newly Cooked:** `newly_cooked()`, creations from the last 90 days by discoverable,
+  public, unsuspended accounts. Each cook's newest creation comes first, so a new cook isn't
+  buried by a prolific one. It's an endless paged grid under the two rows.
+- Each creation appears once, in the first section that has it (For Your Taste, then
+  Trending, then Newly Cooked). Empty sections are hidden. If every section is empty, the
+  screen shows the old "Find something to make" hint. A one-letter query shows "Keep typing".
+
+**Tags tab, empty query** (`TagSuggestionList`, backed by `tag_suggestions()` in one call):
+- **Suggested for you:** tags on the viewer's own posts (weight 3, or 5 when rated 8+), likes
+  and saves (2), comments (1), and recent posts by people they follow (1).
+- **Popular tags:** ranked by recent use. The last 14 days count most, then 60 days, then
+  all-time use and the number of different cooks.
+- **Explore something new:** a few popular tags (2+ posts) the viewer has no history with,
+  shuffled a little each day.
+- Each tag appears in one list only. Every tag has at least one other person's post the
+  viewer can browse, so Browse is never empty. Tapping a tag opens `/browse` with `tagId`.
+  Rows show the creation count. Typed tag results use the same `TagRow`.
+
+**Fallbacks for new users:** `taste_posts` already falls back to popular, well-rated recent
+posts. A viewer with no activity gets no "Suggested for you" tags (until they follow someone),
+but still sees Popular and Explore. Newly Cooked never depends on the viewer's activity.
+
+**Privacy:** all three new functions are SECURITY INVOKER, so the posts RLS policy applies.
+Private and followers-only posts the viewer can't open, people blocked either way, drafts and
+removed posts never show up. Trending and Newly Cooked also require public visibility, a
+public account and no suspension. Newly Cooked also requires `discoverable`. The viewer's own
+creations are never returned. All three are revoked from `anon`.
+
+**Migration:** `supabase/migrations/20261030000001_search_suggestions.sql` (read-only
+functions, no data changes). **Not pushed to the live database.** The app needs it live
+before the new sections fill in. Until then, the Trending, Newly Cooked and tag requests fail,
+those sections stay hidden, and For Your Taste still works.
+
+**Checked:**
+- `tests/db/search-suggestions.test.ts` (11 tests). Trending: ranks recent engagement over
+  lifetime likes, weights recent days higher, ignores the cook's own likes and comments,
+  leaves out own, private, followers-only, blocked (both ways), removed and photo-less posts,
+  caps each cook at two before anyone's third, and pages without repeats. Newly Cooked: same
+  exclusions, plus non-discoverable accounts and posts over 90 days old, and the
+  newest-per-cook order. Tags: section order and dedupe, ranking by recent use, learning from
+  likes, the follow and brand-new-user fallbacks, nothing from own, private, blocked, draft
+  or removed posts, and no anon access.
+- Full test suite, typecheck and lint pass.
+- **Migration live** (2026-10-30, approved). Live data for @chefshin (read-only): Trending
+  and Newly Cooked each fill a first page of 18 with none of their own posts; tags return 8
+  suggested and 12 popular. Explore is empty for this account because every popular tag
+  connects to something they made, liked, saved or follow, so it's correctly hidden.
+- Simulator (iPhone 16e, signed in, read-only): Creations shows For Your Taste, Trending and
+  Newly Cooked with real posts; Tags shows Suggested for you and Popular tags; tapping #matcha
+  opens Browse with its 2 creations.
+- The Trending subtitle reads "Getting the most likes and comments lately" (it said "Most
+  loved", which the app no longer uses).

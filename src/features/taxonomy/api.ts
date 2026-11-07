@@ -7,8 +7,8 @@ export async function fetchTaxonomy() {
   const rows = unwrap(
     await supabase
       .from('categories')
-      .select('id, kind, parent_id, slug, name, sort_order, is_custom')
-      .eq('is_active', true)
+      // Retired rows too, so posts that already use one keep it when edited.
+      .select('id, kind, parent_id, slug, name, sort_order, is_custom, is_active')
       .order('sort_order'),
   ) as CategoryRow[];
   return buildTaxonomy(rows.map(mapCategory));

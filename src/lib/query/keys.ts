@@ -63,5 +63,8 @@ export const queryKeys = {
   tastePosts: ['posts', 'taste'] as const,
   tastePostsAll: ['posts', 'taste', 'all'] as const,
   mostHated: ['discover', 'most-hated'] as const,
+  trendingCreations: ['posts', 'trending'] as const,
+  newlyCooked: ['posts', 'newly-cooked'] as const,
+  tagSuggestionLists: ['discover', 'tag-suggestions'] as const,
   tagSuggestions: (q: string) => ['tags', q] as const,
 };

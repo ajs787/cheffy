@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Hash, Search, SearchX, Users, X } from 'lucide-react-native';
+import { Search, SearchX, Users, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,9 +18,15 @@ import {
   RowSkeleton,
   SegmentedControl,
 } from '@/components/ui';
+import {
+  CreationSuggestions,
+  TagRow,
+  TagSuggestionList,
+} from '@/features/discover/components/SearchSuggestions';
 import { usePostSearch, useTagSearch } from '@/features/discover/hooks';
 import { AlsoKnow } from '@/features/social/components/AlsoKnow';
-import { usePeopleSearch, useSuggestedFriends } from '@/features/social/hooks';
+import { NewToCheffy } from '@/features/social/components/NewToCheffy';
+import { useDiscoveryPeople, usePeopleSearch } from '@/features/social/hooks';
 import { useRecentPeople } from '@/features/social/recentPeople';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
@@ -102,16 +108,21 @@ export default function SearchScreen() {
   );
 }
 
+/**
+ * Creations: with no query, suggestions (For Your Taste, Trending, Newly
+ * Cooked); with a query, matches only, most relevant first and paged.
+ */
 function CreationResults({ q }: { q: string }) {
   const search = usePostSearch(q);
   const posts = search.data?.pages.flatMap((page) => page.items) ?? [];
 
+  if (q.length === 0) return <CreationSuggestions />;
   if (q.length < 2) {
     return (
       <EmptyState
         icon={Search}
         compact
-        title="Find something to make"
+        title="Keep typing"
         message="Search names like “focaccia”, categories like “matcha”, or tags like “weeknight”."
       />
     );
@@ -134,18 +145,18 @@ function CreationResults({ q }: { q: string }) {
 }
 
 /**
- * People: with no query, people you looked at recently and suggestions
- * (each with its reason); with a query, matches only, best first and paged,
- * then a few "You might also know" below them.
+ * People: with no query, people you looked at recently, New to Cheffy, and
+ * suggestions (each with its reason; nobody twice); with a query, matches
+ * only, best first and paged, then a few "You might also know" below them.
  */
 function PeopleResults({ q }: { q: string }) {
   const search = usePeopleSearch(q);
-  const suggested = useSuggestedFriends();
+  const { suggested: suggestedPeople, newcomers, suggestedQuery: suggested } = useDiscoveryPeople();
   const recents = useRecentPeople();
   const searching = q.length > 0;
 
   if (!searching) {
-    const people = suggested.data ?? [];
+    const people = suggestedPeople;
     return (
       <FlashList
         data={people}
@@ -165,6 +176,18 @@ function PeopleResults({ q }: { q: string }) {
                 ))}
               </>
             ) : null}
+            {newcomers.length > 0 ? (
+              <View style={styles.newMembers}>
+                <NewToCheffy
+                  people={newcomers}
+                  header="label"
+                  onOpen={(person) => {
+                    recents.add(person);
+                    router.push({ pathname: '/user/[id]', params: { id: person.id } });
+                  }}
+                />
+              </View>
+            ) : null}
             {people.length > 0 ? (
               <AppText variant="overline" color="textSecondary" style={styles.listLabel}>
                 Suggested for you
@@ -175,7 +198,7 @@ function PeopleResults({ q }: { q: string }) {
         ListEmptyComponent={
           suggested.isPending ? (
             <RowSkeleton />
-          ) : recents.people.length === 0 ? (
+          ) : recents.people.length === 0 && newcomers.length === 0 ? (
             <EmptyState
               icon={Users}
               compact
@@ -248,17 +271,10 @@ function RecentRow({ person, onOpen }: { person: ProfileSummary; onOpen: (p: Pro
   );
 }
 
+/** Tags: with no query, suggested, popular and new-to-you tags; with a query, matches only. */
 function TagResults({ q }: { q: string }) {
   const tags = useTagSearch(q);
-  if (q.length < 1)
-    return (
-      <EmptyState
-        icon={Hash}
-        compact
-        title="Browse by tag"
-        message="Try “iced”, “comfort food” or “brown butter”."
-      />
-    );
+  if (q.length < 1) return <TagSuggestionList />;
   if (tags.isPending) return <RowSkeleton count={4} />;
   if (tags.isError) return <ErrorState error={tags.error} onRetry={() => void tags.refetch()} />;
 
@@ -267,21 +283,8 @@ function TagResults({ q }: { q: string }) {
       data={tags.data ?? []}
       keyExtractor={(tag) => tag.id}
       keyboardShouldPersistTaps="handled"
-      renderItem={({ item }) => (
-        <PressableScale
-          onPress={() =>
-            router.push({ pathname: '/browse', params: { tagId: item.id, title: `#${item.name}` } })
-          }
-          activeScale={0.98}
-          accessibilityRole="link"
-          style={styles.tagRow}
-        >
-          <View style={styles.tagIcon}>
-            <Hash size={iconSizes.sm} color={colors.accent} strokeWidth={strokes.bold} />
-          </View>
-          <AppText variant="bodyStrong">{item.name}</AppText>
-        </PressableScale>
-      )}
+      keyboardDismissMode="on-drag"
+      renderItem={({ item }) => <TagRow tag={item} />}
       ListEmptyComponent={<EmptyState icon={SearchX} compact title={`No tags match “${q}”`} />}
       contentContainerStyle={styles.listContent}
     />
@@ -322,6 +325,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   listLabel: { paddingHorizontal: SCREEN_GUTTER, paddingVertical: spacing.sm },
+  newMembers: { paddingTop: spacing.sm, paddingBottom: spacing.md },
   tagRow: {
     flexDirection: 'row',
     alignItems: 'center',

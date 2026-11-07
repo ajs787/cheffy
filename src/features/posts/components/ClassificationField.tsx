@@ -40,6 +40,13 @@ export function optionsFor(taxonomy: Taxonomy, kind: CustomKind, parentId?: stri
   return [...builtIn, ...custom];
 }
 
+/** Retired choices of the same kind (and subtype parent), e.g. Baking › Pizza. */
+export function retiredFor(taxonomy: Taxonomy, kind: CustomKind, parentId?: string | null): Category[] {
+  return taxonomy.retired.filter(
+    (c) => c.kind === kind && (kind !== 'subcategory' || c.parentId === parentId),
+  );
+}
+
 /**
  * Multi-select classification row: quick chips for what people pick most,
  * plus a searchable sheet with "Add your own".
@@ -58,6 +65,9 @@ export function ClassificationField({
   const [open, setOpen] = useState(false);
   const usage = useClassificationUsage(kind).data ?? {};
   const options = optionsFor(taxonomy, kind, parentId);
+  const retired = retiredFor(taxonomy, kind, parentId);
+  // A post that already uses a retired choice keeps showing it until removed.
+  const keptRetired = retired.filter((o) => value.includes(o.id));
   const mine = customLabels.filter((c) => c.kind === kind).map((c) => c.label);
   const others = customLabels.filter((c) => c.kind !== kind);
 
@@ -70,7 +80,11 @@ export function ClassificationField({
           6,
         );
   // Selected choices always show, even when they aren't quick picks.
-  const shown = [...quick, ...options.filter((o) => value.includes(o.id) && !quick.includes(o))];
+  const shown = [
+    ...quick,
+    ...options.filter((o) => value.includes(o.id) && !quick.includes(o)),
+    ...keptRetired,
+  ];
   const count = value.length + mine.length;
 
   return (
@@ -118,6 +132,8 @@ export function ClassificationField({
         onClose={() => setOpen(false)}
         title={label}
         options={options}
+        kept={keptRetired}
+        retired={retired}
         usage={usage}
         selectedIds={value}
         pendingLabels={mine}

@@ -1,6 +1,5 @@
-// The one place to set where people get the app: the public TestFlight beta
-// now, the App Store link at launch (then change the button labels too).
-var DOWNLOAD_URL = 'https://testflight.apple.com/join/DHn7FPJp';
+// The one place to set where people get the app: the App Store listing.
+var DOWNLOAD_URL = 'https://apps.apple.com/us/app/cheffy-rank-your-creations/id6825135585';
 
 document.querySelectorAll('[data-get-app]').forEach(function (el) {
   if (DOWNLOAD_URL) {

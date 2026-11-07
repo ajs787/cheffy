@@ -162,6 +162,37 @@ export async function fetchSuggestedFriends(
   });
 }
 
+/** A member for New to Cheffy, with when they joined. */
+export type NewMember = UserListItem & { joinedAt: string };
+
+export const NEW_MEMBERS_PAGE = 20;
+
+/**
+ * Eligible members, newest first (the database applies every rule: verified,
+ * discoverable, not blocked, not already followed or requested). Two
+ * requests per page, never one per person.
+ */
+export async function fetchNewMembers(limit = NEW_MEMBERS_PAGE, offset = 0): Promise<NewMember[]> {
+  const picks = await fetchRows<{ user_id: string; joined_at: string }>(
+    supabase.rpc('new_members', { p_limit: limit, p_offset: offset }),
+  );
+  if (picks.length === 0) return [];
+  const rows = await fetchRows<UserListRow>(
+    supabase
+      .from('profiles')
+      .select(USER_LIST_SELECT)
+      .in(
+        'id',
+        picks.map((p) => p.user_id),
+      ),
+  );
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return picks.flatMap((p) => {
+    const row = byId.get(p.user_id);
+    return row ? [{ ...mapUserListItem(row), joinedAt: p.joined_at }] : [];
+  });
+}
+
 /** "Not interested": that person stops being suggested to you. */
 export async function dismissSuggestion(me: string, userId: string): Promise<void> {
   const { error } = await supabase

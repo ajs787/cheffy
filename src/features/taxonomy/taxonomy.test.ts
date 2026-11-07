@@ -15,6 +15,7 @@ const c = (over: Partial<Category> & Pick<Category, 'id' | 'kind' | 'slug'>): Ca
   name: over.slug,
   sortOrder: 0,
   isCustom: false,
+  isActive: true,
   ...over,
 });
 
@@ -33,6 +34,20 @@ const categories: Category[] = [
 
 describe('taxonomy', () => {
   const taxonomy = buildTaxonomy(categories);
+
+  it('keeps retired choices for old posts but never offers them', () => {
+    const t = buildTaxonomy([
+      ...categories,
+      c({ id: 'pizza-b', kind: 'subcategory', slug: 'pizza', parentId: 'baking', isActive: false }),
+      c({ id: 'cakes', kind: 'subcategory', slug: 'cakes', parentId: 'baking' }),
+      c({ id: 'pizza-d', kind: 'dish_type', slug: 'pizza' }),
+    ]);
+    expect(t.subcategoriesByPrimary.baking?.map((s) => s.slug)).toEqual(['cakes']);
+    expect(t.dishTypes.map((s) => s.slug)).toContain('pizza');
+    expect(t.byId['pizza-b']?.name).toBe('pizza');
+    expect(t.retired.map((r) => r.id)).toEqual(['pizza-b']);
+    expect(quickPickFor(t, 'baking').options.map((o) => o.slug)).not.toContain('pizza');
+  });
 
   it('groups and orders categories by kind', () => {
     expect(taxonomy.primaries.map((p) => p.slug)).toEqual(['cooking', 'baking', 'drinks', 'fermented']);
