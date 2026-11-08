@@ -1627,3 +1627,199 @@ Measured on the live DB as @chefshin (`explain analyze`, 3 runs each; 37 profile
 - **Still slow, not changed:** `tag_suggestions` (~375 ms) and `taste_posts` (~275 ms), for
   the same reason. They include followers-only posts the viewer may see, so a correct fix
   needs the follower rule applied once per post rather than dropped. That's a follow-up.
+
+## v1.5 Anonymous Takes (2026-11-07, PR #10, merged 2026-11-08; migration pushed 2026-11-07)
+
+Optional comments shown as "Chef #01" instead of a profile, on public posts whose creator
+allows it. Behind a server-side rollout switch that ships **off**.
+
+**Branch base:** `comment-media` (its migration is already live but the branch was never
+merged) + current `main`. Merging this branch also lands the comment photos/stickers and
+@mentions work.
+
+**Audit findings that shaped the design:**
+- Every signed-in user can read every column of `comments`, and shipped v1.0 apps select
+  `author_id` directly. Hiding a name in the UI would not hide it from the API, and a
+  column lock would break v1.0.
+- `notifications` is in the Realtime publication, so its `actor_id` reaches devices.
+- Comment photos are stored under `<user id>/…`, so a photo would reveal its author.
+- `comments.author_id`, `reply_to_user_id`, mention notifications, the report snapshot's
+  `owner_username` and the moderation list's owner column were all identity paths.
+- Hiding anonymous comments from people who blocked their author would let anyone unmask a
+  Chef by blocking suspects one at a time. So blocks limit reach (no takes on a blocker's
+  posts, no notifications across a block), not reading.
+
+**Design (migration `20261107000001_anonymous_takes.sql`):**
+- An anonymous comment stores `author_id = null` plus `anon_number`. Who holds each number is
+  kept in `anonymous_identities(post_id, user_id, number)`, which has no client grants. The
+  last number used per post is kept in `anonymous_threads`, so numbers are never reused, even
+  after an account is deleted.
+- Writes go through `post_anonymous_take(post, body, parent, reply_to)` (security definer).
+  It checks: signed in, not suspended, rollout on for both the commenter and the creator,
+  the post is published and public, the creator's account is public and not suspended,
+  the creator allows takes, the commenter isn't the creator, and the commenter can view the
+  post (blocks). Numbers are handed out under a per-post advisory lock, plus a unique
+  constraint. A retry with the same text within 2 minutes returns the first comment.
+  `anon_number` isn't insertable or updatable by clients.
+- Anonymous takes are text only: no media (the storage path holds the user id) and no
+  @mentions (enforced by a constraint and the trigger).
+- `delete_anonymous_take` lets only the writer delete. The creator can still delete any
+  comment on their post, as before.
+- Notifications for anonymous comments and replies have `actor_id = null`
+  (`notify_anonymously`; block and self checks use the real author). The push text reads
+  "Chef #03 commented on …".
+- Replies can address a Chef (`reply_to_anon_number`), validated to be in the thread.
+- Rate limits for every comment: 60 an hour (`comments.hourly_limit`). For anonymous takes
+  only: 20 an hour (`anonymous_takes.hourly_limit`), 8 per post an hour
+  (`anonymous_takes.per_post_hourly_limit`), and no repeating the same words within
+  10 minutes. Named comments keep their v1.0 behaviour apart from the hourly cap. The
+  blocked-terms filter applies.
+- For the app, only about the viewer: `viewer_owns_comment(c)` (a computed field) and
+  `anonymous_takes_status(post)` → `{available, open, name}`.
+- `posts.allow_anonymous_takes` defaults to true for new and existing posts. It's saved
+  through `save_post` only when the app sends it, so v1.0 edits keep it.
+- Reports have two new reasons, `hate` and `threats` (both urgent). For an anonymous
+  comment, `target_owner_id` (never client-readable) still records the author, and the
+  snapshot holds `anonymous_name` instead of `owner_username`.
+- Moderation:
+  - `admin_reports` lists the author as "Chef #01 (anonymous)", and anonymous authors can't
+    be found by username search.
+  - `admin_report_detail` hides the author until a moderator calls
+    `admin_reveal_anonymous_author(report, reason)`. That needs a reason and records a
+    `reveal_identity` action with the moderator's name. It returns the account and their
+    last 20 reports.
+  - The detail also shows the thread around the comment, as the public sees it.
+  - New action `suspend_author`. For an anonymous comment it's refused until the reveal is
+    recorded.
+  - Suspending an account hides its anonymous comments too, and unsuspending brings them
+    back (a trigger on `profiles.suspended_at`).
+- Rollout: `app_config['anonymous_takes.mode']` is `off` (shipped), `beta` (accounts in
+  `anonymous_takes_testers`) or `all`.
+
+**App:**
+- Composer:
+  - When the post is open to takes, a "Comment as @you / Anonymous Chef" toggle appears
+    above the field (on focus, with text, or while replying).
+  - It starts as you on every post and stays as picked within the thread.
+  - When anonymous: chef-hat avatar, "You'll appear as Chef #03 on this post. Text only.",
+    no photo button, no @mention suggestions, and the placeholder reads "Add an anonymous
+    take…".
+  - If the creator turns takes off mid-draft, sending is blocked until you pick "Comment as
+    @you". It never falls back to your name on its own.
+- Comment rows: Chef name in oxblood, "anonymous · 2h" (or "you · anonymous" on your own),
+  a shared chef-hat avatar, and no profile link. "@Chef #01" in replies. Likes, replies,
+  report and delete work as before. Creators can now also report (not only delete) comments
+  on their posts.
+- Feed card previews and Activity / in-app banners show "Chef #01" (`actor` is null).
+- Create/Edit Entry: an "Allow Anonymous Takes" switch under "Who can see this", shown only
+  to accounts in the rollout. On non-public posts it notes "Only on public posts".
+- Report sheet: Harassment or bullying, Hate or discrimination, Threats, Sexual or
+  inappropriate, Spam, …
+- v1.0 apps skip comments and notifications without an author, so they don't show
+  anonymous takes. They don't crash and nothing leaks.
+
+**Moderation dashboard (web/admin):** new reasons and filters, "Posted as Chef #01", the
+thread context, a "Reveal who wrote it" panel (reason required, recorded), the author's
+other reports after a reveal, and "Suspend author".
+
+**Policies:** web Privacy and Terms, plus in-app Terms, now have an "Anonymous Takes"
+section. It covers what others see, that it isn't anonymous to Cheffy, moderator access
+being recorded, removal and bans, and the creator's switch. It never says "untraceable".
+`TERMS_VERSION` was not bumped; bumping it makes everyone re-accept, which is a product call.
+
+**Not built (spec gaps):** sections 4–6 of the brief didn't come through, including "Open to
+Feedback discovery" (deliverable 5). Nothing was built for them.
+
+**Checked:**
+- `tests/db/anonymous-takes.test.ts` (29 tests, real migrations with RLS):
+  - default on and the creator's switch (also after a v1.0-style edit);
+  - per-post sequential numbers, a stable number for a returning commenter, and a fresh
+    sequence on another post;
+  - anonymous replies, and named replies to a Chef;
+  - likes, text only, retry idempotency, and existing takes staying (still anonymous) after
+    the switch is turned off;
+  - ineligible posts (own, followers-only, draft, private account) and all three rollout
+    modes;
+  - status only about yourself, and account deletion removing takes without reusing the
+    number;
+  - no client access to the mapping tables or helpers;
+  - the creator's row and notification showing no actor;
+  - reply notifications without names, and push text;
+  - no direct writes of `anon_number`, and no changing the author;
+  - delete only by the writer (or the creator);
+  - blocks;
+  - reports not exposing the owner to the reporter, and the new reasons;
+  - rate limits, repeats, suspension and the blocked-terms filter;
+  - the moderator list and detail hiding the author, reveal (non-moderators refused, reason
+    required, recorded), and suspend only after a reveal, which hides and then restores
+    their anonymous takes.
+- App tests: composer (no toggle where closed; anonymous text only with no mentions or
+  photo; stays anonymous; never silently names you), and anonymous notification mapping.
+- **Not verified:**
+  - true concurrent first comments: PGlite is single-connection. It's guarded by an
+    advisory lock, a row lock and a unique constraint, but untested under real concurrency;
+  - the simulator or a real device (needs a dev or TestFlight build with the flag on for a
+    tester);
+  - the dashboard in a browser.
+
+**Pushed to the live database (2026-11-07):**
+- The live DB already had `20261030000002_discovery_speed.sql` (PR #8, not on this branch), so
+  `db push` refused. That file was copied in unchanged from `discovery-indexes`; it only touches
+  indexes and the Trending/Newly Cooked functions, which this migration doesn't. DB tests
+  passed with it (328/328), and the dry run then showed only `20261107000001`.
+- Checked live after the push, read-only: the flag is `"off"`, there are 0 testers, and
+  `posts.allow_anonymous_takes` is boolean, default true. `comments.author_id` is nullable and
+  0 of 223 comments are anonymous. RLS is on for the three private tables, with no grants to
+  `anon` or `authenticated`. Client roles can call only the public RPCs, and `anon` can call
+  none.
+- Nobody sees anything until the flag is set to `beta` (with testers) or `all`.
+
+## Anonymous likes (2026-11-08, branch `anonymous-takes` / PR #10; migration `20261108000001` pushed 2026-11-08)
+
+Long-press an unliked heart (post card, post page, or a comment) → "Like anonymously". The like
+counts, but nobody else sees who gave it. It's offered only to accounts with Anonymous Takes,
+using the same rollout flag (`anonymous_takes.mode`), so it's off for everyone right now.
+
+**Database** (`20261108000001_anonymous_likes.sql`):
+- `likes.anonymous` and `comment_likes.anonymous` (default false). The row keeps `user_id`, so
+  unliking, "you liked this" and moderation still work.
+- The select policies hide other people's anonymous likes. Your own stay readable to you. The
+  feed's "Liked by" preview and the Likes list only ever show named likes.
+- Notifications use `notify_anonymously` (no actor). An anonymous unlike removes one matching
+  actor-less notification, since they're all identical. Push text reads "A chef liked your…".
+  It never uses the comment's Chef number, because for a like that's the liked comment (often
+  the recipient's own take).
+- Before-insert trigger: requires the rollout flag for the liker. Allows 60 anonymous likes per
+  hour (`anonymous_likes.hourly_limit`), counted in a private `anonymous_like_log` that outlives
+  unlikes, so a like/unlike loop can't dodge the limit or spam notifications.
+- `viewer_liked_anonymously(posts)` and `viewer_liked_comment_anonymously(comments)` only ever
+  report on the viewer. `anonymous_like_count(post)` powers "N chefs liked anonymously" under
+  the Likes list, and it's 0 for anyone who can't see the post.
+- Switching an existing like between named and anonymous isn't offered. The owner would watch a
+  named notification vanish as an anonymous one appeared. There's no update grant on likes.
+
+**App:**
+- The LikeButton supports long-press and shows a small chef-hat badge when your like is
+  anonymous. Comment hearts work the same way.
+- A shared `useAnonymousLikeMenu` hook only mounts its sheet after the first long-press.
+- The Likes list ends with "N chefs liked anonymously".
+- Activity shows "A chef" for an anonymous like. It now selects `actor_id`, so a hidden
+  (blocked) named actor is still dropped instead of looking anonymous.
+- Privacy and Terms each gain a short paragraph.
+
+**Checked:**
+- `tests/db/anonymous-likes.test.ts`: 12 tests, covering:
+  - visibility to others vs. yourself;
+  - the viewer flag and the anonymous count;
+  - notifications and push text, plus unlike cleanup (named and anonymous);
+  - the rollout flag;
+  - no flipping;
+  - the rate limit surviving unlikes;
+  - the private log;
+  - blocks;
+  - comment likes, including on an anonymous take.
+- App tests: LikeButton long-press and badge; activity "A chef" and the blocked-actor drop.
+- Full run: lint and tsc clean, 77 suites / 587 tests.
+
+**Not verified:** on a device. Also, a creator who gets a like right after showing their post to
+one person can guess who it was. Any anonymous-like design has that limit.

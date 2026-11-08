@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Heart } from 'lucide-react-native';
+import { ChefHat, Heart } from 'lucide-react-native';
 import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -24,6 +24,8 @@ export interface CommentRowProps {
   onLongPress?: (comment: Comment) => void;
   onReply?: (comment: Comment) => void;
   onToggleLike?: (comment: Comment) => void;
+  /** Long-press on an unliked heart (offers "Like anonymously"). */
+  onLongPressLike?: (comment: Comment) => void;
 }
 
 const openProfile = (id: string) => router.push({ pathname: '/user/[id]', params: { id } });
@@ -35,6 +37,7 @@ function CommentRowBase({
   onLongPress,
   onReply,
   onToggleLike,
+  onLongPressLike,
 }: CommentRowProps) {
   const pending = comment.id.startsWith('pending-');
   const liked = comment.viewerHasLiked;
@@ -143,11 +146,19 @@ function CommentRowBase({
       {!pending && onToggleLike ? (
         <Pressable
           onPress={() => onToggleLike(comment)}
+          onLongPress={!liked && onLongPressLike ? () => onLongPressLike(comment) : undefined}
           hitSlop={10}
           style={styles.like}
           accessibilityRole="button"
           accessibilityState={{ selected: liked }}
-          accessibilityLabel={liked ? 'Unlike comment' : 'Like comment'}
+          accessibilityLabel={
+            liked
+              ? comment.viewerLikedAnonymously
+                ? 'Unlike comment. You liked it anonymously'
+                : 'Unlike comment'
+              : 'Like comment'
+          }
+          accessibilityHint={!liked && onLongPressLike ? 'Long-press to like anonymously' : undefined}
           accessibilityValue={{ text: `${comment.likeCount} ${comment.likeCount === 1 ? 'like' : 'likes'}` }}
         >
           <Heart
@@ -160,6 +171,9 @@ function CommentRowBase({
             <AppText variant="caption" color={liked ? 'accent' : 'textTertiary'}>
               {formatCount(comment.likeCount)}
             </AppText>
+          ) : null}
+          {liked && comment.viewerLikedAnonymously ? (
+            <ChefHat size={11} color={colors.accent} strokeWidth={strokes.bold} testID="comment-like-anonymous" />
           ) : null}
         </Pressable>
       ) : null}

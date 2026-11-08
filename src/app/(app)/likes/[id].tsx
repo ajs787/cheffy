@@ -7,8 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ListFooter } from '@/components/shared/ListFooter';
 import { UserRow } from '@/components/shared/UserRow';
 import { AppText, EmptyState, ErrorState, RowSkeleton } from '@/components/ui';
+import { AnonymousAvatar } from '@/features/comments/components/AnonymousAvatar';
 import { usePost } from '@/features/posts/hooks';
-import { useLikers } from '@/features/social/hooks';
+import { useAnonymousLikeCount, useLikers } from '@/features/social/hooks';
 import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 import { formatCount } from '@/utils/format';
 
@@ -22,6 +23,7 @@ export default function LikesSheet() {
   const insets = useSafeAreaInsets();
   const post = usePost(id);
   const likers = useLikers(id);
+  const anonymous = useAnonymousLikeCount(id).data ?? 0;
   const users = likers.data?.pages.flat() ?? [];
   const total = post.data?.likeCount ?? users.length;
 
@@ -50,9 +52,23 @@ export default function LikesSheet() {
             if (likers.hasNextPage && !likers.isFetchingNextPage) void likers.fetchNextPage();
           }}
           ListEmptyComponent={
-            <EmptyState icon={Heart} compact title="No likes yet" message="Be the first to show it some love." />
+            anonymous > 0 ? null : (
+              <EmptyState icon={Heart} compact title="No likes yet" message="Be the first to show it some love." />
+            )
           }
-          ListFooterComponent={<ListFooter loading={likers.isFetchingNextPage} />}
+          ListFooterComponent={
+            <>
+              <ListFooter loading={likers.isFetchingNextPage} />
+              {anonymous > 0 && !likers.hasNextPage ? (
+                <View style={styles.anonymousRow} testID="likes-anonymous-row">
+                  <AnonymousAvatar size="sm" />
+                  <AppText variant="callout" color="textSecondary">
+                    {anonymous === 1 ? '1 chef' : `${formatCount(anonymous)} chefs`} liked anonymously
+                  </AppText>
+                </View>
+              ) : null}
+            </>
+          }
           contentContainerStyle={{ paddingBottom: insets.bottom }}
         />
       )}
@@ -61,6 +77,13 @@ export default function LikesSheet() {
 }
 
 const styles = StyleSheet.create({
+  anonymousRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingVertical: spacing.md,
+  },
   sheet: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',

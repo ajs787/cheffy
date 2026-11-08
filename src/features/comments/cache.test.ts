@@ -11,6 +11,7 @@ const comment = (id: string, parentId: string | null = null): Comment => ({
   postId: 'p',
   parentId,
   replyTo: null,
+  viewerLikedAnonymously: false,
   body: id,
   createdAt: '2026-10-20T00:00:00Z',
   author,

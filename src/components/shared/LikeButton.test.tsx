@@ -28,4 +28,26 @@ describe('LikeButton', () => {
     expect(screen.getByRole('button').props.accessibilityState).toMatchObject({ selected: true });
     expect(screen.queryByTestId('like-count')).toBeNull();
   });
+
+  it('long-press on an unliked heart offers an anonymous like', async () => {
+    const onToggle = jest.fn();
+    const onLongPress = jest.fn();
+    await render(<LikeButton liked={false} count={2} onToggle={onToggle} onLongPress={onLongPress} />);
+    await fireEvent(screen.getByTestId('like-button'), 'longPress');
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('a liked heart ignores long-press, and marks an anonymous like', async () => {
+    const onLongPress = jest.fn();
+    await render(<LikeButton liked anonymous count={2} onToggle={jest.fn()} onLongPress={onLongPress} />);
+    expect(screen.getByTestId('like-button').props.onLongPress).toBeUndefined();
+    expect(screen.getByTestId('like-anonymous-badge')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /You liked this anonymously/ })).toBeTruthy();
+  });
+
+  it('shows no badge for a named like', async () => {
+    await render(<LikeButton liked count={2} onToggle={jest.fn()} />);
+    expect(screen.queryByTestId('like-anonymous-badge')).toBeNull();
+  });
 });

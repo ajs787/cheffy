@@ -218,6 +218,7 @@ export async function fetchLikers(postId: string, offset: number): Promise<UserL
       .from('likes')
       .select(`created_at, profile:profiles!likes_user_id_fkey!inner(${USER_LIST_SELECT})`)
       .eq('post_id', postId)
+      .eq('anonymous', false)
       .order('created_at', { ascending: false })
       .order('user_id', { ascending: true })
       .range(offset, offset + LIKERS_PAGE - 1),
@@ -225,9 +226,17 @@ export async function fetchLikers(postId: string, offset: number): Promise<UserL
   return rows.map((row) => mapUserListItem(row.profile));
 }
 
-export async function likePost(me: string, postId: string): Promise<void> {
-  const { error } = await supabase.from('likes').insert({ user_id: me, post_id: postId });
+export async function likePost(me: string, postId: string, anonymous = false): Promise<void> {
+  const { error } = await supabase
+    .from('likes')
+    .insert({ user_id: me, post_id: postId, ...(anonymous ? { anonymous } : {}) });
   if (error && error.code !== ALREADY_EXISTS) throw error;
+}
+
+/** How many of a post's likes are anonymous (shown under the likes list). */
+export async function fetchAnonymousLikeCount(postId: string): Promise<number> {
+  const n = unwrap(await supabase.rpc('anonymous_like_count', { p_post: postId }));
+  return typeof n === 'number' ? n : 0;
 }
 
 export async function unlikePost(me: string, postId: string): Promise<void> {

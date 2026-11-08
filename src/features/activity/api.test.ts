@@ -26,6 +26,7 @@ const row = (type: Parameters<typeof describeItem>[0]['type'], extra = {}) => ({
   created_at: '2026-10-20T10:00:00Z',
   read_at: null,
   comment_id: null,
+  actor_id: 'a' as string | null,
   actor: actorRow,
   post: null,
   comment: null,
@@ -47,13 +48,25 @@ describe('notifications', () => {
 
   it('show an anonymous take by its Chef name, never an account', () => {
     const item = mapNotification(
-      row('comment', { actor: null, post, comment: { body: 'needs salt', anon_number: 3 } }),
+      row('comment', { actor_id: null, actor: null, post, comment: { body: 'needs salt', anon_number: 3 } }),
     )!;
     expect(item).toMatchObject({ actor: null, anonymousName: 'Chef #03', commentBody: 'needs salt' });
     expect(actorName(item)).toBe('Chef #03');
     expect(activityTarget({ ...item, commentId: 'c' })).toMatchObject({ pathname: '/post/[id]' });
     // No actor and no anonymous comment: still dropped.
-    expect(mapNotification(row('comment', { actor: null, post, comment: { body: 'x' } }))).toBeNull();
+    expect(mapNotification(row('comment', { actor_id: null, actor: null, post, comment: { body: 'x' } }))).toBeNull();
+  });
+
+  it('show an anonymous like as "A chef", even on your own anonymous take', () => {
+    const like = mapNotification(row('post_like', { actor_id: null, actor: null, post }))!;
+    expect(actorName(like)).toBe('A chef');
+    // The comment on a comment_like is the liked one (here, your Chef #02 take).
+    const onTake = mapNotification(
+      row('comment_like', { actor_id: null, actor: null, post, comment: { body: 'hm', anon_number: 2 } }),
+    )!;
+    expect(actorName(onTake)).toBe('A chef');
+    // A named like from someone now hidden by a block is still dropped.
+    expect(mapNotification(row('post_like', { actor: null, post }))).toBeNull();
   });
 
   it('read as sentences', () => {

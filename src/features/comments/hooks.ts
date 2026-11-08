@@ -156,6 +156,7 @@ export function useAddComment(postId: string) {
         likeCount: 0,
         replyCount: 0,
         viewerHasLiked: false,
+        viewerLikedAnonymously: false,
         media: media
           ? {
               kind: media.kind,
@@ -292,22 +293,26 @@ export function useDeleteComment(postId: string) {
 export function useToggleCommentLike() {
   const qc = useQueryClient();
   const me = useRequiredUserId();
-  const flip = (id: string, like: boolean) =>
+  const flip = (id: string, like: boolean, anonymous: boolean) =>
     updateCommentInCaches(qc, id, (c) => ({
       ...c,
       viewerHasLiked: like,
+      viewerLikedAnonymously: like && anonymous,
       likeCount: Math.max(0, c.likeCount + (like ? 1 : -1)),
     }));
   return useMutation({
-    mutationFn: ({ comment, like }: { comment: Comment; like: boolean }) =>
-      like ? likeComment(me, comment.id) : unlikeComment(me, comment.id),
-    onMutate: ({ comment, like }) => {
+    mutationFn: ({ comment, like, anonymous = false }: { comment: Comment; like: boolean; anonymous?: boolean }) =>
+      like ? likeComment(me, comment.id, anonymous) : unlikeComment(me, comment.id),
+    onMutate: ({ comment, like, anonymous = false }) => {
       if (like) haptics.light();
-      flip(comment.id, like);
+      flip(comment.id, like, anonymous);
     },
     onError: (error, { comment, like }) => {
-      flip(comment.id, !like);
+      flip(comment.id, !like, comment.viewerLikedAnonymously);
       toast.error(toUserMessage(error, 'Couldn’t update that like.'));
+    },
+    onSuccess: (_data, { like, anonymous }) => {
+      if (like && anonymous) toast.success('Liked anonymously');
     },
   });
 }
