@@ -55,101 +55,104 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
 
   return (
     <View style={styles.card} testID={`post-card-${post.id}`}>
-      <View style={styles.creator}>
-        <Pressable
-          onPress={() => openProfile(post.author.id)}
-          style={styles.author}
-          accessibilityRole="link"
-          accessibilityLabel={`${madeByNames([post.author.displayName, ...post.coCreators.map((c) => c.profile.displayName)])}, @${post.author.username}`}
-        >
-          <Avatar uri={post.author.avatarUrl} name={post.author.displayName} size="sm" />
-          <View style={styles.flex}>
-            <AppText variant="calloutStrong" numberOfLines={1}>
-              {madeByNames([post.author.displayName, ...post.coCreators.map((c) => c.profile.displayName)])}
-            </AppText>
-            <AppText variant="caption" color="textSecondary" numberOfLines={1}>
-              @{post.author.username}
-              {post.publishedAt ? ` · ${formatRelativeTime(post.publishedAt)}` : ''}
-            </AppText>
-            {post.coCreators.length > 0 ? <MadeTogetherTag /> : null}
-          </View>
-        </Pressable>
-        <IconButton
-          icon={Ellipsis}
-          label="More options"
-          color={colors.textSecondary}
-          size="md"
-          onPress={() => onOpenMenu(post)}
-        />
-      </View>
-
-      <Pressable
-        onPress={() => openPost()}
-        style={styles.entry}
-        accessibilityRole="link"
-        accessibilityLabel={`Open ${post.title}`}
-      >
-        <View style={styles.titleRow}>
-          <View style={styles.titleText}>
-            <AppText variant="title1" color="accent" numberOfLines={3}>
-              {post.title}
-            </AppText>
-            <View style={styles.meta}>
-              <View style={styles.flex}>
-                <CategoryLine post={post} />
-              </View>
-              <AppText variant="overline" color="textSecondary">
-                {formatEntryDate(post.madeOn)}
+      <View style={styles.body}>
+        <View style={styles.creator}>
+          <Pressable
+            onPress={() => openProfile(post.author.id)}
+            style={styles.author}
+            accessibilityRole="link"
+            accessibilityLabel={`${madeByNames([post.author.displayName, ...post.coCreators.map((c) => c.profile.displayName)])}, @${post.author.username}`}
+          >
+            <Avatar uri={post.author.avatarUrl} name={post.author.displayName} size="sm" />
+            <View style={styles.flex}>
+              <AppText variant="calloutStrong" numberOfLines={1}>
+                {madeByNames([post.author.displayName, ...post.coCreators.map((c) => c.profile.displayName)])}
               </AppText>
+              <AppText variant="caption" color="textSecondary" numberOfLines={1}>
+                @{post.author.username}
+                {post.publishedAt ? ` · ${formatRelativeTime(post.publishedAt)}` : ''}
+              </AppText>
+              {post.coCreators.length > 0 ? <MadeTogetherTag /> : null}
             </View>
-            {post.isBudget ? <BudgetTag costCents={post.budgetCostCents} /> : null}
-          </View>
-          <RatingDisplay value={post.rating} size="lg" />
-        </View>
-      </Pressable>
-
-      {post.images.length > 0 ? (
-        <View style={styles.photos}>
-          <PhotoMosaic
-            images={post.images}
-            width={width - SCREEN_GUTTER * 2}
-            title={post.title}
-            onPress={(index) => openImageViewer(postImagesForViewer(post.images, post.title), index)}
+          </Pressable>
+          <IconButton
+            icon={Ellipsis}
+            label="More options"
+            color={colors.textSecondary}
+            size="md"
+            onPress={() => onOpenMenu(post)}
           />
         </View>
-      ) : null}
 
-      {post.review || post.story || post.tags.length > 0 ? (
-        <View style={styles.words}>
-          {post.review ? (
-            <AppText
-              variant="body"
-              numberOfLines={expanded ? undefined : 3}
-              onPress={() => setExpanded((v) => !v)}
-            >
-              {post.review}
-            </AppText>
-          ) : null}
-          {/* Keyed by post so a recycled feed cell never keeps another post's state. */}
-          {post.story ? <StorySection key={post.id} story={post.story} /> : null}
-          {post.tags.length > 0 ? (
-            <View style={styles.tags}>
-              {post.tags.slice(0, 5).map((tag) => (
-                <TagChip
-                  key={tag.id}
-                  name={tag.name}
-                  onPress={() =>
-                    router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })
-                  }
-                />
-              ))}
+        <Pressable
+          onPress={() => openPost()}
+          style={styles.entry}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${post.title}`}
+        >
+          <View style={styles.titleRow}>
+            <View style={styles.titleText}>
+              <AppText variant="title1" color="accent" numberOfLines={3}>
+                {post.title}
+              </AppText>
+              <View style={styles.meta}>
+                <View style={styles.flex}>
+                  <CategoryLine post={post} />
+                </View>
+                <AppText variant="overline" color="textSecondary">
+                  {formatEntryDate(post.madeOn)}
+                </AppText>
+              </View>
+              {post.isBudget ? <BudgetTag costCents={post.budgetCostCents} /> : null}
             </View>
-          ) : null}
-        </View>
-      ) : null}
+            <RatingDisplay value={post.rating} size="lg" />
+          </View>
+        </Pressable>
 
-      {/* Actions, likes and comment previews read as one block (no section gap). */}
-      <View>
+        {post.images.length > 0 ? (
+          <View style={styles.photos}>
+            <PhotoMosaic
+              images={post.images}
+              width={width - SCREEN_GUTTER * 2}
+              title={post.title}
+              onPress={(index) => openImageViewer(postImagesForViewer(post.images, post.title), index)}
+            />
+          </View>
+        ) : null}
+
+        {post.review || post.story || post.tags.length > 0 ? (
+          <View style={styles.words}>
+            {post.review ? (
+              <AppText
+                variant="body"
+                numberOfLines={expanded ? undefined : 3}
+                onPress={() => setExpanded((v) => !v)}
+              >
+                {post.review}
+              </AppText>
+            ) : null}
+            {/* Keyed by post so a recycled feed cell never keeps another post's state. */}
+            {post.story ? <StorySection key={post.id} story={post.story} /> : null}
+            {post.tags.length > 0 ? (
+              <View style={styles.tags}>
+                {post.tags.slice(0, 5).map((tag) => (
+                  <TagChip
+                    key={tag.id}
+                    name={tag.name}
+                    onPress={() =>
+                      router.push({ pathname: '/browse', params: { tagId: tag.id, title: `#${tag.name}` } })
+                    }
+                  />
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+
+      {/* Actions, likes and comment previews read as one block, tucked closer to
+          the entry than the entry's own sections are to each other. */}
+      <View style={styles.footer}>
         <View style={styles.actions}>
           <LikeButton
             liked={post.viewerHasLiked}
@@ -256,15 +259,18 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
 export const PostCard = memo(PostCardBase);
 
 /**
- * The like/comment/save row is 36 pt tall: 6 pt above and below the 24 pt
- * icons, so "Liked by" sits ~8 pt under them. Each button's hitSlop keeps its
- * touch area at least 44 pt.
+ * The like/comment/save row is 32 pt tall: 4 pt above and below the 24 pt
+ * icons. Each button's hitSlop (6–8 pt a side) keeps its touch area at least
+ * 44 pt.
  */
-const ACTION_ROW = 36;
+const ACTION_ROW = 32;
 
 const styles = StyleSheet.create({
   anonName: { color: colors.accent },
-  card: { paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
+  card: { paddingTop: spacing.md, paddingBottom: spacing.xs },
+  body: { gap: spacing.md },
+  // ~12 pt from the last line of the entry to the icons (8 + the row's 4).
+  footer: { marginTop: spacing.sm },
   flex: { flex: 1 },
   creator: {
     flexDirection: 'row',
@@ -281,7 +287,14 @@ const styles = StyleSheet.create({
   words: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm + 2 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
   // Likes and comment previews sit right under the actions.
-  social: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.xs, paddingBottom: spacing.sm },
+  // ~8 pt under the icons (the row's 4 + 4), and 8 pt between "Liked by" and
+  // the comment previews so they read as separate lines.
+  social: {
+    paddingHorizontal: SCREEN_GUTTER,
+    paddingTop: spacing.xs,
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
   likedBy: { alignSelf: 'stretch' },
   likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
   comments: { gap: spacing.xs },

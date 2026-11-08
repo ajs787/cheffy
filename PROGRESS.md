@@ -1849,5 +1849,17 @@ and `showCount` defaults to true there.
   "Liked by" still opens the right likers list.
 - Full run: lint and tsc clean, 77 suites / 588 tests.
 
-**Not seen on device:** posts with 100+ likes, comment previews and Co-Chef posts didn't come
-up in the feed I scrolled. They use the same row, and the unit test covers large counts.
+**Not seen on device:** posts with 100+ likes and Co-Chef posts didn't come up in the feed I
+scrolled. They use the same row, and the unit test covers large counts.
+
+**Vertical spacing (same PR):** the icon row sat ~18 pt under the description (the card's
+12 pt section gap plus the row's 6 pt padding) but only ~6 pt above "Liked by", and "Liked by"
+was 4 pt from the comment previews.
+- The entry's sections now sit in their own `body` (12 pt gap), and the actions block follows
+  it with an 8 pt top margin.
+- The row is 32 pt (4 pt around the icons; every button still gets ≥44 pt with its hitSlop).
+- The social block has 4 pt on top and an 8 pt gap between "Liked by" and the previews.
+
+Measured in the simulator on a post with tags, a like line and a comment preview: tags →
+icons ≈ 15 pt, icons → "Liked by" ≈ 13 pt, "Liked by" → comment ≈ 15 pt. Lint and tsc are
+clean, and 588 tests pass.
