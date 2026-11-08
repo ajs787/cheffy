@@ -1748,7 +1748,7 @@ Feedback discovery" (deliverable 5). Nothing was built for them.
   none.
 - Nobody sees anything until the flag is set to `beta` (with testers) or `all`.
 
-## Anonymous likes (2026-11-08, branch `anonymous-takes` / PR #10; migration `20261108000001` not yet pushed)
+## Anonymous likes (2026-11-08, branch `anonymous-takes` / PR #10; migration `20261108000001` pushed 2026-11-08)
 
 Long-press an unliked heart (post card, post page, or a comment) → "Like anonymously". The like
 counts, but nobody else sees who gave it. It's offered only to accounts with Anonymous Takes,
