@@ -24,10 +24,10 @@ export interface LikeButtonProps {
   /** Opens who liked it. When set, only the heart toggles the like; the count opens the list. */
   onPressCount?: () => void;
   /**
-   * Off where the total is shown elsewhere (the feed's "Liked by" line), so
-   * the heart is the same width at any count and the icons after it never move.
+   * Gives the count a fixed-width slot (kept even at 0), so whatever follows
+   * the button sits in the same place at any count. Longer counts shrink to fit.
    */
-  showCount?: boolean;
+  countWidth?: number;
   /** Layout overrides (e.g. a shorter row; hitSlop keeps the touch area). */
   style?: StyleProp<ViewStyle>;
 }
@@ -39,7 +39,7 @@ export function LikeButton({
   onLongPress,
   anonymous,
   onPressCount,
-  showCount = true,
+  countWidth,
   style,
 }: LikeButtonProps) {
   const scale = useSharedValue(1);
@@ -73,11 +73,57 @@ export function LikeButton({
   const label = liked ? (anonymous ? 'Unlike. You liked this anonymously' : 'Unlike') : 'Like';
   const hint = longPress ? 'Long-press to like anonymously' : undefined;
   const countText =
-    showCount && count > 0 ? (
-      <AppText variant="calloutStrong" testID="like-count">
+    count > 0 ? (
+      <AppText
+        variant="calloutStrong"
+        testID="like-count"
+        numberOfLines={1}
+        adjustsFontSizeToFit={countWidth !== undefined}
+        minimumFontScale={0.55}
+      >
         {formatCount(count)}
       </AppText>
     ) : null;
+
+  if (countWidth !== undefined) {
+    // Heart, then a slot of the same width at any count (empty at 0), so the
+    // next button never moves. The slot opens the likers when there are any.
+    const slot = { width: countWidth };
+    return (
+      <View style={[styles.button, styles.fixed, style]}>
+        <Pressable
+          onPress={onToggle}
+          onLongPress={longPress}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 0 }}
+          accessibilityRole="button"
+          accessibilityState={{ selected: liked }}
+          accessibilityLabel={onPressCount ? label : `${label}. ${count} likes`}
+          accessibilityHint={hint}
+          style={styles.fixedHeart}
+          testID="like-button"
+        >
+          {heart}
+        </Pressable>
+        {countText && onPressCount ? (
+          <Pressable
+            onPress={onPressCount}
+            hitSlop={{ top: 8, bottom: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`${count} ${count === 1 ? 'like' : 'likes'}`}
+            accessibilityHint="Shows who liked this"
+            style={[styles.fixedCount, slot]}
+            testID="like-count-button"
+          >
+            {countText}
+          </Pressable>
+        ) : (
+          <View style={[styles.fixedCount, slot]} testID="like-count-slot">
+            {countText}
+          </View>
+        )}
+      </View>
+    );
+  }
 
   if (countText && onPressCount) {
     // Two targets side by side, so opening the list can't toggle the like.
@@ -138,6 +184,11 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
   },
   split: { gap: 0, paddingRight: 0 },
+  // Fixed slot: heart and count fill the row's height (set by the caller), so
+  // the row is the same height with or without likes.
+  fixed: { gap: 0, paddingRight: 0, alignItems: 'stretch' },
+  fixedHeart: { justifyContent: 'center', paddingRight: spacing.xs },
+  fixedCount: { justifyContent: 'center' },
   heart: { minHeight: 44, justifyContent: 'center', paddingRight: spacing.xs + 2 },
   badge: {
     position: 'absolute',

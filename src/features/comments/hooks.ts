@@ -7,7 +7,6 @@ import {
 } from '@tanstack/react-query';
 
 import { useRequiredUserId } from '@/features/auth/store';
-import { PREVIEW_COMMENTS } from '@/features/posts/mappers';
 import { useMyProfile } from '@/features/profile/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { toUserMessage } from '@/lib/errors';
@@ -185,27 +184,6 @@ export function useAddComment(postId: string) {
       );
       // The first anonymous take here hands out a Chef number: show it next time.
       if (anonymous) void qc.invalidateQueries({ queryKey: anonymousTakesKey(me, postId) });
-      // Feed cards preview the top comments; fill an empty slot with this one.
-      if (!comment.parentId) {
-        updatePostInCaches(qc, postId, (p) =>
-          !p.topComments || p.topComments.length >= PREVIEW_COMMENTS
-            ? p
-            : {
-                ...p,
-                topComments: [
-                  ...p.topComments,
-                  {
-                    id: comment.id,
-                    body: comment.body,
-                    mediaKind: comment.media?.kind ?? null,
-                    likeCount: 0,
-                    author: comment.author,
-                    anonNumber: comment.anonNumber,
-                  },
-                ],
-              },
-        );
-      }
     },
     onError: (error, { reply }, context) => {
       if (context) qc.setQueryData(context.key, context.previous);
@@ -272,7 +250,6 @@ export function useDeleteComment(postId: string) {
       updatePostInCaches(qc, postId, (p) => ({
         ...p,
         commentCount: Math.max(0, p.commentCount - removed),
-        topComments: p.topComments?.filter((c) => c.id !== comment.id),
       }));
       return { previous, key, removed };
     },
@@ -301,8 +278,15 @@ export function useToggleCommentLike() {
       likeCount: Math.max(0, c.likeCount + (like ? 1 : -1)),
     }));
   return useMutation({
-    mutationFn: ({ comment, like, anonymous = false }: { comment: Comment; like: boolean; anonymous?: boolean }) =>
-      like ? likeComment(me, comment.id, anonymous) : unlikeComment(me, comment.id),
+    mutationFn: ({
+      comment,
+      like,
+      anonymous = false,
+    }: {
+      comment: Comment;
+      like: boolean;
+      anonymous?: boolean;
+    }) => (like ? likeComment(me, comment.id, anonymous) : unlikeComment(me, comment.id)),
     onMutate: ({ comment, like, anonymous = false }) => {
       if (like) haptics.light();
       flip(comment.id, like, anonymous);

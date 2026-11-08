@@ -5,8 +5,6 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
-import { commentAuthorName } from '@/features/comments/anonymous';
-import { commentPreviewText } from '@/features/comments/preview';
 import { StorySection } from '@/features/posts/components/StorySection';
 import { likedBySummary } from '@/features/social/likedBy';
 import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
@@ -50,7 +48,6 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
       params: focusComment ? { id: post.id, focus: 'comment' } : { id: post.id },
     });
   const openLikes = () => router.push({ pathname: '/likes/[id]', params: { id: post.id } });
-  const topComments = post.topComments ?? [];
   const likedBy = likedBySummary(post.recentLikers, post.likeCount, post.viewerHasLiked, me);
 
   return (
@@ -160,9 +157,10 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
             onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
             onLongPress={anonymousLike.onLongPress}
             anonymous={post.viewerLikedAnonymously}
-            // The total lives in "Liked by" below (which opens the likers), so
-            // the row's icons sit in the same place at any like count.
-            showCount={false}
+            onPressCount={openLikes}
+            // A fixed slot for the count, so the comment button sits in the
+            // same place with no likes, 8 likes or 80.
+            countWidth={LIKE_COUNT_SLOT}
             style={styles.compactAction}
           />
           {anonymousLike.sheet}
@@ -189,8 +187,8 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
           />
         </View>
 
-        {likedBy || topComments.length > 0 ? (
-          // Instagram order: actions, then likes, then a few comments.
+        {likedBy || post.commentCount > 0 ? (
+          // Instagram order: actions, then likes, then a link to the comments.
           <View style={styles.social}>
             {likedBy ? (
               // The whole line is the target, not just the name.
@@ -219,34 +217,20 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
                 </AppText>
               </Pressable>
             ) : null}
-            {topComments.length > 0 ? (
+            {post.commentCount > 0 ? (
               <Pressable
                 onPress={() => openPost(true)}
-                style={styles.comments}
+                hitSlop={{ top: 4, bottom: 6 }}
+                style={styles.viewComments}
                 accessibilityRole="link"
-                accessibilityLabel={`Comments: ${topComments.map((c) => `${commentAuthorName(c)}: ${commentPreviewText(c.body, c.mediaKind)}`).join('. ')}`}
-                accessibilityHint="Opens all comments"
+                accessibilityHint="Opens the comments"
                 testID={`post-card-comments-${post.id}`}
               >
-                {topComments.map((comment) => (
-                  <AppText key={comment.id} variant="callout" numberOfLines={4}>
-                    <AppText variant="calloutStrong" style={comment.author ? undefined : styles.anonName}>
-                      {commentAuthorName(comment)}
-                    </AppText>{' '}
-                    {comment.body.trim() ? (
-                      comment.body
-                    ) : (
-                      <AppText variant="callout" color="textSecondary">
-                        {commentPreviewText(comment.body, comment.mediaKind)}
-                      </AppText>
-                    )}
-                  </AppText>
-                ))}
-                {post.commentCount > topComments.length ? (
-                  <AppText variant="caption" color="textSecondary">
-                    View all {formatCount(post.commentCount)} comments
-                  </AppText>
-                ) : null}
+                <AppText variant="caption" color="textSecondary">
+                  {post.commentCount === 1
+                    ? 'View 1 comment'
+                    : `View all ${formatCount(post.commentCount)} comments`}
+                </AppText>
               </Pressable>
             ) : null}
           </View>
@@ -264,9 +248,10 @@ export const PostCard = memo(PostCardBase);
  * 44 pt.
  */
 const ACTION_ROW = 32;
+/** Fits "99" at full size; "999" or "1.2k" shrink slightly to stay inside. */
+const LIKE_COUNT_SLOT = 20;
 
 const styles = StyleSheet.create({
-  anonName: { color: colors.accent },
   card: { paddingTop: spacing.md, paddingBottom: spacing.xs },
   body: { gap: spacing.md },
   // ~12 pt from the last line of the entry to the icons (8 + the row's 4).
@@ -286,18 +271,17 @@ const styles = StyleSheet.create({
   photos: { paddingHorizontal: SCREEN_GUTTER },
   words: { paddingHorizontal: SCREEN_GUTTER, gap: spacing.sm + 2 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs + 2 },
-  // Likes and comment previews sit right under the actions.
-  // ~8 pt under the icons (the row's 4 + 4), and 8 pt between "Liked by" and
-  // the comment previews so they read as separate lines.
+  // "Liked by" and "View comments" sit ~8 pt under the icons (the row's 4 + 4)
+  // as a pair of small lines.
   social: {
     paddingHorizontal: SCREEN_GUTTER,
     paddingTop: spacing.xs,
-    gap: spacing.sm,
+    gap: spacing.xs,
     paddingBottom: spacing.sm,
   },
   likedBy: { alignSelf: 'stretch' },
   likedByName: { fontFamily: fonts.textSemiBold, color: colors.text },
-  comments: { gap: spacing.xs },
+  viewComments: { alignSelf: 'flex-start' },
   // No rule above the actions: they belong to the entry. The feed's soft
   // divider between posts marks where an entry ends.
   actions: {
@@ -311,7 +295,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs + 2,
     minHeight: ACTION_ROW,
-    paddingHorizontal: spacing.xs,
+    // Flush left: the row's 8 pt gap is the whole space after the like count.
+    paddingRight: spacing.xs,
   },
   compactAction: { minHeight: ACTION_ROW },
 });

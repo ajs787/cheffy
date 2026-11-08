@@ -1824,42 +1824,41 @@ using the same rollout flag (`anonymous_takes.mode`), so it's off for everyone r
 **Not verified:** on a device. Also, a creator who gets a like right after showing their post to
 one person can guess who it was. Any anonymous-like design has that limit.
 
-## Feed like/comment spacing fix (2026-11-08)
+## Feed like/comment row (2026-11-08)
 
 **Bug:** on feed posts with 1+ likes, the comment bubble sat further from the heart than on
-posts with 0 likes, and the gap grew with the number ("1" vs "1.2K").
+posts with 0 likes, and the gap grew with the number of digits.
 
 **Cause:** `LikeButton` drew the like count inside the same row as the heart and comment
-buttons. With a count, it rendered as two touch targets (heart + count, min 28 pt wide + 8 pt
-padding), so the comment button was pushed right by the count's width. With 0 likes there
-was no count, so the comment sat close.
+buttons, sized to its text (a second touch target ≥28 pt wide plus 8 pt padding, each part
+forced to 44 pt tall). With a count, the comment button moved right by the count's width,
+and the row grew taller. With 0 likes there was no count.
 
-**Fix:** the feed card (`PostCard`) now passes `showCount={false}`. The heart then renders
-exactly as it does at 0 likes, and the total stays in the "Liked by … and N others" line
-under the row, which already opens the likers list. No margins, offsets or spacers were
-added. Touch targets are unchanged (44 pt via `hitSlop`), and screen readers still hear
-"Like. N likes". The post detail screen keeps its inline count (it has no "Liked by" line),
-and `showCount` defaults to true there.
+**Fix (feed card only; post detail unchanged):**
+- `LikeButton` has a `countWidth` option: the count gets a fixed 20 pt slot right after the
+  heart (4 pt gap). The slot stays even at 0, so the comment button sits in the same place
+  with no likes, "8" or "80". "999" or "1.2k" shrink slightly to fit; very large counts
+  shrink further. The heart and slot fill the row's height, so rows with and without likes
+  are the same height. The count opens the likers, and the heart toggles.
+- The comment button follows the slot with an 8 pt gap (it was 20 pt from the heart).
+- Vertical: the entry's sections share their own 12 pt gap, the actions block follows with an
+  8 pt margin, the row is 32 pt (every button still gets ≥44 pt with hitSlop), and
+  "Liked by" / "View comments" sit ~8 pt under the icons, 4 pt apart.
+- Comment previews are gone from the card: it shows "View 1 comment" / "View all N comments",
+  which opens the post at its comments. The feed request no longer embeds top comments (up to
+  6 comments plus author profiles per post per page). `mapTopComments`, `CommentPreview`,
+  `Post.topComments` and the cache updates that kept them in sync were removed, along with
+  their test.
+
+No negative margins, offsets or new dependencies.
 
 **Checked:**
-- LikeButton test: with `showCount` off, the rendered heart is identical at 0, 1, 10, 100
-  and 1,250 likes.
-- Simulator (feed): the comment bubble sits at the same spot with 0, 1, 2 and 3 likes and
-  with a long "Liked by vincentvardine237 and 2 others" line, with no clipping.
-  "Liked by" still opens the right likers list.
-- Full run: lint and tsc clean, 77 suites / 588 tests.
+- LikeButton test: the count slot is 20 pt at 0, 1, 10, 100 and 1,250 likes (it shows
+  "1.3k"). The count opens the likers and the heart toggles.
+- Simulator (feed): the bubble is in the same spot on posts with 0 and 1 likes. The count
+  shows next to the heart, "Liked by" and "View all 2 comments" appear with no previews, and
+  "Liked by" opens the right likers list.
+- Full run: lint and tsc clean, 76 suites / 586 tests (the 2 preview tests were removed).
 
-**Not seen on device:** posts with 100+ likes and Co-Chef posts didn't come up in the feed I
-scrolled. They use the same row, and the unit test covers large counts.
-
-**Vertical spacing (same PR):** the icon row sat ~18 pt under the description (the card's
-12 pt section gap plus the row's 6 pt padding) but only ~6 pt above "Liked by", and "Liked by"
-was 4 pt from the comment previews.
-- The entry's sections now sit in their own `body` (12 pt gap), and the actions block follows
-  it with an 8 pt top margin.
-- The row is 32 pt (4 pt around the icons; every button still gets ≥44 pt with its hitSlop).
-- The social block has 4 pt on top and an 8 pt gap between "Liked by" and the previews.
-
-Measured in the simulator on a post with tags, a like line and a comment preview: tags →
-icons ≈ 15 pt, icons → "Liked by" ≈ 13 pt, "Liked by" → comment ≈ 15 pt. Lint and tsc are
-clean, and 588 tests pass.
+**Not seen on device:** posts with 100+ likes and Co-Chef posts. They use the same row, and
+the unit test covers large counts.
