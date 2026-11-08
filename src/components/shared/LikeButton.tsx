@@ -23,11 +23,25 @@ export interface LikeButtonProps {
   anonymous?: boolean;
   /** Opens who liked it. When set, only the heart toggles the like; the count opens the list. */
   onPressCount?: () => void;
+  /**
+   * Off where the total is shown elsewhere (the feed's "Liked by" line), so
+   * the heart is the same width at any count and the icons after it never move.
+   */
+  showCount?: boolean;
   /** Layout overrides (e.g. a shorter row; hitSlop keeps the touch area). */
   style?: StyleProp<ViewStyle>;
 }
 
-export function LikeButton({ liked, count, onToggle, onLongPress, anonymous, onPressCount, style }: LikeButtonProps) {
+export function LikeButton({
+  liked,
+  count,
+  onToggle,
+  onLongPress,
+  anonymous,
+  onPressCount,
+  showCount = true,
+  style,
+}: LikeButtonProps) {
   const scale = useSharedValue(1);
   const wasLiked = useRef(liked);
 
@@ -59,13 +73,13 @@ export function LikeButton({ liked, count, onToggle, onLongPress, anonymous, onP
   const label = liked ? (anonymous ? 'Unlike. You liked this anonymously' : 'Unlike') : 'Like';
   const hint = longPress ? 'Long-press to like anonymously' : undefined;
   const countText =
-    count > 0 ? (
+    showCount && count > 0 ? (
       <AppText variant="calloutStrong" testID="like-count">
         {formatCount(count)}
       </AppText>
     ) : null;
 
-  if (onPressCount && count > 0) {
+  if (countText && onPressCount) {
     // Two targets side by side, so opening the list can't toggle the like.
     return (
       <View style={[styles.button, styles.split, style]}>

@@ -1823,3 +1823,31 @@ using the same rollout flag (`anonymous_takes.mode`), so it's off for everyone r
 
 **Not verified:** on a device. Also, a creator who gets a like right after showing their post to
 one person can guess who it was. Any anonymous-like design has that limit.
+
+## Feed like/comment spacing fix (2026-11-08)
+
+**Bug:** on feed posts with 1+ likes, the comment bubble sat further from the heart than on
+posts with 0 likes, and the gap grew with the number ("1" vs "1.2K").
+
+**Cause:** `LikeButton` drew the like count inside the same row as the heart and comment
+buttons. With a count, it rendered as two touch targets (heart + count, min 28 pt wide + 8 pt
+padding), so the comment button was pushed right by the count's width. With 0 likes there
+was no count, so the comment sat close.
+
+**Fix:** the feed card (`PostCard`) now passes `showCount={false}`. The heart then renders
+exactly as it does at 0 likes, and the total stays in the "Liked by … and N others" line
+under the row, which already opens the likers list. No margins, offsets or spacers were
+added. Touch targets are unchanged (44 pt via `hitSlop`), and screen readers still hear
+"Like. N likes". The post detail screen keeps its inline count (it has no "Liked by" line),
+and `showCount` defaults to true there.
+
+**Checked:**
+- LikeButton test: with `showCount` off, the rendered heart is identical at 0, 1, 10, 100
+  and 1,250 likes.
+- Simulator (feed): the comment bubble sits at the same spot with 0, 1, 2 and 3 likes and
+  with a long "Liked by vincentvardine237 and 2 others" line, with no clipping.
+  "Liked by" still opens the right likers list.
+- Full run: lint and tsc clean, 77 suites / 588 tests.
+
+**Not seen on device:** posts with 100+ likes, comment previews and Co-Chef posts didn't come
+up in the feed I scrolled. They use the same row, and the unit test covers large counts.

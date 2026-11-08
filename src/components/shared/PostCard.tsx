@@ -157,7 +157,9 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
             onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
             onLongPress={anonymousLike.onLongPress}
             anonymous={post.viewerLikedAnonymously}
-            onPressCount={openLikes}
+            // The total lives in "Liked by" below (which opens the likers), so
+            // the row's icons sit in the same place at any like count.
+            showCount={false}
             style={styles.compactAction}
           />
           {anonymousLike.sheet}

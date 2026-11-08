@@ -23,6 +23,26 @@ describe('LikeButton', () => {
     expect(onPressCount).toHaveBeenCalledTimes(1);
   });
 
+  it('with showCount off, renders the same heart at any count (feed row never shifts)', async () => {
+    const onToggle = jest.fn();
+    const heart = (count: number) => (
+      <LikeButton liked={false} count={count} showCount={false} onToggle={onToggle} />
+    );
+    // Everything but the spoken label, which carries the count.
+    const layout = () =>
+      JSON.stringify(screen.toJSON(), (key, value) => (key === 'accessibilityLabel' ? undefined : value));
+    const view = await render(heart(0));
+    const zero = layout();
+    for (const count of [1, 10, 100, 1250]) {
+      await view.rerender(heart(count));
+      expect(screen.queryByTestId('like-count')).toBeNull();
+      expect(screen.queryByTestId('like-count-button')).toBeNull();
+      expect(layout()).toEqual(zero);
+    }
+    // Screen readers still hear the total.
+    expect(screen.getByRole('button', { name: 'Like. 1250 likes' })).toBeTruthy();
+  });
+
   it('reflects the liked state for accessibility and hides a zero count', async () => {
     await render(<LikeButton liked count={0} onToggle={jest.fn()} />);
     expect(screen.getByRole('button').props.accessibilityState).toMatchObject({ selected: true });
