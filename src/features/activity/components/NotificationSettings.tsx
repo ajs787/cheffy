@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Heart, MessageCircle, UserPlus } from 'lucide-react-native';
+import { AtSign, Bell, Heart, MessageCircle, UserPlus } from 'lucide-react-native';
 import { StyleSheet, Switch } from 'react-native';
 
 import { SettingsGroup, SettingsRow } from '@/components/shared/SettingsRow';
@@ -26,6 +26,7 @@ const KINDS: { key: keyof PushPreferences; label: string; icon: typeof Bell }[] 
   { key: 'follows', label: 'Follows & requests', icon: UserPlus },
   { key: 'likes', label: 'Likes', icon: Heart },
   { key: 'comments', label: 'Comments & replies', icon: MessageCircle },
+  { key: 'mentions', label: 'Mentions', icon: AtSign },
 ];
 
 /** Push on/off (via our explanation or iOS Settings) and which kinds to send. */

@@ -99,6 +99,15 @@ The detail page shows:
   moderator changed the report first, you get "Someone else changed this report" and the
   page reloads, so nothing is silently overwritten. Repeating the same change is harmless.
 
+### Comments with photos and stickers
+
+The report keeps a copy of the picture's path (the file is kept while the report is open,
+even if the author deletes the comment), and the detail page shows the picture "As reported"
+and "Now", plus who it @mentions. For comment reports with a picture there's
+**Remove picture only**: the text stays, the picture disappears for everyone (nothing is
+deleted; **Restore picture** brings it back). It resolves the comment's open reports and is
+logged as `remove_media` / `restore_media`. **Remove content** still removes the whole comment.
+
 ## Audit trail
 
 Every action is written to `public.moderation_actions`:

@@ -112,8 +112,13 @@ export interface PostImage {
 export interface CommentPreview {
   id: string;
   body: string;
+  /** Set when the comment has a photo or sticker (shown as a word in previews). */
+  mediaKind?: CommentMediaKind | null;
   likeCount: number;
-  author: ProfileSummary;
+  /** Null for an anonymous take (see `anonNumber`). */
+  author: ProfileSummary | null;
+  /** Anonymous Takes: this post's Chef number ("Chef #01"); null when named. */
+  anonNumber?: number | null;
 }
 
 export interface Post {
@@ -135,6 +140,8 @@ export interface Post {
   /** Budget Eats tag and optional estimated cost per serving (USD cents). */
   isBudget: boolean;
   budgetCostCents: number | null;
+  /** Anonymous Takes: the creator lets people comment as "Chef #01" (default on). */
+  allowAnonymousTakes: boolean;
   /** Why moderators removed it (shown to the author only). */
   removedReason: string | null;
   madeOn: string;
@@ -171,14 +178,53 @@ export interface Comment {
   postId: string;
   body: string;
   createdAt: string;
-  author: ProfileSummary;
+  /** Null for an anonymous take: the API never says who wrote it. */
+  author: ProfileSummary | null;
+  /**
+   * Anonymous Takes: the writer's Chef number on this post ("Chef #01"),
+   * null for a named comment. 0 while an anonymous take is still posting.
+   */
+  anonNumber: number | null;
+  /** The viewer wrote it (named or anonymous), so they can delete it. */
+  isMine: boolean;
   /** Set on replies: the top-level comment they belong to. */
   parentId: string | null;
-  /** Who a reply answers, shown as "@name". */
+  /** Who a reply answers, shown as "@name"… */
   replyTo: ProfileSummary | null;
+  /** …or the anonymous chef it answers ("@Chef #01"). */
+  replyToAnonNumber: number | null;
   likeCount: number;
   replyCount: number;
   viewerHasLiked: boolean;
+  /** One photo or sticker, or null. */
+  media: CommentMedia | null;
+  /** People the comment @mentions, by id (see features/comments/mentions). */
+  mentions: CommentMention[];
+}
+
+export type CommentMediaKind = 'photo' | 'sticker';
+
+export interface CommentMedia {
+  kind: CommentMediaKind;
+  /** Private storage paths (comment-media bucket); null while posting. */
+  path: string | null;
+  thumbPath: string | null;
+  /** Signed list-size URL, or a local file while posting. */
+  thumbUrl: string | null;
+  /** Local full-size file while posting; signed on demand otherwise. */
+  localUri?: string | null;
+  width: number;
+  height: number;
+  /** Taken down by moderators (the text stays). */
+  removed: boolean;
+}
+
+export interface CommentMention {
+  /** The name as written when posted. */
+  username: string;
+  userId: string;
+  /** Their username now; null when the viewer can't see them. */
+  currentUsername: string | null;
 }
 
 export type RankingSort = 'highest' | 'lowest' | 'recent' | 'oldest';
@@ -229,7 +275,14 @@ export interface Page<T> {
 }
 
 export type ReportReason =
-  'spam' | 'inappropriate' | 'harassment' | 'not_homemade' | 'intellectual_property' | 'other';
+  | 'spam'
+  | 'inappropriate'
+  | 'harassment'
+  | 'hate'
+  | 'threats'
+  | 'not_homemade'
+  | 'intellectual_property'
+  | 'other';
 
 export type ReportTarget =
   | { type: 'user'; userId: string }

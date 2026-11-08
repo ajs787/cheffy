@@ -19,7 +19,9 @@ import { haptics } from '@/lib/haptics';
 import { useNotificationBannerStore } from '@/stores/notificationBanner';
 import { colors, HAIRLINE, radii, shadows, spacing, springs } from '@/theme';
 
-import { activityTarget, describe, type ActivityItem } from '../api';
+import { AnonymousAvatar } from '@/features/comments/components/AnonymousAvatar';
+
+import { activityTarget, actorName, describe, type ActivityItem } from '../api';
 import { useNotificationsRealtime } from '../useNotificationsRealtime';
 
 const DURATION_MS = 4500;
@@ -68,7 +70,7 @@ export function NotificationBannerHost() {
       return;
     }
     haptics.light();
-    AccessibilityInfo.announceForAccessibility(`${current.actor.username} ${describe(current)}`);
+    AccessibilityInfo.announceForAccessibility(`${actorName(current)} ${describe(current)}`);
   }, [current, suppressed, dismiss]);
 
   useEffect(() => {
@@ -165,7 +167,7 @@ function Banner({
             }}
             activeScale={0.98}
             accessibilityRole="button"
-            accessibilityLabel={`${item.actor.username} ${describe(item)}`}
+            accessibilityLabel={`${actorName(item)} ${describe(item)}`}
             accessibilityHint="Opens it. Swipe up to dismiss."
             accessibilityActions={[{ name: 'dismiss', label: 'Dismiss' }]}
             onAccessibilityAction={(e) => {
@@ -174,10 +176,14 @@ function Banner({
             onAccessibilityEscape={onDismiss}
             style={styles.banner}
           >
-            <Avatar uri={item.actor.avatarUrl} name={item.actor.displayName} size="sm" />
+            {item.actor ? (
+              <Avatar uri={item.actor.avatarUrl} name={item.actor.displayName} size="sm" />
+            ) : (
+              <AnonymousAvatar size="sm" />
+            )}
             <View style={styles.text}>
               <AppText variant="callout" numberOfLines={2}>
-                <AppText variant="calloutStrong">{item.actor.username}</AppText> {describe(item)}
+                <AppText variant="calloutStrong">{actorName(item)}</AppText> {describe(item)}
               </AppText>
               {item.commentBody && item.type !== 'comment_like' ? (
                 <AppText variant="caption" color="textSecondary" numberOfLines={1}>

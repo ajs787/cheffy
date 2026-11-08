@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ellipsis, EyeOff } from 'lucide-react-native';
-import { useCallback, useRef, useState, type ComponentRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -26,7 +27,7 @@ import { useUserId } from '@/features/auth/store';
 import { PostDetailHeader } from '@/features/posts/components/PostDetailHeader';
 import { usePostMenu } from '@/features/posts/components/usePostMenu';
 import { usePost } from '@/features/posts/hooks';
-import type { ReplyTarget } from '@/features/comments/api';
+import { fetchCommentThread, type ReplyTarget } from '@/features/comments/api';
 import { CommentComposer } from '@/features/comments/components/CommentComposer';
 import { CommentThread } from '@/features/comments/components/CommentThread';
 import { useComments, useDeleteComment, useToggleCommentLike } from '@/features/comments/hooks';
@@ -36,13 +37,24 @@ import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 import type { Comment, ReportTarget } from '@/types/models';
 
 export default function PostScreen() {
-  const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
+  const {
+    id,
+    focus,
+    comment: focusComment,
+  } = useLocalSearchParams<{
+    id: string;
+    focus?: string;
+    comment?: string;
+  }>();
   const me = useUserId();
   const post = usePost(id);
   const comments = useComments(id);
   const deleteComment = useDeleteComment(id);
   const menu = usePostMenu({ onDeleted: () => router.back() });
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const listRef = useRef<FlatList<Comment>>(null);
+  // A comment opened from a notification, briefly highlighted.
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [commentMenu, setCommentMenu] = useState<Comment | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const toggleLike = useToggleCommentLike();
@@ -59,9 +71,54 @@ export default function PostScreen() {
       }),
     [],
   );
+  const loaded = useMemo(() => comments.data?.pages.flat(), [comments.data]);
+  const pageCount = comments.data?.pages.length ?? 0;
+  const { hasNextPage, fetchNextPage } = comments;
+  const scrollToComment = useCallback((commentId: string) => {
+    const index =
+      (listRef.current?.props.data as Comment[] | undefined)?.findIndex((c) => c.id === commentId) ?? -1;
+    if (index >= 0) listRef.current?.scrollToIndex({ index, viewPosition: 0.2, animated: true });
+  }, []);
+
+  // From a notification: find the comment's thread (one small request), load
+  // pages until it's there (a few at most), open its replies, scroll to it
+  // and highlight it.
+  const thread = useQuery({
+    queryKey: ['comment-thread', focusComment ?? ''],
+    queryFn: () => fetchCommentThread(focusComment!),
+    enabled: !!focusComment,
+    staleTime: Infinity,
+  });
+  const deepLinked = useRef<string | null>(null);
+  useEffect(() => {
+    const target = thread.data;
+    if (!focusComment || !target || !loaded || deepLinked.current === focusComment) return;
+    const topId = target.parentId ?? target.id;
+    if (!loaded.some((c) => c.id === topId)) {
+      if (hasNextPage && pageCount < 5) void fetchNextPage();
+      return; // runs again once the next page arrives
+    }
+    deepLinked.current = focusComment;
+    setTimeout(() => {
+      if (target.parentId) setExpanded((current) => new Set(current).add(topId));
+      setHighlightId(focusComment);
+    }, 0);
+    setTimeout(() => scrollToComment(topId), 250);
+  }, [focusComment, thread.data, loaded, hasNextPage, pageCount, fetchNextPage, scrollToComment]);
+  useEffect(() => {
+    if (!highlightId) return;
+    const timer = setTimeout(() => setHighlightId(null), 2500);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
+
   const startReply = useCallback((comment: Comment) => {
     // Replies always join the top-level comment's thread.
-    setReplyTo({ parentId: comment.parentId ?? comment.id, user: comment.author });
+    setReplyTo({
+      parentId: comment.parentId ?? comment.id,
+      commentId: comment.id,
+      user: comment.author,
+      anonNumber: comment.anonNumber,
+    });
     inputRef.current?.focus();
   }, []);
   const onToggleLike = useCallback(
@@ -105,40 +162,50 @@ export default function PostScreen() {
 
   const p = post.data;
   const published = p.status === 'published';
-  const canModerate = (comment: Comment) => comment.author.id === me || p.author.id === me;
+  // Yours (named or anonymous), or any comment on your own post.
+  const canModerate = (comment: Comment) => comment.isMine || p.author.id === me;
 
   const commentActions: SheetAction[] = !commentMenu
     ? []
-    : canModerate(commentMenu)
-      ? [
-          {
-            key: 'delete',
-            label: commentMenu.parentId ? 'Delete reply' : 'Delete comment',
-            destructive: true,
-            onPress: () => deleteComment.mutate(commentMenu),
-          },
-        ]
-      : [
-          {
-            key: 'report',
-            label: 'Report comment',
-            destructive: true,
-            onPress: () => setReportTarget({ type: 'comment', commentId: commentMenu.id }),
-          },
-        ];
+    : [
+        ...(canModerate(commentMenu)
+          ? [
+              {
+                key: 'delete',
+                label: commentMenu.parentId ? 'Delete reply' : 'Delete comment',
+                destructive: true,
+                onPress: () => deleteComment.mutate(commentMenu),
+              },
+            ]
+          : []),
+        // Anyone but its writer can report it — including the creator, so an
+        // anonymous take on your post can be reported, not just deleted.
+        ...(commentMenu.isMine
+          ? []
+          : [
+              {
+                key: 'report',
+                label: 'Report comment',
+                destructive: true,
+                onPress: () => setReportTarget({ type: 'comment', commentId: commentMenu.id }),
+              },
+            ]),
+      ];
 
   return (
     <View style={styles.screen}>
       <AppHeader right={<IconButton icon={Ellipsis} label="More options" onPress={() => menu.open(p)} />} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
-          data={published ? (comments.data?.pages.flat() ?? []) : []}
+          ref={listRef}
+          data={published ? (loaded ?? []) : []}
           keyExtractor={(comment) => comment.id}
           renderItem={({ item }) => (
             <CommentThread
               comment={item}
               expanded={expanded.has(item.id)}
               onToggleExpanded={toggleExpanded}
+              highlightId={highlightId}
               onLongPress={setCommentMenu}
               onReply={startReply}
               onToggleLike={onToggleLike}
@@ -163,6 +230,9 @@ export default function PostScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textTertiary} />
           }
+          onScrollToIndexFailed={({ index, averageItemLength }) =>
+            listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: true })
+          }
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           contentContainerStyle={styles.listContent}
@@ -176,7 +246,14 @@ export default function PostScreen() {
             onCancelReply={() => setReplyTo(null)}
             onSent={(reply) => {
               setReplyTo(null);
-              if (reply) setExpanded((current) => new Set(current).add(reply.parentId));
+              // Make sure the new comment is on screen: replies sit under
+              // their thread, new comments at the end (oldest first).
+              if (reply) {
+                setExpanded((current) => new Set(current).add(reply.parentId));
+                setTimeout(() => scrollToComment(reply.parentId), 120);
+              } else {
+                setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 120);
+              }
             }}
           />
         ) : null}

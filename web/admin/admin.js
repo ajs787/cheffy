@@ -22,13 +22,16 @@
   var PRIORITY_LABEL = { urgent: 'Urgent', normal: 'Normal', low: 'Low' };
   var TYPE_LABEL = { post: 'Post', comment: 'Comment', user: 'Profile' };
   var REASON_LABEL = {
-    inappropriate: 'Inappropriate', harassment: 'Harassment', spam: 'Spam',
+    inappropriate: 'Sexual or inappropriate', harassment: 'Harassment', hate: 'Hate or discrimination',
+    threats: 'Threats', spam: 'Spam',
     not_homemade: 'Not homemade', intellectual_property: 'Intellectual property', other: 'Other',
   };
   var ACTION_LABEL = {
     review: 'Started review', resolve: 'Resolved', dismiss: 'Dismissed', reopen: 'Reopened',
     note: 'Note', remove: 'Removed content', restore: 'Restored content', suspend: 'Suspended account',
     unsuspend: 'Unsuspended account', auto_hide: 'Hidden automatically',
+    remove_media: 'Removed picture', restore_media: 'Restored picture',
+    reveal_identity: 'Revealed anonymous author',
   };
 
   var session = null; // { access_token, refresh_token, expires_at, email }
@@ -171,11 +174,13 @@
     return typeof path === 'string' && path.length <= 300 && SAFE_PATH.test(path);
   }
 
-  // Short-lived (5 minute) links for private post photos.
-  function signedPhoto(path) {
-    if (!safePath(path)) return Promise.resolve(null);
+  // Short-lived (5 minute) links for private post photos and comment pictures.
+  var PRIVATE_BUCKETS = { 'post-images': true, 'comment-media': true };
+  function signedPhoto(path, bucket) {
+    bucket = bucket || 'post-images';
+    if (!safePath(path) || !PRIVATE_BUCKETS[bucket]) return Promise.resolve(null);
     return refreshIfNeeded().then(function () {
-      return fetch(API + '/storage/v1/object/sign/post-images/' + path.split('/').map(encodeURIComponent).join('/'), {
+      return fetch(API + '/storage/v1/object/sign/' + bucket + '/' + path.split('/').map(encodeURIComponent).join('/'), {
         method: 'POST',
         headers: { apikey: KEY, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ expiresIn: 300 }),
@@ -332,7 +337,7 @@
     var open = function () { location.hash = '#/report/' + r.id; };
     var statusCell = el('td', null, [pill(STATUS_LABEL[r.status] || r.status, r.status)]);
     if (r.overdue) statusCell.appendChild(el('div', null, [pill('Over 24h', 'overdue')]));
-    var preview = el('td', { class: 'preview' }, [r.preview || '—']);
+    var preview = el('td', { class: 'preview' }, [r.preview || (r.target_type === 'comment' ? 'Picture-only comment' : '—')]);
     if (r.is_hidden) preview.appendChild(el('div', null, [pill(r.target_type === 'user' ? 'Suspended' : 'Hidden', 'hidden-content')]));
     if (Number(r.target_reports) > 1) preview.appendChild(el('div', { class: 'muted small', text: r.target_reports + ' reports on this' }));
     return el('tr', {
@@ -412,12 +417,43 @@
       var s = quote(data.story); if (s) panel.appendChild(s);
       var p = photosFor(data.images); if (p) panel.appendChild(p);
     } else if (type === 'comment') {
-      panel.appendChild(quote(data.body || ''));
+      var body = quote(data.body || '');
+      if (body) panel.appendChild(body);
+      if (data.media) {
+        var m = data.media;
+        var holder = el('div', { class: 'photos' });
+        var img = el('img', { alt: 'Reported ' + (m.kind || 'picture'), loading: 'lazy', referrerpolicy: 'no-referrer' });
+        holder.appendChild(img);
+        panel.appendChild(holder);
+        signedPhoto(m.path, 'comment-media').then(function (url) {
+          if (url) img.src = url;
+          else img.replaceWith(el('div', { class: 'muted small', text: 'Picture no longer available' }));
+        });
+      }
+      panel.appendChild(facts([
+        ['Picture', data.media ? (data.media.kind === 'sticker' ? 'Sticker' : 'Photo') + (data.media.hidden ? ' — removed' + (data.media.hidden_reason ? ' (' + data.media.hidden_reason + ')' : '') : '') : ''],
+        ['Mentions', (data.mentions || []).map(function (u) { return '@' + u; }).join(', ')],
+      ]));
+      if (data.anonymous_name) {
+        panel.appendChild(facts([['Posted as', data.anonymous_name + ' (Anonymous Take)']]));
+      }
       if (!isSnapshot) {
         panel.appendChild(facts([
           ['On post', data.post_title || ''],
           ['Status', data.hidden ? 'Hidden' + (data.hidden_reason ? ' — ' + data.hidden_reason : '') : 'Visible'],
         ]));
+        // The thread as the public sees it (Chef names stay Chef names).
+        if (data.thread && data.thread.length > 1) {
+          var ul = el('ul', { class: 'timeline' });
+          data.thread.forEach(function (t) {
+            ul.appendChild(el('li', null, [
+              el(t.is_reported ? 'b' : 'span', { text: t.name || '(unknown)' }), ' · ', fmtDate(t.created_at),
+              el('div', { class: 'quote', text: t.body || '(picture only)' }),
+            ]));
+          });
+          panel.appendChild(el('p', { class: 'muted small', text: 'Thread around it:' }));
+          panel.appendChild(ul);
+        }
       }
     } else {
       if (data.avatar_path && avatarUrl(data.avatar_path)) panel.appendChild(el('img', { src: avatarUrl(data.avatar_path), alt: 'Profile photo', class: 'avatar', width: '96', height: '96', referrerpolicy: 'no-referrer' }));
@@ -463,6 +499,14 @@
       if (cur.exists !== false && !hidden && r.target_type === 'user') {
         act('Suspend account', 'danger', function () { moderate(r, 'suspend'); });
       }
+      // The author of a reported post or comment (for an anonymous comment,
+      // only once a moderator has revealed and recorded who it is).
+      if (r.target_type !== 'user' && d.author && !d.author.suspended) {
+        act('Suspend author', 'danger', function () { moderate(r, 'suspend_author'); });
+      }
+      if (r.target_type === 'comment' && cur.media && !cur.media.hidden) {
+        act('Remove picture only', 'danger', function () { moderateMedia(r, 'remove_media'); });
+      }
       act('Resolve', 'secondary', function () { setStatus(r, 'actioned', true); });
       act('Dismiss', 'secondary', function () { setStatus(r, 'dismissed', true); });
     } else {
@@ -472,6 +516,9 @@
       act(r.target_type === 'user' ? 'Unsuspend account' : 'Restore content', 'secondary', function () {
         moderate(r, r.target_type === 'user' ? 'unsuspend' : 'restore');
       });
+    }
+    if (r.target_type === 'comment' && cur.media && cur.media.hidden) {
+      act('Restore picture', 'secondary', function () { moderateMedia(r, 'restore_media'); });
     }
     act('Add note', 'secondary', function () { addNote(r); });
     host.appendChild(actions);
@@ -493,9 +540,17 @@
       quote(r.details),
     ]));
 
-    if (d.author) {
+    if (r.anonymous && !d.author) {
       right.appendChild(el('section', { class: 'panel' }, [
         el('h3', { text: 'Author' }),
+        el('p', { text: (cur.anonymous_name || (d.snapshot && d.snapshot.anonymous_name) || 'Anonymous chef') + ' — an Anonymous Take.' }),
+        el('p', { class: 'muted small', text: 'Who wrote it stays hidden unless it’s needed to act on this report. Revealing it is recorded in the history with your name and reason.' }),
+        el('button', { type: 'button', class: 'secondary', text: 'Reveal who wrote it', onclick: function () { reveal(r); } }),
+      ]));
+    }
+    if (d.author) {
+      var authorPanel = el('section', { class: 'panel' }, [
+        el('h3', { text: r.anonymous ? 'Author (revealed)' : 'Author' }),
         facts([
           ['Account', '@' + d.author.username + (d.author.display_name ? ' (' + d.author.display_name + ')' : '')],
           ['Joined', fmtDate(d.author.joined)],
@@ -503,7 +558,20 @@
           ['Reports about them', String(d.author.reports_against)],
           ['Status', d.author.suspended ? 'Suspended' : 'Active'],
         ]),
-      ]));
+      ]);
+      var recent = (d.author.recent_reports || []).filter(function (x) { return x.id !== r.id; });
+      if (recent.length) {
+        var rl = el('ul', { class: 'timeline' });
+        recent.forEach(function (x) {
+          rl.appendChild(el('li', null, [
+            el('a', { href: '#/report/' + x.id, text: (TYPE_LABEL[x.target_type] || x.target_type) + (x.anonymous ? ' (anonymous)' : '') + ': ' + (REASON_LABEL[x.reason] || x.reason) }),
+            ' · ', STATUS_LABEL[x.status] || x.status, ' · ', fmtDate(x.created_at),
+          ]));
+        });
+        authorPanel.appendChild(el('p', { class: 'muted small', text: 'Their other reports:' }));
+        authorPanel.appendChild(rl);
+      }
+      right.appendChild(authorPanel);
     }
 
     var related = el('section', { class: 'panel' }, [el('h3', { text: 'Other reports on this (' + d.related.length + ')' })]);
@@ -613,6 +681,8 @@
       suspend: ['Suspend this account?',
         'They are signed out and can’t sign in, and all their posts and comments are hidden. Reversible with Unsuspend.', 'SUSPEND', true],
       unsuspend: ['Unsuspend this account?', 'They can sign in again and the posts hidden by the suspension come back.', null, false],
+      suspend_author: ['Suspend the author’s account?',
+        'They are signed out and can’t sign in, and all their posts and comments (anonymous ones too) are hidden. This report is resolved. Reversible from a report about their profile.', 'SUSPEND', true],
     }[action];
     return confirmDialog({
       title: copy[0], body: copy[1], note: true, noteRequired: copy[3], typeWord: copy[2], danger: copy[3],
@@ -620,6 +690,38 @@
     }).then(function (res) {
       if (!res) return;
       return rpc('admin_moderate_report', { p_report: r.id, p_action: action, p_expected: r.status, p_note: res.note })
+        .then(function () { return afterChange(r, 'Done.'); })
+        .catch(function (e) { onError(r, e); });
+    });
+  }
+
+  // Who wrote an anonymous comment: needs a reason, and is recorded.
+  function reveal(r) {
+    return confirmDialog({
+      title: 'Reveal who wrote this?',
+      body: 'Only do this when you need it to act on the report (for example, to check repeat abuse or to suspend). Your name and reason are kept in the history. The author is never told, and nobody else can see it.',
+      note: true, noteRequired: true, okLabel: 'Reveal',
+    }).then(function (res) {
+      if (!res) return;
+      return rpc('admin_reveal_anonymous_author', { p_report: r.id, p_reason: res.note })
+        .then(function () { return afterChange(r, 'Revealed and recorded.'); })
+        .catch(function (e) { onError(r, e); });
+    });
+  }
+
+  // A comment's photo or sticker, keeping its text.
+  function moderateMedia(r, action) {
+    var removing = action === 'remove_media';
+    return confirmDialog({
+      title: removing ? 'Remove this picture?' : 'Restore this picture?',
+      body: removing
+        ? 'The comment stays, without its picture. Nothing is deleted, and you can restore it. Open reports about the comment are resolved.'
+        : 'The picture becomes visible again to the people who can see the comment.',
+      note: true, noteRequired: removing, typeWord: removing ? 'REMOVE' : null, danger: removing,
+      okLabel: removing ? 'Remove picture' : 'Restore picture',
+    }).then(function (res) {
+      if (!res) return;
+      return rpc('admin_moderate_comment_media', { p_report: r.id, p_action: action, p_expected: r.status, p_note: res.note })
         .then(function () { return afterChange(r, 'Done.'); })
         .catch(function (e) { onError(r, e); });
     });

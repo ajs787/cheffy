@@ -69,6 +69,8 @@ export const postFormSchema = z.object({
   milk: optionalText(40, 'Milk'),
   sweetener: optionalText(40, 'Sweetener'),
   images: z.array(z.custom<ComposeImage>()).max(MAX_IMAGES, `Up to ${MAX_IMAGES} photos.`),
+  /** Anonymous Takes: let people comment as "Chef #01" (on by default). */
+  allowAnonymousTakes: z.boolean(),
   /** Budget Eats: optional tag with an optional estimated cost per serving. */
   isBudget: z.boolean(),
   budgetCost: z.string().superRefine((value, ctx) => {
@@ -115,6 +117,7 @@ export function emptyPostForm(defaults?: {
     milk: '',
     sweetener: '',
     images: [],
+    allowAnonymousTakes: true,
     isBudget: false,
     budgetCost: '',
   };
@@ -144,6 +147,7 @@ export function postToForm(post: Post): PostFormValues {
     temperature: post.temperature,
     milk: post.milk ?? '',
     sweetener: post.sweetener ?? '',
+    allowAnonymousTakes: post.allowAnonymousTakes,
     isBudget: post.isBudget,
     budgetCost: post.budgetCostCents === null ? '' : (post.budgetCostCents / 100).toFixed(2),
     images: post.images.map((image) => ({
@@ -228,6 +232,11 @@ export function toSavePayload(
       sweetener: isDrink ? trimmed(values.sweetener) || null : null,
       is_budget: values.isBudget,
       budget_cost_cents: values.isBudget ? parseDollars(values.budgetCost) : null,
+      // A draft recovered from an older version may not have it: then the
+      // post keeps whatever it had.
+      ...(typeof values.allowAnonymousTakes === 'boolean'
+        ? { allow_anonymous_takes: values.allowAnonymousTakes }
+        : {}),
     },
     p_tags: normalizeTags(values.tags),
     p_categories: categories,

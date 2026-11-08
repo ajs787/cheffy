@@ -28,6 +28,7 @@ import { SettingsGroup, SettingsRow } from '@/components/shared/SettingsRow';
 import { AppHeader, AppText, ConfirmationDialog, Divider } from '@/components/ui';
 import { PRIVACY_URL, SUPPORT_EMAIL } from '@/constants/app';
 import { NotificationSettings } from '@/features/activity/components/NotificationSettings';
+import { MentionPrivacyRow } from '@/features/comments/components/MentionPrivacyRow';
 import { signOut } from '@/features/auth/api';
 import { DeleteAccountSheet } from '@/features/profile/components/DeleteAccountSheet';
 import { useSession } from '@/features/auth/store';
@@ -116,6 +117,8 @@ export default function SettingsScreen() {
               />
             }
           />
+          <Divider inset={spacing.lg} />
+          <MentionPrivacyRow />
           {isPrivate || pending > 0 ? (
             <>
               <Divider inset={spacing.lg} />

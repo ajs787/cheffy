@@ -1,13 +1,13 @@
 // delete-account: permanently deletes the caller's Cheffy account (App Store
 // 5.1.1(v)). Runs on Supabase's servers so cleanup doesn't depend on the app:
 //   1. identify the caller from their own access token;
-//   2. remove every file under {uid}/ in post-images and avatars;
+//   2. remove every file under {uid}/ in post-images, avatars and comment-media;
 //   3. delete the auth user, which cascades to the profile, posts, comments,
 //      likes, follows, collaborations, notifications and push tokens.
 // The service-role key is provided by the Edge runtime and never leaves it.
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 
-const BUCKETS = ['post-images', 'avatars'] as const;
+const BUCKETS = ['post-images', 'avatars', 'comment-media'] as const;
 
 const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });

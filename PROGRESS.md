@@ -1154,6 +1154,185 @@ matches. Newest first within each tier.
 - Separately, the shared `GridSkeleton` loading grid draws tiny squares. That's existing
   behaviour, unchanged here.
 
+## Comments: @mentions, photos and personal stickers (2026-10-29, branch `comment-media`, not pushed)
+
+**Status:** built and tested locally. **Migration `20261029000001_comment_media_mentions` is
+live, and the `comment-media` Edge Function is deployed** (2026-10-29, approved by the owner;
+`delete-account` was redeployed too). A new dev/TestFlight build is still needed for this app
+code and for keyboard stickers.
+
+**Checked on live after the push (read-only, no test data written):**
+- `migration list` matched before the push: only this migration was pending. The live DB
+  also has `20261028000001_pizza_to_cooking`, which comes from `ui-polish-branding`. That file
+  was copied in only for the push and isn't in this branch.
+- All 9 new `comments` columns exist, along with `comment_mentions`, `comment_uploads` and the
+  `comment_mention` notification type. All 205 existing comments are intact.
+- Bucket `comment-media` is private with a 3 MB limit. Its only storage policy is
+  `comment_media_objects_select` (no client write policies).
+- Signed out:
+  - `comment-media` returns 401 (with no token, and with the anon key);
+  - `mention_suggestions`, `comment_uploads_to_sweep` and the `comment_uploads` table are
+    refused;
+  - listing the bucket returns nothing.
+- Builds already out (e.g. TestFlight) don't select the new columns and keep working.
+- Not run yet: a signed-in upload, mention or notification on live. That needs a test
+  account and the new build.
+
+### Ship order (important)
+1. Apply the migration (`supabase db push`). The app's comment query selects the new columns,
+   so this build must not reach people before the migration is live. Older builds keep working
+   after it: their inserts and selects don't touch the new columns.
+2. Deploy the function: `supabase functions deploy comment-media` (needs the default
+   `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` env; JWT verification on). Also redeploy
+   `delete-account`, which now clears the `comment-media` bucket too.
+3. `eas build` (adds the `expo-paste-input` native module). Until then, the photo picker and
+   "Paste Sticker or Image" work; inserting from the sticker keyboard needs the new build.
+
+### What's built
+- **@mentions.** Typing `@` opens a panel above the keyboard: friends (mutual follows), then
+  people you follow, people who follow you, people in this post's comments, then everyone
+  else, filtered live by username and display name (150 ms debounce, cached). Each row shows
+  avatar, name, @username. A tap inserts `@username `. Up to 5 per comment. Deleting or
+  editing a name before sending drops that mention. Works in replies.
+  In threads, mentions show in Oxblood and open the profile.
+- **Stored by user id** (`comment_mentions`), with the name as written, so "@oldname" still
+  links to the right person (shown with their current username) after a rename.
+- **Anti-spoofing.** The server keeps a picked id only when that person's current username
+  is in the text. It drops unknown ids, yourself, suspended accounts, anyone in a block with
+  you either way, and anyone whose **Who can @mention you** setting (Settings › Privacy:
+  Everyone / People you follow / No one) doesn't allow you.
+- **Mention notifications** (`comment_mention`). They're created only when the comment row is
+  written, so never for a failed post. One per person per comment. Never yourself. None for
+  someone already notified about that comment (the post author, or the person replied to).
+  Only for people who can see the post (private/followers-only posts don't leak titles).
+  Blocks are respected both ways. Limits: 20 mention notifications per hour per sender, and
+  5 a day from one sender to one person. Push respects a new **Mentions** toggle. Tapping one
+  (in Activity, a banner or a push) opens the post scrolled to that comment, with the thread
+  opened and the comment briefly highlighted.
+- **Photo and sticker comments.** A picture icon next to the box opens: Choose Photo (the
+  system PHPicker, no library permission), Paste Sticker or Image, Remove Picture (when one is
+  attached), and the sheet's Cancel. Text-only, picture-only, text+picture, and pictures in
+  replies all work, with one picture per comment. A thumbnail shows above the box: tap to
+  enlarge, × to remove, and picking again replaces it. Typed text is kept throughout.
+  Nothing uploads until Post.
+  In threads the picture sits under the text, aspect kept: photos up to 200×240, stickers up
+  to 120×120, no frame, transparent. Tap for the full-screen pinch-to-zoom viewer. Picture-only
+  comments have no empty text line. Reply, like, report and delete are unchanged. Feed
+  previews and Activity show "Sent a photo" / "Sent a sticker".
+- **Composer.** Compact box, mention panel (4 rows max, so it fits above the keyboard on an
+  iPhone SE), attach button, Post. After a successful post the keyboard closes, the box clears
+  and the list scrolls to the new comment (or its thread). If posting fails, the text and
+  picture stay. Double taps are ignored.
+
+### Personal iPhone stickers: what iOS delivers, and what's supported
+- iOS hands a sticker from the emoji keyboard to a text field in one of three ways:
+  - iOS 18+, a field with `supportsAdaptiveImageGlyph`: an inline `NSAdaptiveImageGlyph`
+    (the same path as Genmoji);
+  - a rich-text field: an `NSTextAttachment`;
+  - otherwise, image data via paste.
+- React Native's `TextInput` handles none of these. The sticker is dropped, or never offered.
+- **Supported** (after the new build), via `expo-paste-input` 0.2.2 (MIT, an Expo module, no
+  config plugin). It wraps our `TextInput` and turns all three paths into a temporary image
+  file, which becomes the attachment preview. Transparency is kept: stickers are re-encoded
+  as PNG (≤ 512 px, 256 px thumb). Sticker-only comments and sticker replies work.
+- Also supported on every build: **Paste Sticker or Image** (uses expo-clipboard after a tap,
+  as PNG), and **Choose Photo**. A small PNG/WebP picked from Photos is kept as a transparent
+  sticker.
+- **Not supported:**
+  - **Animated stickers.** Animated live stickers and GIFs are flattened to their first frame,
+    and the server rejects animated WebP. Unreliable through these APIs, so it was left out
+    on purpose.
+  - Genmoji rendered inline in the text. A Genmoji inserted from the keyboard becomes a
+    picture attachment, like a sticker.
+  - "Choose Sticker" from a picker. No iOS picker exposes the sticker library, so the menu
+    doesn't offer it.
+  - Inserting more than one sticker. Only the first becomes the attachment, and the person
+    is told.
+  - Android keyboard stickers aren't wired (`StickerAwareInput` is iOS-only).
+  - Emoji are never swapped in for stickers.
+- **Risk to watch:** expo-paste-input works by swizzling `paste:`, `canPerformAction:` and
+  `insertAdaptiveImageGlyph:` on the text input class. It only acts on inputs it wraps, but
+  it's third-party native code. If keyboard insertion misbehaves on a device, removing the
+  package turns it off (`KEYBOARD_STICKERS_SUPPORTED` becomes false); the fallbacks remain.
+
+### Database and Storage (`supabase/migrations/20261029000001_comment_media_mentions.sql`)
+- `comments`: new columns:
+  - `media_upload_id` and `mention_ids`, which clients may set on insert only;
+  - `media_kind/path/thumb_path/width/height`, which a trigger copies from the upload;
+  - `media_hidden_at/_reason`, for moderators.
+- `comments` constraints: the body may be empty only with a picture, and ≤ 5 mentions.
+  Existing comments and threading are unchanged.
+- Authors can still edit only `body`. The picture, mentions and moderation fields are
+  protected by the update trigger.
+- New tables: `comment_mentions` and `comment_uploads`. New `profiles.mention_policy` and
+  `notification_preferences.mentions`.
+- New functions: `mention_suggestions` (RPC), `admin_moderate_comment_media` (moderators),
+  and sweep helpers (service role only).
+- Replaced functions: `push_message` (now carries `commentId`; `path` keeps the old shape so
+  older builds still open the post), `push_wanted`, `reports_before_insert` (keeps picture and
+  mentions as evidence), and `admin_report_detail`.
+- Private bucket `comment-media` (3 MB, JPEG/PNG/WebP). **No client insert, update or delete
+  policies.** Reading is allowed for the owner, moderators, or anyone who can see a comment
+  using the file and whose picture isn't removed. Comment RLS already covers post visibility,
+  deleted posts, blocks and hidden comments, so signed URLs follow it.
+- **Edge Function `supabase/functions/comment-media`:** the only way in.
+  - Checks the caller (and that they aren't suspended).
+  - Limits uploads to 30 per hour.
+  - Reads the **real bytes**: JPEG/PNG/WebP signatures and header dimensions (anything else
+    is refused, e.g. SVG/HTML/GIF/EXE/animated WebP).
+  - Enforces size limits: full ≤ 2048 px and 3 MB, thumb ≤ 720 px and 512 KB. Stickers must
+    be PNG/WebP.
+  - Stores files with the sniffed type under `{uid}/`, then records the upload.
+  - Client-chosen upload ids make retries idempotent.
+  - No external URLs and no base64 in Postgres.
+- **Failure safety:** the comment row is written only after the upload succeeded, and the
+  insert checks the upload is the author's own, unused and under an hour old. Uploads that
+  never became a comment, or whose comment was deleted, are swept by the function after an
+  hour unless an open report holds them.
+- Limits: 20 picture comments per hour per person.
+
+### Moderation
+- Reports on picture comments keep the picture path and mentions in the evidence snapshot.
+- The web dashboard shows the picture (signed, 5 minutes) "As reported" and "Now", with
+  **Remove picture only** / **Restore picture** (logged as `remove_media` / `restore_media`;
+  removing resolves the reports) next to the existing Remove content.
+- The in-app queue labels picture-only comments.
+- See MODERATION_ADMIN_GUIDE.md.
+
+### Performance
+- Uploads are resized before sending: photos to ≤ 1600 px JPEG 0.8, plus a 480 px thumb.
+- Lists load only thumbs, signed in **one batch request per page** and cached in memory and
+  on disk by path. Full size is signed only when the viewer opens.
+- Thread pagination is unchanged (30 per page, 20 replies).
+- Rows are memoized. Mention suggestions are debounced and cached.
+- Mentions add one small read after posting, and only when mentions were sent (the
+  insert's response can't see rows its trigger wrote).
+
+### Tests run
+- `npx tsc --noEmit` ✅.
+- `npx expo lint` ✅.
+- Jest: **472 passed / 68 suites**, up from 441. New:
+  - `tests/db/comment-media-mentions.test.ts` (18): tokens, spoofing, self, unknown ids,
+    the max of 5, blocks, mention policy, post visibility, no duplicate notification,
+    per-person cap, suggestion ranking, image-only/text+image/sticker replies, foreign,
+    reused, expired and invented uploads, clients can't write paths, uploads or the bucket,
+    storage read follows visibility and blocks, sweep plus evidence, moderator
+    remove-picture with audit, push text plus commentId, the rename case;
+  - `tests/db/image-info.test.ts` (3): byte sniffing and limits;
+  - `mentions.test.ts`;
+  - `CommentComposer.test.tsx`: suggestions, insert, sending ids, a removed mention being
+    dropped, keeping the draft on failure, double-tap, the attach menu;
+  - activity and push tests.
+- `npx expo-doctor`: only the existing "16 packages a patch behind" warning, which `main`
+  also has.
+
+### Not verified (needs the owner or a device)
+- No signed-in flow has run on live yet: upload through the Edge Function, posting a picture
+  comment, a mention notification, a push.
+- Sticker-keyboard insertion, Genmoji, transparency and paste need a real iPhone on the new
+  build (the Simulator has no personal stickers). Also: picking photos, the viewer, the
+  keyboard on a small iPhone, a slow or interrupted network (airplane mode mid-post: the
+  draft should stay, and retrying reuses the upload), and push taps opening the comment.
 ## UI polish, branding & content clarity (2026-10-28, branch `ui-polish-branding`)
 
 **1. Pizza moves from Baking to Cooking** (migration `20261028000001_pizza_to_cooking`, live since 2026-10-28, approved)
