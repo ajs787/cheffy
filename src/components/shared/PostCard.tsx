@@ -166,7 +166,8 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
           {anonymousLike.sheet}
           <Pressable
             onPress={() => openPost(true)}
-            hitSlop={8}
+            // Only the 4 pt gap on the left, so it never overlaps the like count.
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
             style={styles.action}
             accessibilityRole="button"
             accessibilityLabel={`Comments, ${post.commentCount}`}
@@ -249,7 +250,7 @@ export const PostCard = memo(PostCardBase);
  */
 const ACTION_ROW = 32;
 /** Fits "99" at full size; "999" or "1.2k" shrink slightly to stay inside. */
-const LIKE_COUNT_SLOT = 20;
+const LIKE_COUNT_SLOT = 18;
 
 const styles = StyleSheet.create({
   card: { paddingTop: spacing.md, paddingBottom: spacing.xs },
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginHorizontal: SCREEN_GUTTER,
   },
   action: {
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs + 2,
     minHeight: ACTION_ROW,
-    // Flush left: the row's 8 pt gap is the whole space after the like count.
+    // Flush left: the row's 4 pt gap is the whole space after the like count.
     paddingRight: spacing.xs,
   },
   compactAction: { minHeight: ACTION_ROW },

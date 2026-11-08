@@ -1840,7 +1840,8 @@ and the row grew taller. With 0 likes there was no count.
   with no likes, "8" or "80". "999" or "1.2k" shrink slightly to fit; very large counts
   shrink further. The heart and slot fill the row's height, so rows with and without likes
   are the same height. The count opens the likers, and the heart toggles.
-- The comment button follows the slot with an 8 pt gap (it was 20 pt from the heart).
+- The comment button follows the slot with a 4 pt gap, and the slot is 18 pt (it was 20 pt
+  from the heart). Its left touch padding matches the gap, so it never overlaps the count.
 - Vertical: the entry's sections share their own 12 pt gap, the actions block follows with an
   8 pt margin, the row is 32 pt (every button still gets ≥44 pt with hitSlop), and
   "Liked by" / "View comments" sit ~8 pt under the icons, 4 pt apart.
