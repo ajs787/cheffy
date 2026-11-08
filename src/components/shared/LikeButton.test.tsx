@@ -23,6 +23,41 @@ describe('LikeButton', () => {
     expect(onPressCount).toHaveBeenCalledTimes(1);
   });
 
+  it('with countWidth, keeps the same-width count slot at any count (feed row never shifts)', async () => {
+    const onToggle = jest.fn();
+    const onPressCount = jest.fn();
+    const heart = (count: number) => (
+      <LikeButton
+        liked={false}
+        count={count}
+        countWidth={20}
+        onToggle={onToggle}
+        onPressCount={onPressCount}
+      />
+    );
+    const slotWidth = (testID: string) =>
+      [screen.getByTestId(testID).props.style].flat(Infinity).reduce((w, s) => s?.width ?? w, undefined);
+    const view = await render(heart(0));
+    // No likes: an empty slot of the same width, nothing to open.
+    expect(screen.queryByTestId('like-count')).toBeNull();
+    expect(slotWidth('like-count-slot')).toBe(20);
+    for (const [count, shown] of [
+      [1, '1'],
+      [10, '10'],
+      [100, '100'],
+      [1250, '1.3k'],
+    ] as const) {
+      await view.rerender(heart(count));
+      expect(screen.getByTestId('like-count')).toHaveTextContent(shown);
+      expect(slotWidth('like-count-button')).toBe(20);
+    }
+    // The count opens the likers; the heart still toggles.
+    await fireEvent.press(screen.getByRole('button', { name: '1250 likes' }));
+    expect(onPressCount).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByRole('button', { name: 'Like' }));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
   it('reflects the liked state for accessibility and hides a zero count', async () => {
     await render(<LikeButton liked count={0} onToggle={jest.fn()} />);
     expect(screen.getByRole('button').props.accessibilityState).toMatchObject({ selected: true });

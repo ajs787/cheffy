@@ -109,18 +109,6 @@ export interface PostImage {
   thumbUrl: string | null;
 }
 
-export interface CommentPreview {
-  id: string;
-  body: string;
-  /** Set when the comment has a photo or sticker (shown as a word in previews). */
-  mediaKind?: CommentMediaKind | null;
-  likeCount: number;
-  /** Null for an anonymous take (see `anonNumber`). */
-  author: ProfileSummary | null;
-  /** Anonymous Takes: this post's Chef number ("Chef #01"); null when named. */
-  anonNumber?: number | null;
-}
-
 export interface Post {
   id: string;
   author: ProfileSummary;
@@ -167,8 +155,6 @@ export interface Post {
   viewerHasSaved: boolean;
   /** Newest likers (feed only; empty elsewhere). */
   recentLikers: ProfileSummary[];
-  /** Top comments to preview on a feed card (feed queries only). */
-  topComments?: CommentPreview[];
   /** Accepted co-creators, each with their own rating and review. */
   coCreators: CoCreator[];
   /** Invitations still waiting (visible to the creator and the invitee only). */

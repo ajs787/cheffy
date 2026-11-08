@@ -1823,3 +1823,42 @@ using the same rollout flag (`anonymous_takes.mode`), so it's off for everyone r
 
 **Not verified:** on a device. Also, a creator who gets a like right after showing their post to
 one person can guess who it was. Any anonymous-like design has that limit.
+
+## Feed like/comment row (2026-11-08)
+
+**Bug:** on feed posts with 1+ likes, the comment bubble sat further from the heart than on
+posts with 0 likes, and the gap grew with the number of digits.
+
+**Cause:** `LikeButton` drew the like count inside the same row as the heart and comment
+buttons, sized to its text (a second touch target ≥28 pt wide plus 8 pt padding, each part
+forced to 44 pt tall). With a count, the comment button moved right by the count's width,
+and the row grew taller. With 0 likes there was no count.
+
+**Fix (feed card only; post detail unchanged):**
+- `LikeButton` has a `countWidth` option: the count gets a fixed 20 pt slot right after the
+  heart (4 pt gap). The slot stays even at 0, so the comment button sits in the same place
+  with no likes, "8" or "80". "999" or "1.2k" shrink slightly to fit; very large counts
+  shrink further. The heart and slot fill the row's height, so rows with and without likes
+  are the same height. The count opens the likers, and the heart toggles.
+- The comment button follows the slot with an 8 pt gap (it was 20 pt from the heart).
+- Vertical: the entry's sections share their own 12 pt gap, the actions block follows with an
+  8 pt margin, the row is 32 pt (every button still gets ≥44 pt with hitSlop), and
+  "Liked by" / "View comments" sit ~8 pt under the icons, 4 pt apart.
+- Comment previews are gone from the card: it shows "View 1 comment" / "View all N comments",
+  which opens the post at its comments. The feed request no longer embeds top comments (up to
+  6 comments plus author profiles per post per page). `mapTopComments`, `CommentPreview`,
+  `Post.topComments` and the cache updates that kept them in sync were removed, along with
+  their test.
+
+No negative margins, offsets or new dependencies.
+
+**Checked:**
+- LikeButton test: the count slot is 20 pt at 0, 1, 10, 100 and 1,250 likes (it shows
+  "1.3k"). The count opens the likers and the heart toggles.
+- Simulator (feed): the bubble is in the same spot on posts with 0 and 1 likes. The count
+  shows next to the heart, "Liked by" and "View all 2 comments" appear with no previews, and
+  "Liked by" opens the right likers list.
+- Full run: lint and tsc clean, 76 suites / 586 tests (the 2 preview tests were removed).
+
+**Not seen on device:** posts with 100+ likes and Co-Chef posts. They use the same row, and
+the unit test covers large counts.
