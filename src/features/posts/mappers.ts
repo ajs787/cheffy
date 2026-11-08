@@ -31,6 +31,7 @@ export const POST_SELECT = `
   images:post_images(id, storage_path, thumb_path, width, height, position),
   post_tags(tag:tags(id, slug, name)),
   viewer_has_liked,
+  viewer_liked_anonymously,
   viewer_has_saved,
   collaborators:post_collaborators(status, user:profiles!post_collaborators_user_id_fkey(${PROFILE_SUMMARY_SELECT})),
   evaluations:post_evaluations(user_id, rating, review)
@@ -141,6 +142,7 @@ export interface PostRow {
   }[];
   post_tags: { tag: { id: string; slug: string; name: string } | null }[];
   viewer_has_liked: boolean;
+  viewer_liked_anonymously?: boolean;
   viewer_has_saved: boolean;
   likers?: { created_at: string; profile: ProfileSummaryRow | null }[];
   top_comments?: {
@@ -252,6 +254,7 @@ export function mapPost(row: PostRow): Post | null {
       .filter((t): t is NonNullable<typeof t> => t !== null)
       .sort((a, b) => a.name.localeCompare(b.name)),
     viewerHasLiked: row.viewer_has_liked,
+    viewerLikedAnonymously: row.viewer_liked_anonymously ?? false,
     viewerHasSaved: row.viewer_has_saved,
     recentLikers: (row.likers ?? []).flatMap((l) => (l.profile ? [mapProfileSummary(l.profile)] : [])),
     topComments: mapTopComments(row.top_comments),

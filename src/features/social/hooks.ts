@@ -26,6 +26,7 @@ import {
   fetchBlockedUsers,
   fetchConnections,
   fetchFollowRequests,
+  fetchAnonymousLikeCount,
   fetchLikers,
   LIKERS_PAGE,
   dismissSuggestion,
@@ -56,15 +57,20 @@ export function useToggleLike() {
   const qc = useQueryClient();
   const me = useRequiredUserId();
   return useMutation({
-    mutationFn: ({ post, like }: { post: Pick<Post, 'id'>; like: boolean }) =>
-      like ? likePost(me, post.id) : unlikePost(me, post.id),
-    onMutate: async ({ post, like }) => {
+    mutationFn: ({ post, like, anonymous = false }: { post: Pick<Post, 'id'>; like: boolean; anonymous?: boolean }) =>
+      like ? likePost(me, post.id, anonymous) : unlikePost(me, post.id),
+    onMutate: async ({ post, like, anonymous = false }) => {
       await qc.cancelQueries({ queryKey: queryKeys.posts });
       const snapshot = snapshotPostCaches(qc);
       updatePostInCaches(qc, post.id, (p) =>
         p.viewerHasLiked === like
           ? p
-          : { ...p, viewerHasLiked: like, likeCount: Math.max(0, p.likeCount + (like ? 1 : -1)) },
+          : {
+              ...p,
+              viewerHasLiked: like,
+              viewerLikedAnonymously: like && anonymous,
+              likeCount: Math.max(0, p.likeCount + (like ? 1 : -1)),
+            },
       );
       if (like) haptics.light();
       return { snapshot };
@@ -72,6 +78,9 @@ export function useToggleLike() {
     onError: (error, _vars, context) => {
       if (context) restorePostCaches(qc, context.snapshot);
       toast.error(toUserMessage(error, 'Couldn’t update your like.'));
+    },
+    onSuccess: (_data, { like, anonymous }) => {
+      if (like && anonymous) toast.success('Liked anonymously');
     },
     // An open likes list picks up the change.
     onSettled: (_data, _error, { post }) => qc.invalidateQueries({ queryKey: queryKeys.likers(post.id) }),
@@ -85,6 +94,16 @@ export function useLikers(postId: string | undefined) {
     queryFn: ({ pageParam }) => fetchLikers(postId ?? '', pageParam),
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (last.length === LIKERS_PAGE ? pages.length * LIKERS_PAGE : undefined),
+    enabled: !!postId,
+    staleTime: 30_000,
+  });
+}
+
+/** How many of a post's likes are anonymous ("+ 3 liked anonymously"). */
+export function useAnonymousLikeCount(postId: string | undefined) {
+  return useQuery({
+    queryKey: [...queryKeys.likers(postId ?? ''), 'anonymous'],
+    queryFn: () => fetchAnonymousLikeCount(postId ?? ''),
     enabled: !!postId,
     staleTime: 30_000,
   });

@@ -13,6 +13,7 @@ const COMMENT_SELECT = `
   id, post_id, parent_id, body, created_at, like_count, reply_count, anon_number, reply_to_anon_number,
   media_kind, media_path, media_thumb_path, media_width, media_height, media_hidden_at,
   viewer_has_liked:viewer_has_liked_comment,
+  viewer_liked_anonymously:viewer_liked_comment_anonymously,
   is_mine:viewer_owns_comment,
   author:profiles!comments_author_id_fkey(${PROFILE_SUMMARY_SELECT}),
   reply_to:profiles!comments_reply_to_user_id_fkey(${PROFILE_SUMMARY_SELECT}),
@@ -37,6 +38,7 @@ export interface CommentRow {
   media_height?: number | null;
   media_hidden_at?: string | null;
   viewer_has_liked: boolean;
+  viewer_liked_anonymously?: boolean;
   author: ProfileSummaryRow | null;
   reply_to: ProfileSummaryRow | null;
   mentions?: { username: string; user_id: string; user: { username: string } | null }[] | null;
@@ -63,6 +65,7 @@ export function mapComment(row: CommentRow): Comment | null {
     likeCount: row.like_count ?? 0,
     replyCount: row.reply_count ?? 0,
     viewerHasLiked: row.viewer_has_liked ?? false,
+    viewerLikedAnonymously: row.viewer_liked_anonymously ?? false,
     media:
       row.media_kind && row.media_path
         ? {
@@ -250,8 +253,10 @@ export async function deleteComment(comment: Pick<Comment, 'id' | 'anonNumber' |
 /** Unique-violation: already liked, which is fine. */
 const ALREADY_EXISTS = '23505';
 
-export async function likeComment(me: string, commentId: string): Promise<void> {
-  const { error } = await supabase.from('comment_likes').insert({ user_id: me, comment_id: commentId });
+export async function likeComment(me: string, commentId: string, anonymous = false): Promise<void> {
+  const { error } = await supabase
+    .from('comment_likes')
+    .insert({ user_id: me, comment_id: commentId, ...(anonymous ? { anonymous } : {}) });
   if (error && error.code !== ALREADY_EXISTS) throw error;
 }
 

@@ -31,6 +31,7 @@ import { fetchCommentThread, type ReplyTarget } from '@/features/comments/api';
 import { CommentComposer } from '@/features/comments/components/CommentComposer';
 import { CommentThread } from '@/features/comments/components/CommentThread';
 import { useComments, useDeleteComment, useToggleCommentLike } from '@/features/comments/hooks';
+import { useAnonymousLikeMenu } from '@/features/social/components/AnonymousLikeSheet';
 import { ReportSheet } from '@/features/social/components/ReportSheet';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { colors, SCREEN_GUTTER, spacing } from '@/theme';
@@ -125,6 +126,23 @@ export default function PostScreen() {
     (comment: Comment) => toggleLike.mutate({ comment, like: !comment.viewerHasLiked }),
     [toggleLike],
   );
+  // Long-press a comment's heart → "Like anonymously" for that comment.
+  const anonLikeTarget = useRef<Comment | null>(null);
+  const anonymousLike = useAnonymousLikeMenu(() => {
+    const comment = anonLikeTarget.current;
+    if (comment) toggleLike.mutate({ comment, like: true, anonymous: true });
+  });
+  const openAnonymousLike = anonymousLike.onLongPress;
+  const onLongPressLike = useMemo(
+    () =>
+      openAnonymousLike
+        ? (comment: Comment) => {
+            anonLikeTarget.current = comment;
+            openAnonymousLike();
+          }
+        : undefined,
+    [openAnonymousLike],
+  );
   const { refreshing, onRefresh } = usePullToRefresh(() => Promise.all([post.refetch(), comments.refetch()]));
 
   if (post.isPending) {
@@ -209,6 +227,7 @@ export default function PostScreen() {
               onLongPress={setCommentMenu}
               onReply={startReply}
               onToggleLike={onToggleLike}
+              onLongPressLike={onLongPressLike}
             />
           )}
           ListHeaderComponent={<PostDetailHeader post={p} onCommentPress={() => inputRef.current?.focus()} />}
@@ -259,6 +278,7 @@ export default function PostScreen() {
         ) : null}
       </KeyboardAvoidingView>
 
+      {anonymousLike.sheet}
       <ActionSheet visible={!!commentMenu} onClose={() => setCommentMenu(null)} actions={commentActions} />
       <ReportSheet target={reportTarget} onClose={() => setReportTarget(null)} />
       {menu.element}

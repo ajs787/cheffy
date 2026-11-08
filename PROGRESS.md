@@ -1747,3 +1747,53 @@ Feedback discovery" (deliverable 5). Nothing was built for them.
   `anon` or `authenticated`. Client roles can call only the public RPCs, and `anon` can call
   none.
 - Nobody sees anything until the flag is set to `beta` (with testers) or `all`.
+
+## Anonymous likes (2026-11-08, branch `anonymous-takes` / PR #10; migration `20261108000001` not yet pushed)
+
+Long-press an unliked heart (post card, post page, or a comment) → "Like anonymously". The like
+counts, but nobody else sees who gave it. It's offered only to accounts with Anonymous Takes,
+using the same rollout flag (`anonymous_takes.mode`), so it's off for everyone right now.
+
+**Database** (`20261108000001_anonymous_likes.sql`):
+- `likes.anonymous` and `comment_likes.anonymous` (default false). The row keeps `user_id`, so
+  unliking, "you liked this" and moderation still work.
+- The select policies hide other people's anonymous likes. Your own stay readable to you. The
+  feed's "Liked by" preview and the Likes list only ever show named likes.
+- Notifications use `notify_anonymously` (no actor). An anonymous unlike removes one matching
+  actor-less notification, since they're all identical. Push text reads "A chef liked your…".
+  It never uses the comment's Chef number, because for a like that's the liked comment (often
+  the recipient's own take).
+- Before-insert trigger: requires the rollout flag for the liker. Allows 60 anonymous likes per
+  hour (`anonymous_likes.hourly_limit`), counted in a private `anonymous_like_log` that outlives
+  unlikes, so a like/unlike loop can't dodge the limit or spam notifications.
+- `viewer_liked_anonymously(posts)` and `viewer_liked_comment_anonymously(comments)` only ever
+  report on the viewer. `anonymous_like_count(post)` powers "N chefs liked anonymously" under
+  the Likes list, and it's 0 for anyone who can't see the post.
+- Switching an existing like between named and anonymous isn't offered. The owner would watch a
+  named notification vanish as an anonymous one appeared. There's no update grant on likes.
+
+**App:**
+- The LikeButton supports long-press and shows a small chef-hat badge when your like is
+  anonymous. Comment hearts work the same way.
+- A shared `useAnonymousLikeMenu` hook only mounts its sheet after the first long-press.
+- The Likes list ends with "N chefs liked anonymously".
+- Activity shows "A chef" for an anonymous like. It now selects `actor_id`, so a hidden
+  (blocked) named actor is still dropped instead of looking anonymous.
+- Privacy and Terms each gain a short paragraph.
+
+**Checked:**
+- `tests/db/anonymous-likes.test.ts`: 12 tests, covering:
+  - visibility to others vs. yourself;
+  - the viewer flag and the anonymous count;
+  - notifications and push text, plus unlike cleanup (named and anonymous);
+  - the rollout flag;
+  - no flipping;
+  - the rate limit surviving unlikes;
+  - the private log;
+  - blocks;
+  - comment likes, including on an anonymous take.
+- App tests: LikeButton long-press and badge; activity "A chef" and the blocked-actor drop.
+- Full run: lint and tsc clean, 77 suites / 587 tests.
+
+**Not verified:** on a device. Also, a creator who gets a like right after showing their post to
+one person can guess who it was. Any anonymous-like design has that limit.

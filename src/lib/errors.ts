@@ -112,6 +112,8 @@ const DB_MESSAGES: [RegExp, string][] = [
   [/posts_recipe_url_format/i, 'Recipe links need to start with http:// or https://.'],
   [/made_on cannot be in the future/i, 'The date made can’t be in the future.'],
   [/post not found/i, 'This post isn’t available anymore.'],
+  [/anonymous likes aren't available/i, 'Anonymous likes aren’t available right now.'],
+  [/too many likes/i, 'You’re liking a lot quickly. Try again in a little while.'],
   [/row-level security|permission denied/i, 'You don’t have permission to do that.'],
   [/jwt expired|invalid jwt/i, 'Your session expired. Please sign in again.'],
 ];

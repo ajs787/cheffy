@@ -10,6 +10,7 @@ import { commentPreviewText } from '@/features/comments/preview';
 import { StorySection } from '@/features/posts/components/StorySection';
 import { likedBySummary } from '@/features/social/likedBy';
 import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
+import { useAnonymousLikeMenu } from '@/features/social/components/AnonymousLikeSheet';
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
 import { colors, fonts, iconSizes, SCREEN_GUTTER, spacing, strokes } from '@/theme';
 import { madeByNames, type Post } from '@/types/models';
@@ -40,6 +41,7 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
   const me = useUserId();
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
+  const anonymousLike = useAnonymousLikeMenu(() => toggleLike.mutate({ post, like: true, anonymous: true }));
   const [expanded, setExpanded] = useState(false);
 
   const openPost = (focusComment = false) =>
@@ -153,9 +155,12 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
             liked={post.viewerHasLiked}
             count={post.likeCount}
             onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
+            onLongPress={anonymousLike.onLongPress}
+            anonymous={post.viewerLikedAnonymously}
             onPressCount={openLikes}
             style={styles.compactAction}
           />
+          {anonymousLike.sheet}
           <Pressable
             onPress={() => openPost(true)}
             hitSlop={8}

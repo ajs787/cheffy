@@ -162,6 +162,8 @@ export interface Post {
   images: PostImage[];
   tags: Tag[];
   viewerHasLiked: boolean;
+  /** The viewer's like doesn't show their name (only the viewer ever sees this). */
+  viewerLikedAnonymously: boolean;
   viewerHasSaved: boolean;
   /** Newest likers (feed only; empty elsewhere). */
   recentLikers: ProfileSummary[];
@@ -196,6 +198,7 @@ export interface Comment {
   likeCount: number;
   replyCount: number;
   viewerHasLiked: boolean;
+  viewerLikedAnonymously: boolean;
   /** One photo or sticker, or null. */
   media: CommentMedia | null;
   /** People the comment @mentions, by id (see features/comments/mentions). */

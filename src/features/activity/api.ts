@@ -47,13 +47,14 @@ interface NotificationRow {
   created_at: string;
   read_at: string | null;
   comment_id: string | null;
+  actor_id: string | null;
   actor: UserListRow | null;
   post: { id: string; title: string; images: { thumb_path: string; position: number }[] } | null;
   comment: { body: string; media_kind?: 'photo' | 'sticker' | null; anon_number?: number | null } | null;
 }
 
 const NOTIFICATION_SELECT = `
-  id, type, created_at, read_at, comment_id,
+  id, type, created_at, read_at, comment_id, actor_id,
   actor:profiles!notifications_actor_id_fkey(${USER_LIST_SELECT}),
   post:posts(id, title, images:post_images(thumb_path, position)),
   comment:comments(body, media_kind, anon_number)
@@ -76,13 +77,28 @@ export function actorName(item: Pick<ActivityItem, 'actor' | 'anonymousName'>): 
   return item.actor?.username ?? item.anonymousName ?? 'Someone';
 }
 
+const LIKE_TYPES: readonly NotificationType[] = ['post_like', 'comment_like'];
+
+/**
+ * Who an actor-less notification is from. Only an anonymous action has no
+ * actor_id; a set actor_id whose profile didn't come back is someone hidden by
+ * a block (or gone), so that row is dropped (null). An anonymous like is
+ * "A chef": its comment is the liked one, whose Chef number isn't the liker's.
+ */
+function anonymousActorName(row: NotificationRow): string | null {
+  if (row.actor_id !== null) return null;
+  if (LIKE_TYPES.includes(row.type)) return 'A chef';
+  const n = row.comment?.anon_number;
+  return n == null ? null : anonymousName(n);
+}
+
 /**
  * Maps a row; drops ones whose actor or post the viewer can no longer see.
  * An anonymous take's notification has no actor, only its comment's Chef number.
  */
 export function mapNotification(row: NotificationRow): ActivityItem | null {
-  const anonNumber = row.actor ? null : (row.comment?.anon_number ?? null);
-  if (!row.actor && anonNumber === null) return null;
+  const anonName = row.actor ? null : anonymousActorName(row);
+  if (!row.actor && anonName === null) return null;
   if (POST_TYPES.includes(row.type) && !row.post) return null;
   const cover = row.post ? [...row.post.images].sort((a, b) => a.position - b.position)[0] : undefined;
   return {
@@ -91,7 +107,7 @@ export function mapNotification(row: NotificationRow): ActivityItem | null {
     at: row.created_at,
     read: row.read_at !== null,
     actor: row.actor ? mapUserListItem(row.actor) : null,
-    anonymousName: anonNumber === null ? null : anonymousName(anonNumber),
+    anonymousName: anonName,
     post: row.post
       ? { id: row.post.id, title: row.post.title, thumbPath: cover?.thumb_path ?? null, thumbUrl: null }
       : null,

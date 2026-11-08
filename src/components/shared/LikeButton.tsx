@@ -1,4 +1,4 @@
-import { Heart } from 'lucide-react-native';
+import { ChefHat, Heart } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
@@ -17,13 +17,17 @@ export interface LikeButtonProps {
   liked: boolean;
   count: number;
   onToggle: () => void;
+  /** Long-press on an unliked heart (offers "Like anonymously"). */
+  onLongPress?: () => void;
+  /** The viewer's like doesn't show their name: a small chef hat marks it. */
+  anonymous?: boolean;
   /** Opens who liked it. When set, only the heart toggles the like; the count opens the list. */
   onPressCount?: () => void;
   /** Layout overrides (e.g. a shorter row; hitSlop keeps the touch area). */
   style?: StyleProp<ViewStyle>;
 }
 
-export function LikeButton({ liked, count, onToggle, onPressCount, style }: LikeButtonProps) {
+export function LikeButton({ liked, count, onToggle, onLongPress, anonymous, onPressCount, style }: LikeButtonProps) {
   const scale = useSharedValue(1);
   const wasLiked = useRef(liked);
 
@@ -44,8 +48,16 @@ export function LikeButton({ liked, count, onToggle, onPressCount, style }: Like
         fill={liked ? colors.accent : 'transparent'}
         strokeWidth={strokes.regular}
       />
+      {liked && anonymous ? (
+        <View style={styles.badge} testID="like-anonymous-badge">
+          <ChefHat size={10} color={colors.accent} strokeWidth={strokes.bold} />
+        </View>
+      ) : null}
     </Animated.View>
   );
+  const longPress = !liked && onLongPress ? onLongPress : undefined;
+  const label = liked ? (anonymous ? 'Unlike. You liked this anonymously' : 'Unlike') : 'Like';
+  const hint = longPress ? 'Long-press to like anonymously' : undefined;
   const countText =
     count > 0 ? (
       <AppText variant="calloutStrong" testID="like-count">
@@ -59,10 +71,12 @@ export function LikeButton({ liked, count, onToggle, onPressCount, style }: Like
       <View style={[styles.button, styles.split, style]}>
         <Pressable
           onPress={onToggle}
+          onLongPress={longPress}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 2 }}
           accessibilityRole="button"
           accessibilityState={{ selected: liked }}
-          accessibilityLabel={liked ? 'Unlike' : 'Like'}
+          accessibilityLabel={label}
+          accessibilityHint={hint}
           style={styles.heart}
           testID="like-button"
         >
@@ -86,10 +100,12 @@ export function LikeButton({ liked, count, onToggle, onPressCount, style }: Like
   return (
     <Pressable
       onPress={onToggle}
+      onLongPress={longPress}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityState={{ selected: liked }}
-      accessibilityLabel={liked ? `Unlike. ${count} likes` : `Like. ${count} likes`}
+      accessibilityLabel={`${label}. ${count} likes`}
+      accessibilityHint={hint}
       style={[styles.button, style]}
       testID="like-button"
     >
@@ -109,5 +125,18 @@ const styles = StyleSheet.create({
   },
   split: { gap: 0, paddingRight: 0 },
   heart: { minHeight: 44, justifyContent: 'center', paddingRight: spacing.xs + 2 },
+  badge: {
+    position: 'absolute',
+    right: -5,
+    bottom: -4,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tint,
+    borderWidth: 1.5,
+    borderColor: colors.background,
+  },
   count: { minHeight: 44, minWidth: 28, justifyContent: 'center', paddingRight: spacing.sm },
 });

@@ -8,6 +8,7 @@ import { MadeTogetherTag } from '@/components/shared/MadeTogetherTag';
 import { ImageCarousel } from '@/components/shared/ImageCarousel';
 import { LikeButton } from '@/components/shared/LikeButton';
 import { AppButton, AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
+import { useAnonymousLikeMenu } from '@/features/social/components/AnonymousLikeSheet';
 import { useToggleLike, useToggleSave } from '@/features/social/hooks';
 import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
 import { colors, iconSizes, radii, SCREEN_GUTTER, spacing, strokes } from '@/theme';
@@ -31,6 +32,7 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
   const { width } = useWindowDimensions();
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
+  const anonymousLike = useAnonymousLikeMenu(() => toggleLike.mutate({ post, like: true, anonymous: true }));
   const VisibilityIcon = post.visibility === 'private' ? Lock : Users;
   const published = post.status === 'published';
 
@@ -117,8 +119,11 @@ export function PostDetailHeader({ post, onCommentPress }: PostDetailHeaderProps
               liked={post.viewerHasLiked}
               count={post.likeCount}
               onToggle={() => toggleLike.mutate({ post, like: !post.viewerHasLiked })}
+              onLongPress={anonymousLike.onLongPress}
+              anonymous={post.viewerLikedAnonymously}
               onPressCount={() => router.push({ pathname: '/likes/[id]', params: { id: post.id } })}
             />
+            {anonymousLike.sheet}
             <Pressable
               onPress={onCommentPress}
               hitSlop={8}
