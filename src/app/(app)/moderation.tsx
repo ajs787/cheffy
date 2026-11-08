@@ -106,7 +106,12 @@ export default function ModerationScreen() {
                 </AppText>
               ) : null}
               <AppText variant="body" numberOfLines={6}>
-                {item.preview ?? '(content no longer exists)'}
+                {item.preview === null
+                  ? '(content no longer exists)'
+                  : item.preview.trim() ||
+                    (item.targetType === 'comment'
+                      ? 'Picture-only comment. See the picture on the web dashboard.'
+                      : '—')}
               </AppText>
               {item.ownerUsername ? (
                 <AppText

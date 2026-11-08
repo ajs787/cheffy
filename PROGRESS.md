@@ -1154,6 +1154,185 @@ matches. Newest first within each tier.
 - Separately, the shared `GridSkeleton` loading grid draws tiny squares. That's existing
   behaviour, unchanged here.
 
+## Comments: @mentions, photos and personal stickers (2026-10-29, branch `comment-media`, not pushed)
+
+**Status:** built and tested locally. **Migration `20261029000001_comment_media_mentions` is
+live, and the `comment-media` Edge Function is deployed** (2026-10-29, approved by the owner;
+`delete-account` was redeployed too). A new dev/TestFlight build is still needed for this app
+code and for keyboard stickers.
+
+**Checked on live after the push (read-only, no test data written):**
+- `migration list` matched before the push: only this migration was pending. The live DB
+  also has `20261028000001_pizza_to_cooking`, which comes from `ui-polish-branding`. That file
+  was copied in only for the push and isn't in this branch.
+- All 9 new `comments` columns exist, along with `comment_mentions`, `comment_uploads` and the
+  `comment_mention` notification type. All 205 existing comments are intact.
+- Bucket `comment-media` is private with a 3 MB limit. Its only storage policy is
+  `comment_media_objects_select` (no client write policies).
+- Signed out:
+  - `comment-media` returns 401 (with no token, and with the anon key);
+  - `mention_suggestions`, `comment_uploads_to_sweep` and the `comment_uploads` table are
+    refused;
+  - listing the bucket returns nothing.
+- Builds already out (e.g. TestFlight) don't select the new columns and keep working.
+- Not run yet: a signed-in upload, mention or notification on live. That needs a test
+  account and the new build.
+
+### Ship order (important)
+1. Apply the migration (`supabase db push`). The app's comment query selects the new columns,
+   so this build must not reach people before the migration is live. Older builds keep working
+   after it: their inserts and selects don't touch the new columns.
+2. Deploy the function: `supabase functions deploy comment-media` (needs the default
+   `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` env; JWT verification on). Also redeploy
+   `delete-account`, which now clears the `comment-media` bucket too.
+3. `eas build` (adds the `expo-paste-input` native module). Until then, the photo picker and
+   "Paste Sticker or Image" work; inserting from the sticker keyboard needs the new build.
+
+### What's built
+- **@mentions.** Typing `@` opens a panel above the keyboard: friends (mutual follows), then
+  people you follow, people who follow you, people in this post's comments, then everyone
+  else, filtered live by username and display name (150 ms debounce, cached). Each row shows
+  avatar, name, @username. A tap inserts `@username `. Up to 5 per comment. Deleting or
+  editing a name before sending drops that mention. Works in replies.
+  In threads, mentions show in Oxblood and open the profile.
+- **Stored by user id** (`comment_mentions`), with the name as written, so "@oldname" still
+  links to the right person (shown with their current username) after a rename.
+- **Anti-spoofing.** The server keeps a picked id only when that person's current username
+  is in the text. It drops unknown ids, yourself, suspended accounts, anyone in a block with
+  you either way, and anyone whose **Who can @mention you** setting (Settings › Privacy:
+  Everyone / People you follow / No one) doesn't allow you.
+- **Mention notifications** (`comment_mention`). They're created only when the comment row is
+  written, so never for a failed post. One per person per comment. Never yourself. None for
+  someone already notified about that comment (the post author, or the person replied to).
+  Only for people who can see the post (private/followers-only posts don't leak titles).
+  Blocks are respected both ways. Limits: 20 mention notifications per hour per sender, and
+  5 a day from one sender to one person. Push respects a new **Mentions** toggle. Tapping one
+  (in Activity, a banner or a push) opens the post scrolled to that comment, with the thread
+  opened and the comment briefly highlighted.
+- **Photo and sticker comments.** A picture icon next to the box opens: Choose Photo (the
+  system PHPicker, no library permission), Paste Sticker or Image, Remove Picture (when one is
+  attached), and the sheet's Cancel. Text-only, picture-only, text+picture, and pictures in
+  replies all work, with one picture per comment. A thumbnail shows above the box: tap to
+  enlarge, × to remove, and picking again replaces it. Typed text is kept throughout.
+  Nothing uploads until Post.
+  In threads the picture sits under the text, aspect kept: photos up to 200×240, stickers up
+  to 120×120, no frame, transparent. Tap for the full-screen pinch-to-zoom viewer. Picture-only
+  comments have no empty text line. Reply, like, report and delete are unchanged. Feed
+  previews and Activity show "Sent a photo" / "Sent a sticker".
+- **Composer.** Compact box, mention panel (4 rows max, so it fits above the keyboard on an
+  iPhone SE), attach button, Post. After a successful post the keyboard closes, the box clears
+  and the list scrolls to the new comment (or its thread). If posting fails, the text and
+  picture stay. Double taps are ignored.
+
+### Personal iPhone stickers: what iOS delivers, and what's supported
+- iOS hands a sticker from the emoji keyboard to a text field in one of three ways:
+  - iOS 18+, a field with `supportsAdaptiveImageGlyph`: an inline `NSAdaptiveImageGlyph`
+    (the same path as Genmoji);
+  - a rich-text field: an `NSTextAttachment`;
+  - otherwise, image data via paste.
+- React Native's `TextInput` handles none of these. The sticker is dropped, or never offered.
+- **Supported** (after the new build), via `expo-paste-input` 0.2.2 (MIT, an Expo module, no
+  config plugin). It wraps our `TextInput` and turns all three paths into a temporary image
+  file, which becomes the attachment preview. Transparency is kept: stickers are re-encoded
+  as PNG (≤ 512 px, 256 px thumb). Sticker-only comments and sticker replies work.
+- Also supported on every build: **Paste Sticker or Image** (uses expo-clipboard after a tap,
+  as PNG), and **Choose Photo**. A small PNG/WebP picked from Photos is kept as a transparent
+  sticker.
+- **Not supported:**
+  - **Animated stickers.** Animated live stickers and GIFs are flattened to their first frame,
+    and the server rejects animated WebP. Unreliable through these APIs, so it was left out
+    on purpose.
+  - Genmoji rendered inline in the text. A Genmoji inserted from the keyboard becomes a
+    picture attachment, like a sticker.
+  - "Choose Sticker" from a picker. No iOS picker exposes the sticker library, so the menu
+    doesn't offer it.
+  - Inserting more than one sticker. Only the first becomes the attachment, and the person
+    is told.
+  - Android keyboard stickers aren't wired (`StickerAwareInput` is iOS-only).
+  - Emoji are never swapped in for stickers.
+- **Risk to watch:** expo-paste-input works by swizzling `paste:`, `canPerformAction:` and
+  `insertAdaptiveImageGlyph:` on the text input class. It only acts on inputs it wraps, but
+  it's third-party native code. If keyboard insertion misbehaves on a device, removing the
+  package turns it off (`KEYBOARD_STICKERS_SUPPORTED` becomes false); the fallbacks remain.
+
+### Database and Storage (`supabase/migrations/20261029000001_comment_media_mentions.sql`)
+- `comments`: new columns:
+  - `media_upload_id` and `mention_ids`, which clients may set on insert only;
+  - `media_kind/path/thumb_path/width/height`, which a trigger copies from the upload;
+  - `media_hidden_at/_reason`, for moderators.
+- `comments` constraints: the body may be empty only with a picture, and ≤ 5 mentions.
+  Existing comments and threading are unchanged.
+- Authors can still edit only `body`. The picture, mentions and moderation fields are
+  protected by the update trigger.
+- New tables: `comment_mentions` and `comment_uploads`. New `profiles.mention_policy` and
+  `notification_preferences.mentions`.
+- New functions: `mention_suggestions` (RPC), `admin_moderate_comment_media` (moderators),
+  and sweep helpers (service role only).
+- Replaced functions: `push_message` (now carries `commentId`; `path` keeps the old shape so
+  older builds still open the post), `push_wanted`, `reports_before_insert` (keeps picture and
+  mentions as evidence), and `admin_report_detail`.
+- Private bucket `comment-media` (3 MB, JPEG/PNG/WebP). **No client insert, update or delete
+  policies.** Reading is allowed for the owner, moderators, or anyone who can see a comment
+  using the file and whose picture isn't removed. Comment RLS already covers post visibility,
+  deleted posts, blocks and hidden comments, so signed URLs follow it.
+- **Edge Function `supabase/functions/comment-media`:** the only way in.
+  - Checks the caller (and that they aren't suspended).
+  - Limits uploads to 30 per hour.
+  - Reads the **real bytes**: JPEG/PNG/WebP signatures and header dimensions (anything else
+    is refused, e.g. SVG/HTML/GIF/EXE/animated WebP).
+  - Enforces size limits: full ≤ 2048 px and 3 MB, thumb ≤ 720 px and 512 KB. Stickers must
+    be PNG/WebP.
+  - Stores files with the sniffed type under `{uid}/`, then records the upload.
+  - Client-chosen upload ids make retries idempotent.
+  - No external URLs and no base64 in Postgres.
+- **Failure safety:** the comment row is written only after the upload succeeded, and the
+  insert checks the upload is the author's own, unused and under an hour old. Uploads that
+  never became a comment, or whose comment was deleted, are swept by the function after an
+  hour unless an open report holds them.
+- Limits: 20 picture comments per hour per person.
+
+### Moderation
+- Reports on picture comments keep the picture path and mentions in the evidence snapshot.
+- The web dashboard shows the picture (signed, 5 minutes) "As reported" and "Now", with
+  **Remove picture only** / **Restore picture** (logged as `remove_media` / `restore_media`;
+  removing resolves the reports) next to the existing Remove content.
+- The in-app queue labels picture-only comments.
+- See MODERATION_ADMIN_GUIDE.md.
+
+### Performance
+- Uploads are resized before sending: photos to ≤ 1600 px JPEG 0.8, plus a 480 px thumb.
+- Lists load only thumbs, signed in **one batch request per page** and cached in memory and
+  on disk by path. Full size is signed only when the viewer opens.
+- Thread pagination is unchanged (30 per page, 20 replies).
+- Rows are memoized. Mention suggestions are debounced and cached.
+- Mentions add one small read after posting, and only when mentions were sent (the
+  insert's response can't see rows its trigger wrote).
+
+### Tests run
+- `npx tsc --noEmit` ✅.
+- `npx expo lint` ✅.
+- Jest: **472 passed / 68 suites**, up from 441. New:
+  - `tests/db/comment-media-mentions.test.ts` (18): tokens, spoofing, self, unknown ids,
+    the max of 5, blocks, mention policy, post visibility, no duplicate notification,
+    per-person cap, suggestion ranking, image-only/text+image/sticker replies, foreign,
+    reused, expired and invented uploads, clients can't write paths, uploads or the bucket,
+    storage read follows visibility and blocks, sweep plus evidence, moderator
+    remove-picture with audit, push text plus commentId, the rename case;
+  - `tests/db/image-info.test.ts` (3): byte sniffing and limits;
+  - `mentions.test.ts`;
+  - `CommentComposer.test.tsx`: suggestions, insert, sending ids, a removed mention being
+    dropped, keeping the draft on failure, double-tap, the attach menu;
+  - activity and push tests.
+- `npx expo-doctor`: only the existing "16 packages a patch behind" warning, which `main`
+  also has.
+
+### Not verified (needs the owner or a device)
+- No signed-in flow has run on live yet: upload through the Edge Function, posting a picture
+  comment, a mention notification, a push.
+- Sticker-keyboard insertion, Genmoji, transparency and paste need a real iPhone on the new
+  build (the Simulator has no personal stickers). Also: picking photos, the viewer, the
+  keyboard on a small iPhone, a slow or interrupted network (airplane mode mid-post: the
+  draft should stay, and retrying reuses the upload), and push taps opening the comment.
 ## UI polish, branding & content clarity (2026-10-28, branch `ui-polish-branding`)
 
 **1. Pizza moves from Baking to Cooking** (migration `20261028000001_pizza_to_cooking`, live since 2026-10-28, approved)
@@ -1422,3 +1601,149 @@ those sections stay hidden, and For Your Taste still works.
   opens Browse with its 2 creations.
 - The Trending subtitle reads "Getting the most likes and comments lately" (it said "Most
   loved", which the app no longer uses).
+
+## v1.5 Anonymous Takes (2026-11-07, branch `anonymous-takes`; migration pushed 2026-11-07; not committed)
+
+Optional comments shown as "Chef #01" instead of a profile, on public posts whose creator
+allows it. Behind a server-side rollout switch that ships **off**.
+
+**Branch base:** `comment-media` (its migration is already live but the branch was never
+merged) + current `main`. Merging this branch also lands the comment photos/stickers and
+@mentions work.
+
+**Audit findings that shaped the design:**
+- Every signed-in user can read every column of `comments`, and shipped v1.0 apps select
+  `author_id` directly. Hiding a name in the UI would not hide it from the API, and a
+  column lock would break v1.0.
+- `notifications` is in the Realtime publication, so its `actor_id` reaches devices.
+- Comment photos are stored under `<user id>/…`, so a photo would reveal its author.
+- `comments.author_id`, `reply_to_user_id`, mention notifications, the report snapshot's
+  `owner_username` and the moderation list's owner column were all identity paths.
+- Hiding anonymous comments from people who blocked their author would let anyone unmask a
+  Chef by blocking suspects one at a time. So blocks limit reach (no takes on a blocker's
+  posts, no notifications across a block), not reading.
+
+**Design (migration `20261107000001_anonymous_takes.sql`):**
+- An anonymous comment stores `author_id = null` plus `anon_number`. Who holds each number is
+  kept in `anonymous_identities(post_id, user_id, number)`, which has no client grants. The
+  last number used per post is kept in `anonymous_threads`, so numbers are never reused, even
+  after an account is deleted.
+- Writes go through `post_anonymous_take(post, body, parent, reply_to)` (security definer).
+  It checks: signed in, not suspended, rollout on for both the commenter and the creator,
+  the post is published and public, the creator's account is public and not suspended,
+  the creator allows takes, the commenter isn't the creator, and the commenter can view the
+  post (blocks). Numbers are handed out under a per-post advisory lock, plus a unique
+  constraint. A retry with the same text within 2 minutes returns the first comment.
+  `anon_number` isn't insertable or updatable by clients.
+- Anonymous takes are text only: no media (the storage path holds the user id) and no
+  @mentions (enforced by a constraint and the trigger).
+- `delete_anonymous_take` lets only the writer delete. The creator can still delete any
+  comment on their post, as before.
+- Notifications for anonymous comments and replies have `actor_id = null`
+  (`notify_anonymously`; block and self checks use the real author). The push text reads
+  "Chef #03 commented on …".
+- Replies can address a Chef (`reply_to_anon_number`), validated to be in the thread.
+- Rate limits for every comment: 60 an hour (`comments.hourly_limit`). For anonymous takes
+  only: 20 an hour (`anonymous_takes.hourly_limit`), 8 per post an hour
+  (`anonymous_takes.per_post_hourly_limit`), and no repeating the same words within
+  10 minutes. Named comments keep their v1.0 behaviour apart from the hourly cap. The
+  blocked-terms filter applies.
+- For the app, only about the viewer: `viewer_owns_comment(c)` (a computed field) and
+  `anonymous_takes_status(post)` → `{available, open, name}`.
+- `posts.allow_anonymous_takes` defaults to true for new and existing posts. It's saved
+  through `save_post` only when the app sends it, so v1.0 edits keep it.
+- Reports have two new reasons, `hate` and `threats` (both urgent). For an anonymous
+  comment, `target_owner_id` (never client-readable) still records the author, and the
+  snapshot holds `anonymous_name` instead of `owner_username`.
+- Moderation:
+  - `admin_reports` lists the author as "Chef #01 (anonymous)", and anonymous authors can't
+    be found by username search.
+  - `admin_report_detail` hides the author until a moderator calls
+    `admin_reveal_anonymous_author(report, reason)`. That needs a reason and records a
+    `reveal_identity` action with the moderator's name. It returns the account and their
+    last 20 reports.
+  - The detail also shows the thread around the comment, as the public sees it.
+  - New action `suspend_author`. For an anonymous comment it's refused until the reveal is
+    recorded.
+  - Suspending an account hides its anonymous comments too, and unsuspending brings them
+    back (a trigger on `profiles.suspended_at`).
+- Rollout: `app_config['anonymous_takes.mode']` is `off` (shipped), `beta` (accounts in
+  `anonymous_takes_testers`) or `all`.
+
+**App:**
+- Composer:
+  - When the post is open to takes, a "Comment as @you / Anonymous Chef" toggle appears
+    above the field (on focus, with text, or while replying).
+  - It starts as you on every post and stays as picked within the thread.
+  - When anonymous: chef-hat avatar, "You'll appear as Chef #03 on this post. Text only.",
+    no photo button, no @mention suggestions, and the placeholder reads "Add an anonymous
+    take…".
+  - If the creator turns takes off mid-draft, sending is blocked until you pick "Comment as
+    @you". It never falls back to your name on its own.
+- Comment rows: Chef name in oxblood, "anonymous · 2h" (or "you · anonymous" on your own),
+  a shared chef-hat avatar, and no profile link. "@Chef #01" in replies. Likes, replies,
+  report and delete work as before. Creators can now also report (not only delete) comments
+  on their posts.
+- Feed card previews and Activity / in-app banners show "Chef #01" (`actor` is null).
+- Create/Edit Entry: an "Allow Anonymous Takes" switch under "Who can see this", shown only
+  to accounts in the rollout. On non-public posts it notes "Only on public posts".
+- Report sheet: Harassment or bullying, Hate or discrimination, Threats, Sexual or
+  inappropriate, Spam, …
+- v1.0 apps skip comments and notifications without an author, so they don't show
+  anonymous takes. They don't crash and nothing leaks.
+
+**Moderation dashboard (web/admin):** new reasons and filters, "Posted as Chef #01", the
+thread context, a "Reveal who wrote it" panel (reason required, recorded), the author's
+other reports after a reveal, and "Suspend author".
+
+**Policies:** web Privacy and Terms, plus in-app Terms, now have an "Anonymous Takes"
+section. It covers what others see, that it isn't anonymous to Cheffy, moderator access
+being recorded, removal and bans, and the creator's switch. It never says "untraceable".
+`TERMS_VERSION` was not bumped; bumping it makes everyone re-accept, which is a product call.
+
+**Not built (spec gaps):** sections 4–6 of the brief didn't come through, including "Open to
+Feedback discovery" (deliverable 5). Nothing was built for them.
+
+**Checked:**
+- `tests/db/anonymous-takes.test.ts` (29 tests, real migrations with RLS):
+  - default on and the creator's switch (also after a v1.0-style edit);
+  - per-post sequential numbers, a stable number for a returning commenter, and a fresh
+    sequence on another post;
+  - anonymous replies, and named replies to a Chef;
+  - likes, text only, retry idempotency, and existing takes staying (still anonymous) after
+    the switch is turned off;
+  - ineligible posts (own, followers-only, draft, private account) and all three rollout
+    modes;
+  - status only about yourself, and account deletion removing takes without reusing the
+    number;
+  - no client access to the mapping tables or helpers;
+  - the creator's row and notification showing no actor;
+  - reply notifications without names, and push text;
+  - no direct writes of `anon_number`, and no changing the author;
+  - delete only by the writer (or the creator);
+  - blocks;
+  - reports not exposing the owner to the reporter, and the new reasons;
+  - rate limits, repeats, suspension and the blocked-terms filter;
+  - the moderator list and detail hiding the author, reveal (non-moderators refused, reason
+    required, recorded), and suspend only after a reveal, which hides and then restores
+    their anonymous takes.
+- App tests: composer (no toggle where closed; anonymous text only with no mentions or
+  photo; stays anonymous; never silently names you), and anonymous notification mapping.
+- **Not verified:**
+  - true concurrent first comments: PGlite is single-connection. It's guarded by an
+    advisory lock, a row lock and a unique constraint, but untested under real concurrency;
+  - the simulator or a real device (needs a dev or TestFlight build with the flag on for a
+    tester);
+  - the dashboard in a browser.
+
+**Pushed to the live database (2026-11-07):**
+- The live DB already had `20261030000002_discovery_speed.sql` (PR #8, not on this branch), so
+  `db push` refused. That file was copied in unchanged from `discovery-indexes`; it only touches
+  indexes and the Trending/Newly Cooked functions, which this migration doesn't. DB tests
+  passed with it (328/328), and the dry run then showed only `20261107000001`.
+- Checked live after the push, read-only: the flag is `"off"`, there are 0 testers, and
+  `posts.allow_anonymous_takes` is boolean, default true. `comments.author_id` is nullable and
+  0 of 223 comments are anonymous. RLS is on for the three private tables, with no grants to
+  `anon` or `authenticated`. Client roles can call only the public RPCs, and `anon` can call
+  none.
+- Nobody sees anything until the flag is set to `beta` (with testers) or `all`.

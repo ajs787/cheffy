@@ -16,6 +16,13 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: 'Anonymous Takes',
+    body: [
+      'Some posts allow Anonymous Takes: comments shown as a numbered chef (“Chef #01”) instead of your profile. Anonymous Takes are anonymous to other users, including the post’s creator — not to Cheffy. Your account is still linked to every comment you post, and the Community Guidelines apply in full.',
+      'When a report needs it, Cheffy moderators can see which account wrote an anonymous comment; each time they do, it is recorded. Anonymous comments that break the rules are removed, and the account behind them can be restricted or banned like any other. Creators can turn Anonymous Takes off for a post at any time; comments already posted stay unless they’re removed.',
+    ],
+  },
+  {
     title: 'Reporting and blocking',
     body: [
       'Use “Report” on any post, comment or profile to flag it. Reports are reviewed and objectionable content is removed, typically within 24 hours, and the users who posted it may be removed.',

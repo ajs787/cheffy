@@ -10,28 +10,32 @@ import { colors, SCREEN_GUTTER, spacing } from '@/theme';
 import { followStateOf } from '@/types/models';
 import { formatRelativeTime } from '@/utils/dates';
 
-import { activityTarget, describe, type ActivityItem } from '../api';
+import { AnonymousAvatar } from '@/features/comments/components/AnonymousAvatar';
+
+import { activityTarget, actorName, describe, type ActivityItem } from '../api';
 
 function ActivityRowBase({ item }: { item: ActivityItem }) {
   const respond = useRespondToFollowRequest();
   const collab = useRespondToCollaboration();
   const sentence = describe(item);
   const showComment = item.commentBody && item.type !== 'comment_like';
+  const actor = item.actor;
+  const name = actorName(item);
 
   let trailing: React.ReactNode = null;
-  if (item.type === 'follow_request') {
+  if (item.type === 'follow_request' && actor) {
     trailing = (
       <View style={styles.requestActions}>
         <AppButton
           label="Confirm"
           size="sm"
-          onPress={() => respond.mutate({ userId: item.actor.id, accept: true })}
+          onPress={() => respond.mutate({ userId: actor.id, accept: true })}
         />
         <AppButton
           label="Delete"
           size="sm"
           variant="secondary"
-          onPress={() => respond.mutate({ userId: item.actor.id, accept: false })}
+          onPress={() => respond.mutate({ userId: actor.id, accept: false })}
         />
       </View>
     );
@@ -48,16 +52,10 @@ function ActivityRowBase({ item }: { item: ActivityItem }) {
         />
       </View>
     );
-  } else if (item.type === 'follow') {
+  } else if (item.type === 'follow' && actor) {
     // Always shown, so following back turns it into "Following" (or
     // "Requested") instead of making the button vanish.
-    trailing = (
-      <FollowButton
-        userId={item.actor.id}
-        state={followStateOf(item.actor)}
-        isPrivate={item.actor.isPrivate}
-      />
-    );
+    trailing = <FollowButton userId={actor.id} state={followStateOf(actor)} isPrivate={actor.isPrivate} />;
   } else if (item.post) {
     trailing = (
       <FoodImage
@@ -74,14 +72,23 @@ function ActivityRowBase({ item }: { item: ActivityItem }) {
       onPress={() => router.push(activityTarget(item))}
       activeScale={0.98}
       accessibilityRole="link"
-      accessibilityLabel={`${item.read ? '' : 'New. '}${item.actor.username} ${sentence}, ${formatRelativeTime(item.at)}`}
+      accessibilityLabel={`${item.read ? '' : 'New. '}${name}${actor ? '' : ', anonymous,'} ${sentence}, ${formatRelativeTime(item.at)}`}
       style={[styles.row, !item.read && styles.unread]}
     >
       {!item.read ? <View style={styles.dot} /> : null}
-      <Avatar uri={item.actor.avatarUrl} name={item.actor.displayName} size="md" />
+      {actor ? (
+        <Avatar uri={actor.avatarUrl} name={actor.displayName} size="md" />
+      ) : (
+        <View style={styles.anonAvatar}>
+          <AnonymousAvatar size="sm" />
+        </View>
+      )}
       <View style={styles.text}>
         <AppText variant="callout" numberOfLines={3}>
-          <AppText variant="calloutStrong">{item.actor.username}</AppText> {sentence}
+          <AppText variant="calloutStrong" style={actor ? undefined : styles.anonName}>
+            {name}
+          </AppText>{' '}
+          {sentence}
           <AppText variant="callout" color="textTertiary">
             {'  '}
             {formatRelativeTime(item.at)}
@@ -120,5 +127,8 @@ const styles = StyleSheet.create({
   },
   text: { flex: 1, gap: 2 },
   thumb: { width: 48, height: 48 },
+  // Same footprint as a md avatar.
+  anonAvatar: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  anonName: { color: colors.accent },
   requestActions: { flexDirection: 'row', gap: spacing.xs },
 });

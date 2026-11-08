@@ -8,17 +8,25 @@ import type { Comment } from '@/types/models';
 import { useReplies } from '../hooks';
 import { CommentRow, type CommentRowProps } from './CommentRow';
 
-export interface CommentThreadProps extends Omit<CommentRowProps, 'comment' | 'nested'> {
+export interface CommentThreadProps extends Omit<CommentRowProps, 'comment' | 'nested' | 'highlighted'> {
   comment: Comment;
   expanded: boolean;
   onToggleExpanded: (commentId: string) => void;
+  /** A comment to draw attention to (opened from a notification). */
+  highlightId?: string | null;
 }
 
 /**
  * A top-level comment and its replies (one level). Replies load when the
  * thread is opened, a page at a time.
  */
-function CommentThreadBase({ comment, expanded, onToggleExpanded, ...rowProps }: CommentThreadProps) {
+function CommentThreadBase({
+  comment,
+  expanded,
+  onToggleExpanded,
+  highlightId,
+  ...rowProps
+}: CommentThreadProps) {
   const replies = useReplies(comment.id, expanded && comment.replyCount > 0);
   const loaded = replies.data?.pages.flat() ?? [];
   const pending = comment.id.startsWith('pending-');
@@ -26,9 +34,17 @@ function CommentThreadBase({ comment, expanded, onToggleExpanded, ...rowProps }:
 
   return (
     <View>
-      <CommentRow comment={comment} {...rowProps} />
+      <CommentRow comment={comment} highlighted={highlightId === comment.id} {...rowProps} />
       {expanded
-        ? loaded.map((reply) => <CommentRow key={reply.id} comment={reply} nested {...rowProps} />)
+        ? loaded.map((reply) => (
+            <CommentRow
+              key={reply.id}
+              comment={reply}
+              nested
+              highlighted={highlightId === reply.id}
+              {...rowProps}
+            />
+          ))
         : null}
       {!pending && comment.replyCount > 0 ? (
         <Pressable

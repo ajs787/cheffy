@@ -93,7 +93,24 @@ PK `(follower_id, following_id)`; `check follower_id <> following_id`.
 PK `(user_id, post_id)` → a user can like a post once.
 
 ### comments
-`id, post_id, author_id, body (1–1000 trimmed), created_at, updated_at`.
+`id, post_id, author_id, body (≤ 1000 trimmed; may be empty only with a picture), created_at, updated_at`,
+plus (migration `20261029000001`):
+- `media_upload_id` → `comment_uploads` (client-writable on insert only); `media_kind photo|sticker`,
+  `media_path`, `media_thumb_path`, `media_width`, `media_height` copied from the upload by a trigger;
+  `media_hidden_at/_reason` (moderators remove just the picture).
+- `mention_ids uuid[]` (client sends the people it picked; a trigger keeps only real, allowed people
+  whose current `@username` is in the body, ≤ 5). Kept mentions go to `comment_mentions`.
+
+### comment_mentions
+PK `(comment_id, user_id)`, `username` as written. Readable when the comment is. Lets "@oldname"
+still link to the right person after a rename.
+
+### comment_uploads
+Written only by the `comment-media` Edge Function (service role) after checking the real bytes.
+`id, owner_id, kind, path, thumb_path, mime, bytes, width, height`. Unused after an hour → swept
+(`comment_uploads_to_sweep` / `forget_comment_uploads`, service role only), unless an open report
+holds it as evidence. Files live in the private `comment-media` bucket; clients have no write
+policies there, and reading follows the comment's visibility.
 
 ### saved_posts
 PK `(user_id, post_id)`. Private to the saver.

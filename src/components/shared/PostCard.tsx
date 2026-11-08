@@ -5,6 +5,8 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AppText, Avatar, IconButton, RatingDisplay, TagChip } from '@/components/ui';
 import { useUserId } from '@/features/auth/store';
+import { commentAuthorName } from '@/features/comments/anonymous';
+import { commentPreviewText } from '@/features/comments/preview';
 import { StorySection } from '@/features/posts/components/StorySection';
 import { likedBySummary } from '@/features/social/likedBy';
 import { openImageViewer, postImagesForViewer } from '@/stores/imageViewer';
@@ -212,13 +214,22 @@ function PostCardBase({ post, onOpenMenu }: PostCardProps) {
                 onPress={() => openPost(true)}
                 style={styles.comments}
                 accessibilityRole="link"
-                accessibilityLabel={`Comments: ${topComments.map((c) => `${c.author.username}: ${c.body}`).join('. ')}`}
+                accessibilityLabel={`Comments: ${topComments.map((c) => `${commentAuthorName(c)}: ${commentPreviewText(c.body, c.mediaKind)}`).join('. ')}`}
                 accessibilityHint="Opens all comments"
                 testID={`post-card-comments-${post.id}`}
               >
                 {topComments.map((comment) => (
                   <AppText key={comment.id} variant="callout" numberOfLines={4}>
-                    <AppText variant="calloutStrong">{comment.author.username}</AppText> {comment.body}
+                    <AppText variant="calloutStrong" style={comment.author ? undefined : styles.anonName}>
+                      {commentAuthorName(comment)}
+                    </AppText>{' '}
+                    {comment.body.trim() ? (
+                      comment.body
+                    ) : (
+                      <AppText variant="callout" color="textSecondary">
+                        {commentPreviewText(comment.body, comment.mediaKind)}
+                      </AppText>
+                    )}
                   </AppText>
                 ))}
                 {post.commentCount > topComments.length ? (
@@ -245,6 +256,7 @@ export const PostCard = memo(PostCardBase);
 const ACTION_ROW = 36;
 
 const styles = StyleSheet.create({
+  anonName: { color: colors.accent },
   card: { paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
   flex: { flex: 1 },
   creator: {

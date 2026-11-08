@@ -5,9 +5,11 @@ import { supabase } from './client';
 export const BUCKETS = {
   avatars: 'avatars',
   postImages: 'post-images',
+  commentMedia: 'comment-media',
 } as const;
 
-type Bucket = (typeof BUCKETS)[keyof typeof BUCKETS];
+export type Bucket = (typeof BUCKETS)[keyof typeof BUCKETS];
+type PrivateBucket = typeof BUCKETS.postImages | typeof BUCKETS.commentMedia;
 
 const SIGNED_URL_TTL_SECONDS = 2 * 60 * 60;
 /** Re-sign when a cached URL has less than this left. */
@@ -29,18 +31,22 @@ function pruneSignedUrlCache(now: number): void {
 }
 
 /**
- * Signs private post-image paths in one batch request. URLs are cached in
- * memory until close to expiry so lists don't re-sign on every render; the
- * image disk cache is keyed by path (see FoodImage) so re-signing never
- * re-downloads.
+ * Signs private file paths in one batch request. URLs are cached in memory
+ * until close to expiry so lists don't re-sign on every render; the image
+ * disk cache is keyed by path (see FoodImage) so re-signing never
+ * re-downloads. Storage only signs what the caller may read (its policies
+ * follow post and comment visibility).
  */
-export async function signPostImagePaths(paths: readonly string[]): Promise<Record<string, string>> {
+export async function signPaths(
+  bucket: PrivateBucket,
+  paths: readonly string[],
+): Promise<Record<string, string>> {
   const now = Date.now();
   const result: Record<string, string> = {};
   const missing: string[] = [];
 
   for (const path of new Set(paths)) {
-    const cached = signedUrlCache.get(path);
+    const cached = signedUrlCache.get(`${bucket}:${path}`);
     if (cached && cached.expiresAt - now > REFRESH_MARGIN_MS) {
       result[path] = cached.url;
     } else {
@@ -50,13 +56,13 @@ export async function signPostImagePaths(paths: readonly string[]): Promise<Reco
 
   if (missing.length > 0) {
     const { data, error } = await supabase.storage
-      .from(BUCKETS.postImages)
+      .from(bucket)
       .createSignedUrls(missing, SIGNED_URL_TTL_SECONDS);
     if (error) throw error;
     const expiresAt = now + SIGNED_URL_TTL_SECONDS * 1000;
     for (const entry of data) {
       if (entry.path && entry.signedUrl && !entry.error) {
-        signedUrlCache.set(entry.path, { url: entry.signedUrl, expiresAt });
+        signedUrlCache.set(`${bucket}:${entry.path}`, { url: entry.signedUrl, expiresAt });
         result[entry.path] = entry.signedUrl;
       }
     }
@@ -64,6 +70,11 @@ export async function signPostImagePaths(paths: readonly string[]): Promise<Reco
   }
 
   return result;
+}
+
+/** Signs private post-image paths (see signPaths). */
+export function signPostImagePaths(paths: readonly string[]): Promise<Record<string, string>> {
+  return signPaths(BUCKETS.postImages, paths);
 }
 
 export function avatarUrl(path: string | null | undefined): string | null {
@@ -92,4 +103,3 @@ export async function removeFiles(bucket: Bucket, paths: readonly string[]): Pro
   const { error } = await supabase.storage.from(bucket).remove([...paths]);
   if (error) throw error;
 }
-

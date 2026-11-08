@@ -41,7 +41,9 @@ import { LeaveComposeSheet } from '@/features/posts/components/LeaveComposeSheet
 import { CategorySelector } from '@/features/posts/components/CategorySelector';
 import { ComposeFooter } from '@/features/posts/components/ComposeFooter';
 import { DetailsSection } from '@/features/posts/components/DetailsSection';
+import { AnonymousTakesField } from '@/features/posts/components/AnonymousTakesField';
 import { BudgetField } from '@/features/posts/components/BudgetField';
+import { useAnonymousTakesStatus } from '@/features/comments/anonymous';
 import { FormSection } from '@/features/posts/components/FormSection';
 import { inviteCollaborators } from '@/features/collaboration/api';
 import { MadeWithField } from '@/features/collaboration/components/MadeWithField';
@@ -114,7 +116,9 @@ export default function ComposeScreen() {
   const offer = !restored && !declined ? (start?.recovery ?? null) : null;
   const restore = (recovery: ComposeRecovery) => {
     const { images, missing } = withoutMissingLocalPhotos(
-      existing.data ? refreshRemoteImages(recovery.values.images, existing.data.images) : recovery.values.images,
+      existing.data
+        ? refreshRemoteImages(recovery.values.images, existing.data.images)
+        : recovery.values.images,
     );
     if (missing > 0) {
       toast.error(
@@ -458,6 +462,9 @@ function ComposeForm({
   };
 
   const tags = useWatch({ control, name: 'tags' });
+  const visibility = useWatch({ control, name: 'visibility' });
+  // Shown only to accounts in the Anonymous Takes rollout.
+  const anonymousTakes = useAnonymousTakesStatus(null);
   const tagsSummary =
     tags.length > 0 ? tags.map((t) => `#${t}`).join('  ') : 'Help friends find it — #sourdough, #weeknight';
   const pick = taxonomy.data ? quickPickFor(taxonomy.data, primaryId || null) : null;
@@ -710,6 +717,19 @@ function ComposeForm({
               name="visibility"
               render={({ field }) => <VisibilitySelector value={field.value} onChange={field.onChange} />}
             />
+            {anonymousTakes.available ? (
+              <Controller
+                control={control}
+                name="allowAnonymousTakes"
+                render={({ field }) => (
+                  <AnonymousTakesField
+                    value={field.value ?? true}
+                    onChange={field.onChange}
+                    visibility={visibility}
+                  />
+                )}
+              />
+            ) : null}
           </FormSection>
         </ScrollView>
 

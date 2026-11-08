@@ -1,5 +1,5 @@
 import { badgeLabel } from './components/ActivityBell';
-import { activityTarget, describe as describeItem, mapNotification } from './api';
+import { activityTarget, actorName, describe as describeItem, mapNotification } from './api';
 
 jest.mock('@/lib/supabase/client', () => ({ supabase: {} }));
 
@@ -45,6 +45,17 @@ describe('notifications', () => {
     expect(mapNotification(row('follow'))).not.toBeNull();
   });
 
+  it('show an anonymous take by its Chef name, never an account', () => {
+    const item = mapNotification(
+      row('comment', { actor: null, post, comment: { body: 'needs salt', anon_number: 3 } }),
+    )!;
+    expect(item).toMatchObject({ actor: null, anonymousName: 'Chef #03', commentBody: 'needs salt' });
+    expect(actorName(item)).toBe('Chef #03');
+    expect(activityTarget({ ...item, commentId: 'c' })).toMatchObject({ pathname: '/post/[id]' });
+    // No actor and no anonymous comment: still dropped.
+    expect(mapNotification(row('comment', { actor: null, post, comment: { body: 'x' } }))).toBeNull();
+  });
+
   it('read as sentences', () => {
     const p = { id: 'p', title: 'Iced Matcha', thumbPath: null, thumbUrl: null };
     expect(describeItem({ type: 'follow_request', post: null, commentBody: null })).toBe(
@@ -70,6 +81,25 @@ describe('notifications', () => {
       pathname: '/post/[id]',
       params: { id: 'p', focus: 'comments' },
     });
+  });
+
+  it('describe mentions and open the post at that comment', () => {
+    const actor = mapNotification(row('follow'))!.actor;
+    const p = { id: 'p', title: 'Iced Matcha', thumbPath: null, thumbUrl: null };
+    expect(describeItem({ type: 'comment_mention', post: p, commentBody: '@ana try it' })).toBe(
+      'mentioned you in a comment on Iced Matcha',
+    );
+    expect(activityTarget({ type: 'comment_mention', post: p, actor, commentId: 'c1' })).toEqual({
+      pathname: '/post/[id]',
+      params: { id: 'p', focus: 'comments', comment: 'c1' },
+    });
+    // A mention on a post the viewer can't see is dropped.
+    expect(mapNotification(row('comment_mention'))).toBeNull();
+  });
+
+  it('show picture-only comments as words', () => {
+    const item = mapNotification(row('comment', { post, comment: { body: '', media_kind: 'sticker' } }))!;
+    expect(item.commentBody).toBe('Sent a sticker');
   });
 
   it('cap the badge', () => {

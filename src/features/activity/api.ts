@@ -2,6 +2,8 @@ import { mapUserListItem, USER_LIST_SELECT, type UserListRow } from '@/features/
 import { unwrap } from '@/lib/errors';
 import { supabase } from '@/lib/supabase/client';
 import { fetchRows } from '@/lib/supabase/query';
+import { anonymousName } from '@/features/comments/anonymous';
+import { commentPreviewText } from '@/features/comments/preview';
 import { signPostImagePaths } from '@/lib/supabase/storage';
 import type { UserListItem } from '@/types/models';
 
@@ -14,7 +16,8 @@ export type NotificationType =
   | 'comment_reply'
   | 'comment_like'
   | 'collab_invite'
-  | 'collab_accepted';
+  | 'collab_accepted'
+  | 'comment_mention';
 
 export interface ActivityPost {
   id: string;
@@ -28,7 +31,10 @@ export interface ActivityItem {
   type: NotificationType;
   at: string;
   read: boolean;
-  actor: UserListItem;
+  /** Null for an anonymous take: see `anonymousName`. */
+  actor: UserListItem | null;
+  /** "Chef #01" when an anonymous take is what happened (no actor is ever sent). */
+  anonymousName: string | null;
   /** Null for follow events, or when the post is no longer visible. */
   post: ActivityPost | null;
   commentId: string | null;
@@ -43,14 +49,14 @@ interface NotificationRow {
   comment_id: string | null;
   actor: UserListRow | null;
   post: { id: string; title: string; images: { thumb_path: string; position: number }[] } | null;
-  comment: { body: string } | null;
+  comment: { body: string; media_kind?: 'photo' | 'sticker' | null; anon_number?: number | null } | null;
 }
 
 const NOTIFICATION_SELECT = `
   id, type, created_at, read_at, comment_id,
   actor:profiles!notifications_actor_id_fkey(${USER_LIST_SELECT}),
   post:posts(id, title, images:post_images(thumb_path, position)),
-  comment:comments(body)
+  comment:comments(body, media_kind, anon_number)
 `;
 
 export const ACTIVITY_LIMIT = 100;
@@ -62,11 +68,21 @@ const POST_TYPES: readonly NotificationType[] = [
   'comment_like',
   'collab_invite',
   'collab_accepted',
+  'comment_mention',
 ];
 
-/** Maps a row; drops ones whose actor or post the viewer can no longer see. */
+/** Who did it, as shown: a username, or a Chef name for an anonymous take. */
+export function actorName(item: Pick<ActivityItem, 'actor' | 'anonymousName'>): string {
+  return item.actor?.username ?? item.anonymousName ?? 'Someone';
+}
+
+/**
+ * Maps a row; drops ones whose actor or post the viewer can no longer see.
+ * An anonymous take's notification has no actor, only its comment's Chef number.
+ */
 export function mapNotification(row: NotificationRow): ActivityItem | null {
-  if (!row.actor) return null;
+  const anonNumber = row.actor ? null : (row.comment?.anon_number ?? null);
+  if (!row.actor && anonNumber === null) return null;
   if (POST_TYPES.includes(row.type) && !row.post) return null;
   const cover = row.post ? [...row.post.images].sort((a, b) => a.position - b.position)[0] : undefined;
   return {
@@ -74,12 +90,13 @@ export function mapNotification(row: NotificationRow): ActivityItem | null {
     type: row.type,
     at: row.created_at,
     read: row.read_at !== null,
-    actor: mapUserListItem(row.actor),
+    actor: row.actor ? mapUserListItem(row.actor) : null,
+    anonymousName: anonNumber === null ? null : anonymousName(anonNumber),
     post: row.post
       ? { id: row.post.id, title: row.post.title, thumbPath: cover?.thumb_path ?? null, thumbUrl: null }
       : null,
     commentId: row.comment_id,
-    commentBody: row.comment?.body ?? null,
+    commentBody: row.comment ? commentPreviewText(row.comment.body, row.comment.media_kind) || null : null,
   };
 }
 
@@ -137,19 +154,37 @@ export function describe(item: Pick<ActivityItem, 'type' | 'post' | 'commentBody
       return `invited you to co-post ${item.post?.title ?? 'a creation'}`;
     case 'collab_accepted':
       return `is now a co-creator of ${title}`;
+    case 'comment_mention':
+      return `mentioned you in a comment on ${item.post?.title ?? 'a post'}`;
   }
 }
 
 /** Where tapping a notification goes. */
 export type ActivityTarget =
+  | { pathname: '/activity' }
   | { pathname: '/user/[id]'; params: { id: string } }
-  | { pathname: '/post/[id]'; params: { id: string; focus?: string } };
+  | { pathname: '/post/[id]'; params: { id: string; focus?: string; comment?: string } };
 
-export function activityTarget(item: Pick<ActivityItem, 'type' | 'post' | 'actor'>): ActivityTarget {
-  if (!item.post) return { pathname: '/user/[id]', params: { id: item.actor.id } };
-  const toComments = item.type === 'comment' || item.type === 'comment_reply' || item.type === 'comment_like';
+const COMMENT_TYPES: readonly NotificationType[] = [
+  'comment',
+  'comment_reply',
+  'comment_like',
+  'comment_mention',
+];
+
+export function activityTarget(
+  item: Pick<ActivityItem, 'type' | 'post' | 'actor'> & { commentId?: string | null },
+): ActivityTarget {
+  if (!item.post) {
+    // Anonymous notifications always have a post; without one there's nowhere better than Activity.
+    return item.actor ? { pathname: '/user/[id]', params: { id: item.actor.id } } : { pathname: '/activity' };
+  }
+  if (!COMMENT_TYPES.includes(item.type)) return { pathname: '/post/[id]', params: { id: item.post.id } };
+  // Opens the post scrolled to that comment (its thread opened for a reply).
   return {
     pathname: '/post/[id]',
-    params: toComments ? { id: item.post.id, focus: 'comments' } : { id: item.post.id },
+    params: item.commentId
+      ? { id: item.post.id, focus: 'comments', comment: item.commentId }
+      : { id: item.post.id, focus: 'comments' },
   };
 }
