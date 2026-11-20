@@ -1863,3 +1863,31 @@ No negative margins, offsets or new dependencies.
 
 **Not seen on device:** posts with 100+ likes and Co-Chef posts. They use the same row, and
 the unit test covers large counts.
+
+## Plate dish type (2026-11-16; migration `20261116000001_plate_dish_type` live since 2026-11-19, approved)
+
+**What:** "Plate" is a new Cooking dish type for composed meals with several components
+(say, a protein, vegetables and rice). It is listed after Bowl.
+
+**How:**
+- Dish types are rows in `public.categories` (`kind = 'dish_type'`). There is no enum,
+  check constraint or hardcoded list in the app. Create Entry, Edit Entry, post details,
+  `CategoryLine`, search and Discover filters all read the same taxonomy query, so the
+  migration is the whole change. There was nothing to consolidate.
+- The migration inserts Plate at sort order 14 and moves Grilled, Roast and Side to 15–17.
+  It is additive: no post or other category changes.
+- Before writing it, I read the live data (read-only). There was no existing "Plate", not
+  even a custom label. If someone adds one before the push, the upsert promotes it to the
+  built-in option instead of creating a duplicate.
+- No app update is needed. The taxonomy cache is in memory only (24 h), so Plate appears
+  the next time someone opens the app.
+
+**Checks:**
+- `tsc` passes, lint is clean, and the taxonomy and posts tests pass.
+- New test in `schemas.test.ts`: Plate sorts after Bowl, and a Cooking entry with Plate saves it.
+- After the push (read-only): Plate is a built-in, active dish type at 14, with Grilled,
+  Roast and Side at 15–17. Nothing else changed; post classifications are untouched (178 rows).
+- **Not seen in the app yet.** Xcode is no longer installed on this Mac (only the
+  command-line tools), so the simulator can't run. The web build can't stand in: categories
+  are readable only when signed in. Next time the app is open: Create Entry → Cooking → Dish
+  type should list Plate after Bowl, and Edit Entry should show the same.
