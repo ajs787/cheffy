@@ -160,4 +160,22 @@ describe('toSavePayload', () => {
     // Dish types only apply to cooking.
     expect(p_categories).toEqual(['matcha', 'lattes', 'korean']);
   });
+
+  it('offers Plate after Bowl and saves it on a Cooking entry', () => {
+    const withPlate = buildTaxonomy([
+      cat('cooking', 'primary', 'cooking'),
+      { ...cat('grilled', 'dish_type', 'grilled'), sortOrder: 15 },
+      { ...cat('plate', 'dish_type', 'plate'), name: 'Plate', sortOrder: 14 },
+      { ...cat('bowl', 'dish_type', 'bowl'), sortOrder: 13 },
+    ]);
+    expect(withPlate.dishTypes.map((d) => d.slug)).toEqual(['bowl', 'plate', 'grilled']);
+
+    const { p_categories } = toSavePayload(
+      { ...base(), title: 'Chicken plate', primaryCategoryId: 'cooking', dishTypeIds: ['plate'] },
+      'post-5',
+      'published',
+      withPlate,
+    );
+    expect(p_categories).toEqual(['plate']);
+  });
 });
