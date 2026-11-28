@@ -1936,3 +1936,52 @@ the unit test covers large counts.
   Not changed here.
 - The official Supabase plugin (partner tier) is available but not installed.
 - The hooks take effect in new Claude Code sessions.
+
+## Phase A: comment reliability and media investigation (2026-11-28, branch `comment-reliability`, not committed)
+
+Full reports: [DATABASE_RELIABILITY_REPORT.md](DATABASE_RELIABILITY_REPORT.md) and
+[COMMENT_MEDIA_TEST_REPORT.md](COMMENT_MEDIA_TEST_REPORT.md). Live checks were read-only.
+No migration was made and nothing was deployed.
+
+**Root causes (from production logs):**
+- Comment failures under activity: Discover fires 13–17 heavy queries per open. On this small
+  instance a few opens at once queue past the 8 s statement timeout. The only failed comment
+  insert in 7 days (2026-11-28 01:53:48 UTC) happened inside that burst.
+- Comment media: no media comment has ever reached the server. There are 0 uploads, 0 Storage
+  requests and 0 Edge Function calls in 7 days, and no dropped-sticker characters in comment
+  text. It was never tested on a device. If attempts fail, they fail on the phone before the
+  upload.
+
+**Changes (app only):**
+- Discover rows load 3 at a time (`src/utils/concurrency.ts`, `useDiscoverSection`). Grids skip
+  the queue.
+- Category tiles fetch 5 posts instead of 10.
+- Discover rows are cached for 5 minutes instead of 2.
+- The unread count is fetched once per refresh, not twice (`exact: true` on `['activity']`).
+- Retry-safe comment sends: resending an unchanged draft reuses a comment already saved since
+  the failed attempt (bounded by the last success), and a copy already in the list is never
+  shown twice.
+- `MediaPrepareError`: on-phone picture preparation failures get their own message and
+  `console.warn`. A 401 from the media function shows a session message.
+
+**Checks:**
+- Baseline before changes: tsc and lint clean, 587/587 tests.
+- After: tsc and lint clean, 598/598 tests (78 suites).
+  New tests: limiter (3), `addComment` retries (6), composer retries (2).
+- A DB test caught that `comments` doesn't grant INSERT on `id`, so client-chosen ids would
+  have broken posting. The approach was changed and those tests removed.
+- Reviews: security found no issues. Quality found 7 issues, 6 fixed. The 7th is the in-flight
+  duplicate, which needs a migration for an idempotency key.
+
+**Not verified / blocked:**
+- Device behaviour (Xcode isn't installed).
+- The comment media repro (needs a real iPhone and a dev or TestFlight build).
+- Load tests at 5/10/25/50 users (no staging project).
+- The effect on production (not released).
+
+**Next (needs approval):**
+- A DB migration to make Discover cheap (a single home RPC, cheaper visibility checks, indexes).
+- A staging project for load tests.
+- An idempotency-key migration for comments.
+- Retrying once after a token refresh on 401.
+- Phases B–F of the brief are not started.

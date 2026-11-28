@@ -24,7 +24,9 @@ export function useNotificationsRealtime() {
     if (!me) return;
     const refresh = () => {
       void qc.invalidateQueries({ queryKey: unreadKey });
-      void qc.invalidateQueries({ queryKey: activityKey });
+      // exact: ['activity'] is also the prefix of the unread key, which would
+      // otherwise be refetched twice (the first request cancelled mid-flight).
+      void qc.invalidateQueries({ queryKey: activityKey, exact: true });
     };
     const unsubscribe = subscribeToNotifications({
       client: supabase,

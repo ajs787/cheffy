@@ -61,6 +61,14 @@ export async function prepareMedia(draft: DraftMedia): Promise<{ full: Rendered;
   return { full, thumb };
 }
 
+/** The picture couldn't be resized/re-encoded on the phone (nothing was sent). */
+export class MediaPrepareError extends Error {
+  constructor(override readonly cause: unknown) {
+    super('could not prepare the picture');
+    this.name = 'MediaPrepareError';
+  }
+}
+
 export class MediaUploadError extends Error {
   constructor(
     message: string,
@@ -77,7 +85,16 @@ export class MediaUploadError extends Error {
  * response returns the same upload instead of making a second one.
  */
 export async function uploadMedia(id: string, draft: DraftMedia): Promise<{ id: string }> {
-  const { full, thumb } = await prepareMedia(draft);
+  let prepared: Awaited<ReturnType<typeof prepareMedia>>;
+  try {
+    prepared = await prepareMedia(draft);
+  } catch (error) {
+    // Kept apart from upload failures: no request was made, so the server
+    // logs can't show it. The stage and cause help a device bug report.
+    console.warn('comment media: prepare failed', draft.kind, error);
+    throw new MediaPrepareError(error);
+  }
+  const { full, thumb } = prepared;
   const size = MEDIA_SIZES[draft.kind];
   const form = new FormData();
   form.append('id', id);
