@@ -1891,3 +1891,48 @@ the unit test covers large counts.
   command-line tools), so the simulator can't run. The web build can't stand in: categories
   are readable only when signed in. Next time the app is open: Create Entry → Cooking → Dish
   type should list Plate after Bowl, and Edit Entry should show the same.
+
+## Claude Code workflow (2026-11-28, branch `claude-workflow`, not committed)
+
+**Found:**
+- Official Expo plugin already enabled.
+- `npm run check`: typecheck about 5 s, lint about 3 s, 587 tests about 2 min. All pass.
+- The tests include 25 PGlite suites in `tests/db` that apply every migration and test RLS.
+- Supabase CLI 3.4 has `db advisors`.
+- No CLAUDE.md, no project skills, agents or hooks, and no CI.
+
+**Added:**
+- `CLAUDE.md`: imports AGENTS.md, then Cheffy's permanent rules. It links to the
+  ARCHITECTURE, DESIGN_SYSTEM and DATABASE_SCHEMA docs instead of repeating them.
+- Skills in `.claude/skills/`:
+  - `cheffy-feature`: the 11-step feature procedure.
+  - `cheffy-db-audit`: migration checklist, PGlite tests, and the advisors baseline below.
+  - `cheffy-ui-review`: static token and accessibility checks, a reviewer, then seeing it run.
+  - `cheffy-release-check`: read-only go/no-go before a build.
+- Read-only reviewers in `.claude/agents/`: `cheffy-security-reviewer`,
+  `cheffy-quality-reviewer` and `cheffy-ui-reviewer`. Their tools are limited to
+  Read, Grep and Glob, so they can't edit or run anything.
+- Hooks in `.claude/settings.json`:
+  - `guard-production.sh` (PreToolUse, Bash) always asks before: `supabase db push`,
+    writable `db query --linked`, Supabase deploy/secrets/reset, EAS build/submit/update,
+    `gh pr merge`, pushes to main and force pushes. Tested on 18 sample commands: 9 asked,
+    9 passed, all as expected.
+  - `check-changed-ts.sh` (Stop) runs typecheck and ESLint on changed TS files. It skips
+    when nothing changed since the last clean run, and has a loop guard. Tested: no
+    changes 0 s; a type error was reported (exit 2); a clean change took 12 s; a repeat
+    took 0 s (cached).
+- `.github/workflows/check.yml`: `npm ci`, typecheck, lint and `npm test` on PRs and on main.
+  It's checks only and has read-only permissions. It hasn't run on GitHub yet.
+
+**Live advisors baseline (read-only, 2026-11-28):**
+- 0 errors.
+- 64 security-definer RPC warnings. These are expected.
+- `pg_net` is installed in `public`.
+- Leaked-password protection is off.
+- One duplicate index on `comments`.
+
+**Open:**
+- `expo-doctor` reports 24 packages a patch or two behind SDK 58's expected versions.
+  Not changed here.
+- The official Supabase plugin (partner tier) is available but not installed.
+- The hooks take effect in new Claude Code sessions.
