@@ -86,6 +86,12 @@ export function CommentComposer({
   const [media, setMedia] = useState<DraftMedia | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const sending = useRef(false);
+  // The last failed attempt (when it started, and what it sent). A resend of
+  // the same text, reply target and picture can then find a comment that was
+  // saved before its response was lost; any edit makes it a new comment.
+  const failed = useRef<{ since: string; signature: string } | null>(null);
+  // When the last comment sent from here was saved: retries never look past it.
+  const lastSentAt = useRef<string | null>(null);
   const [pending, setPending] = useState(false);
   const [focused, setFocused] = useState(false);
 
@@ -186,13 +192,25 @@ export function CommentComposer({
     if (!canSend || sending.current) return;
     sending.current = true;
     setPending(true);
+    const startedAt = new Date().toISOString();
     const reply = replyTo;
+    const signature = JSON.stringify([body.trim(), reply?.commentId ?? null, media?.uri ?? null]);
+    const retrySince = failed.current?.signature === signature ? failed.current.since : null;
     try {
-      await addComment.mutateAsync(
+      const sent = await addComment.mutateAsync(
         anonymous
           ? { body, reply, anonymous: true, anonNumber: myAnonNumber }
-          : { body, reply, mentionIds: mentionIdsFor(body, picked.current, me?.id), media },
+          : {
+              retrySince,
+              notBefore: lastSentAt.current,
+              body,
+              reply,
+              mentionIds: mentionIdsFor(body, picked.current, me?.id),
+              media,
+            },
       );
+      failed.current = null;
+      lastSentAt.current = sent?.createdAt ?? lastSentAt.current;
       setBody('');
       setSelection({ start: 0, end: 0 });
       setForcedSelection(undefined);
@@ -203,6 +221,7 @@ export function CommentComposer({
       onSent?.(reply);
     } catch {
       // useAddComment rolls back and explains; the text and picture stay to retry.
+      failed.current = { since: retrySince ?? startedAt, signature };
     } finally {
       sending.current = false;
       setPending(false);

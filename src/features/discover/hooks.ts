@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { queryKeys, type DiscoverQueryParams } from '@/lib/query/keys';
+import { createLimiter } from '@/utils/concurrency';
 
 import {
   fetchDiscoverPage,
@@ -16,13 +17,23 @@ import {
   type DiscoverPageParam,
 } from './api';
 
+/**
+ * Discover shows ~12 rows that each call discover_posts. Fired together they
+ * queued up on the database (statement timeouts, and other people's comments
+ * failing in the same seconds, 2026-11-28). Rows load three at a time; grids
+ * people are scrolling ("Just posted", Browse) skip this queue.
+ */
+const sectionLimit = createLimiter(3);
+
 /** First page only — for horizontal Discover sections. */
-export function useDiscoverSection(params: DiscoverQueryParams, enabled = true) {
+export function useDiscoverSection(params: DiscoverQueryParams, enabled = true, limit = 10) {
   return useQuery({
-    queryKey: [...queryKeys.discover(params), 'section'],
-    queryFn: async () => (await fetchDiscoverPage(params, null, 10)).items,
+    queryKey: [...queryKeys.discover(params), 'section', limit],
+    queryFn: async () => (await sectionLimit(() => fetchDiscoverPage(params, null, limit))).items,
     enabled,
-    staleTime: 2 * 60_000,
+    // Rows cover days or weeks ("this month", "last two weeks"): refetching
+    // them every couple of minutes only added load.
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -71,7 +82,11 @@ export function useTagSearch(query: string) {
 const TASTE_STALE_MS = 10 * 60_000;
 
 export function useTasteTopics() {
-  return useQuery({ queryKey: queryKeys.tasteTopics, queryFn: () => fetchTasteTopics(), staleTime: TASTE_STALE_MS });
+  return useQuery({
+    queryKey: queryKeys.tasteTopics,
+    queryFn: () => fetchTasteTopics(),
+    staleTime: TASTE_STALE_MS,
+  });
 }
 
 /** The Discover carousel: the first few picks. */

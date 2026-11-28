@@ -31,10 +31,11 @@ import {
   type CommentCursor,
   type ReplyTarget,
 } from './api';
-import { MediaUploadError, newUploadId, uploadMedia, type DraftMedia } from './media';
+import { MediaPrepareError, MediaUploadError, newUploadId, uploadMedia, type DraftMedia } from './media';
 import {
   appendComment,
   cacheKeyFor,
+  hasComment,
   removeComment,
   replaceComment,
   updateCommentInCaches,
@@ -69,6 +70,10 @@ export function useReplies(parentId: string, enabled: boolean) {
 }
 
 export interface SendComment {
+  /** When this draft's first (failed) attempt started; see NewComment.retrySince. */
+  retrySince?: string | null;
+  /** When the last comment sent from this composer was saved; see NewComment.notBefore. */
+  notBefore?: string | null;
   body: string;
   reply?: ReplyTarget | null;
   mentionIds?: string[];
@@ -109,7 +114,7 @@ export function useAddComment(postId: string) {
   const { data: profile } = useMyProfile();
 
   return useMutation({
-    mutationFn: async ({ body, reply, mentionIds, media, anonymous }: SendComment) => {
+    mutationFn: async ({ retrySince, notBefore, body, reply, mentionIds, media, anonymous }: SendComment) => {
       if (anonymous) return addAnonymousTake(postId, { body, reply });
       const send = async () =>
         addComment(me, postId, {
@@ -117,6 +122,8 @@ export function useAddComment(postId: string) {
           reply,
           mentionIds,
           uploadId: media ? await ensureUpload(media) : null,
+          retrySince,
+          notBefore,
         });
       try {
         const comment = await send();
@@ -178,10 +185,22 @@ export function useAddComment(postId: string) {
       updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: p.commentCount + 1 }));
       return { previous, key, optimisticId: optimistic.id };
     },
-    onSuccess: (comment, { anonymous }, context) => {
-      qc.setQueryData<CommentPages>(context.key, (data) =>
-        replaceComment(data, context.optimisticId, comment),
-      );
+    onSuccess: (comment, { anonymous, reply }, context) => {
+      if (hasComment(qc.getQueryData<CommentPages>(context.key), comment.id)) {
+        // A retry found the comment already saved, and the list already has
+        // it (it was refetched): drop the placeholder and its +1s.
+        qc.setQueryData<CommentPages>(context.key, (data) => removeComment(data, context.optimisticId));
+        if (reply)
+          updateCommentInCaches(qc, reply.parentId, (c) => ({
+            ...c,
+            replyCount: Math.max(0, c.replyCount - 1),
+          }));
+        updatePostInCaches(qc, postId, (p) => ({ ...p, commentCount: Math.max(0, p.commentCount - 1) }));
+      } else {
+        qc.setQueryData<CommentPages>(context.key, (data) =>
+          replaceComment(data, context.optimisticId, comment),
+        );
+      }
       // The first anonymous take here hands out a Chef number: show it next time.
       if (anonymous) void qc.invalidateQueries({ queryKey: anonymousTakesKey(me, postId) });
     },
@@ -199,7 +218,10 @@ export function useAddComment(postId: string) {
 }
 
 function commentErrorMessage(error: unknown): string {
+  if (error instanceof MediaPrepareError)
+    return 'Couldn’t get that picture ready to send. Try another one. Your comment is still here.';
   if (error instanceof MediaUploadError) {
+    if (error.status === 401) return 'Your session expired. Close and reopen Cheffy, then try again.';
     if (error.status === 429) return 'You’ve added a lot of pictures. Try again in a little while.';
     if (error.status === 413 || error.status === 422)
       return 'That picture can’t be used. Try a different one.';

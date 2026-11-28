@@ -38,6 +38,10 @@ export function replaceComment(
     : data;
 }
 
+export function hasComment(data: CommentPages | undefined, id: string): boolean {
+  return !!data?.pages.some((page) => page.some((c) => c.id === id));
+}
+
 export function removeComment(data: CommentPages | undefined, id: string): CommentPages | undefined {
   return data ? { ...data, pages: data.pages.map((page) => page.filter((c) => c.id !== id)) } : data;
 }

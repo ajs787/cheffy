@@ -11,12 +11,15 @@ const GAP = spacing.sm;
 
 /** One category: the newest real entry's photo as its cover, or a quiet glyph tile. */
 function CategoryTile({ category, width }: { category: Category; width: number }) {
-  const latest = useDiscoverSection({ sort: 'recent', primaryId: category.id });
+  // Only the cover is shown, so a few posts are enough to find one with a photo.
+  const latest = useDiscoverSection({ sort: 'recent', primaryId: category.id }, true, 5);
   const cover = latest.data?.find((post) => post.images[0]?.thumbUrl)?.images[0];
 
   return (
     <PressableScale
-      onPress={() => router.push({ pathname: '/browse', params: { primaryId: category.id, title: category.name } })}
+      onPress={() =>
+        router.push({ pathname: '/browse', params: { primaryId: category.id, title: category.name } })
+      }
       activeScale={0.96}
       accessibilityRole="link"
       accessibilityLabel={`Browse ${category.name}`}
@@ -24,7 +27,12 @@ function CategoryTile({ category, width }: { category: Category; width: number }
     >
       {cover ? (
         <>
-          <FoodImage uri={cover.thumbUrl} cacheKey={cover.thumbPath} radius={0} style={StyleSheet.absoluteFill} />
+          <FoodImage
+            uri={cover.thumbUrl}
+            cacheKey={cover.thumbPath}
+            radius={0}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.labelBand}>
             <AppText variant="overline" style={styles.labelOnPhoto}>
               {category.name}

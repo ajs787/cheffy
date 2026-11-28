@@ -197,3 +197,44 @@ describe('CommentComposer anonymous takes', () => {
     expect(mockMutateAsync.mock.calls[0][0]).not.toHaveProperty('anonymous');
   });
 });
+
+describe('CommentComposer retries', () => {
+  it('marks a resend after a failure, so an already-saved comment is reused', async () => {
+    const { type, input } = await setup();
+    await type('Looks amazing');
+    mockMutateAsync.mockRejectedValueOnce(new Error('timeout'));
+    await fireEvent.press(screen.getByTestId('comment-send'));
+    // The draft survives the failure…
+    expect(input().props.value).toBe('Looks amazing');
+    expect(mockMutateAsync.mock.calls[0]![0].retrySince).toBeNull();
+
+    mockMutateAsync.mockResolvedValueOnce({});
+    await fireEvent.press(screen.getByTestId('comment-send'));
+    // …and the resend says when the first attempt started.
+    expect(mockMutateAsync.mock.calls[1]![0].retrySince).toEqual(expect.stringMatching(/^\d{4}-\d\d-\d\dT/));
+
+    // A new comment after a success is a first attempt again.
+    await type('Second comment');
+    mockMutateAsync.mockResolvedValueOnce({});
+    await fireEvent.press(screen.getByTestId('comment-send'));
+    expect(mockMutateAsync.mock.calls[2]![0].retrySince).toBeNull();
+  });
+
+  it('treats an edited draft as a new comment, and bounds retries by the last success', async () => {
+    const { type } = await setup();
+    await type('First');
+    mockMutateAsync.mockResolvedValueOnce({ createdAt: '2026-11-28T00:00:00Z' });
+    await fireEvent.press(screen.getByTestId('comment-send'));
+
+    await type('Second');
+    mockMutateAsync.mockRejectedValueOnce(new Error('timeout'));
+    await fireEvent.press(screen.getByTestId('comment-send'));
+    expect(mockMutateAsync.mock.calls[1]![0].notBefore).toBe('2026-11-28T00:00:00Z');
+
+    // Edited after the failure: not a retry of the failed attempt.
+    await type('Second, edited');
+    mockMutateAsync.mockResolvedValueOnce({});
+    await fireEvent.press(screen.getByTestId('comment-send'));
+    expect(mockMutateAsync.mock.calls[2]![0].retrySince).toBeNull();
+  });
+});

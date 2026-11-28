@@ -169,10 +169,43 @@ export interface NewComment {
   mentionIds?: string[];
   /** A finished upload (see media.ts). */
   uploadId?: string | null;
+  /**
+   * Set when sending this draft again after a failed attempt (when the first
+   * attempt started). The first attempt may have been saved even though its
+   * response was lost, so that comment is used instead of posting it twice.
+   */
+  retrySince?: string | null;
+  /**
+   * When the composer's last successful comment was saved: a retry never
+   * reuses that one or anything older (e.g. the same "lol" posted earlier).
+   */
+  notBefore?: string | null;
 }
 
-export async function addComment(me: string, postId: string, input: NewComment): Promise<Comment> {
-  const row = await fetchOne<CommentRow>(
+/** Device and server clocks differ a little; look slightly further back. */
+const RETRY_CLOCK_SLACK_MS = 2 * 60_000;
+
+/** The comment an earlier attempt of this same draft already saved, if any. */
+async function findSavedAttempt(me: string, postId: string, input: NewComment): Promise<CommentRow | null> {
+  if (!input.retrySince) return null;
+  const since = new Date(new Date(input.retrySince).getTime() - RETRY_CLOCK_SLACK_MS).toISOString();
+  let query = supabase
+    .from('comments')
+    .select(COMMENT_SELECT)
+    .eq('post_id', postId)
+    .eq('author_id', me)
+    .eq('body', input.body.trim())
+    .gte('created_at', since);
+  if (input.notBefore) query = query.gt('created_at', input.notBefore);
+  const parentId = input.reply?.parentId ?? null;
+  query = parentId ? query.eq('parent_id', parentId) : query.is('parent_id', null);
+  query = input.uploadId ? query.eq('media_upload_id', input.uploadId) : query.is('media_upload_id', null);
+  const rows = await fetchRows<CommentRow>(query.order('created_at', { ascending: false }).limit(1));
+  return rows[0] ?? null;
+}
+
+async function insertComment(me: string, postId: string, input: NewComment): Promise<CommentRow> {
+  return fetchOne<CommentRow>(
     supabase
       .from('comments')
       .insert({
@@ -188,6 +221,13 @@ export async function addComment(me: string, postId: string, input: NewComment):
       .select(COMMENT_SELECT)
       .single(),
   );
+}
+
+export async function addComment(me: string, postId: string, input: NewComment): Promise<Comment> {
+  // If the lookup itself fails (say, a very long comment in the URL), send
+  // normally rather than leave the draft stuck.
+  const saved = await findSavedAttempt(me, postId, input).catch(() => null);
+  const row = saved ?? (await insertComment(me, postId, input));
   const comment = mapComment(row);
   if (!comment) throw new Error('Comment author missing');
   // The mentions are written by a trigger in the same statement, so the

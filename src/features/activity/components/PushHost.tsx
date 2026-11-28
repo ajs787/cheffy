@@ -68,7 +68,7 @@ export function PushHost() {
       }),
     });
     const open = (data: unknown) => {
-      void qc.invalidateQueries({ queryKey: activityKey });
+      void qc.invalidateQueries({ queryKey: activityKey, exact: true });
       void qc.invalidateQueries({ queryKey: unreadKey });
       const path = pushPath(data);
       const commentId = pushCommentId(data);
